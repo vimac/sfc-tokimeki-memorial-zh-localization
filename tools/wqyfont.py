@@ -22,8 +22,39 @@ def font():
     return _font
 
 
+def ink(ch):
+    """Ink bbox (x0, x1, y0, y1) relative to the pen origin, or None if blank.
+
+    WenQuanYi 13px is a bitmap strike, so this measures it rather than assuming: full
+    kanji are 13 columns x 13 rows with 0-1 columns of left bearing, and a few are wider
+    or taller (装 is 14 across, （ reaches row 14).
+    """
+    im = Image.new('L', (48, 48), 0)
+    ImageDraw.Draw(im).text((0, 0), ch, font=font(), fill=255)
+    px = im.load()
+    pts = [(x, y) for y in range(48) for x in range(48) if px[x, y] >= 128]
+    if not pts:
+        return None
+    return (min(p[0] for p in pts), max(p[0] for p in pts),
+            min(p[1] for p in pts), max(p[1] for p in pts))
+
+
+def fit(ch, dx, dy):
+    """Largest offset <= (dx, dy) that keeps every ink dot inside the drawn 14x14.
+
+    A record draws columns 0..13 and rows 0..13 only, so an over-size glyph must slide
+    back instead of losing its last column: at dx=2 the crop silently cut the right
+    stroke of 1,019 of the 1,154 characters this build ships.
+    """
+    b = ink(ch)
+    if not b:
+        return dx, dy
+    return (max(-b[0], min(dx, 13 - b[1])), max(-b[2], min(dy, 13 - b[3])))
+
+
 def bitmap(ch, dx=0, dy=0):
     """14x14 list of rows of 0/1. dx/dy shift the glyph right/down."""
+    dx, dy = fit(ch, dx, dy)
     im = Image.new('L', (32, 32), 0)
     ImageDraw.Draw(im).text((9 + dx, 9 + dy), ch, font=font(), fill=255)
     px = im.crop((9, 9, 9 + W, 9 + H)).load()

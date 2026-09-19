@@ -9,7 +9,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `aac6c2af23796e66666302f461e609dc` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
+| `rom_prologue_zh.sfc` | `9710c49b40f5a29d14178d698c99a74f` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 `rom_prologue_zh_DRAFT_乱码待修.sfc`、`rom_prologue_zh_jis.sfc`、`tokimeki_chinese_font.sfc`、
@@ -33,7 +33,7 @@ rom_original_japanese.sfc / rom_prologue_zh.sfc  母盘与交付盘
 `tools/extract_font.py` 重新生成）、68 个属于废弃方案的脚本（旧 JIS 槽位方案、死循环排查期的
 一次性模拟器驱动），以及 4 个引用了已删脚本、删完即坏的工具，共 72 个，`tools/` 从 131 降到 59。
 删除后 `tools/build_prologue.py --patch`
-仍产出字节完全相同的 `aac6c2af…`，验收链路无恙。
+仍产出字节完全相同的 `aac6c2af…`（该盘是当时的构建，已被第一节的 9710c49b… 取代），验收链路无恙。
 
 git 只跟踪源码、文档与手工译文；ROM/存档、`reference/`（18 MB 第三方素材）、`out/`、
 渲染 PNG 与 `translations/pending.json`（可重生成的解包缓存）都在 `.gitignore` 里。
@@ -66,6 +66,32 @@ python3 tools/build_prologue.py --patch
 * 注入量是最小的：只为本补丁真正用到的字生成记录，未用到的槽位保持原样
   （`0 unclaimed slot(s) changed`）。
 
+### 三之二、字模几何：14×14 点阵 field，全程 1:1，没有任何缩放
+
+这是「右侧丢 1~2 px」问题的答案，也是校准字形位置时必须记住的换算：
+
+* **记录**：28 字节 = 14 个小端 16 位行字。bit15 是该行**最左**一个像素，但**只有高 14 位会被画**
+  （每字低 2 位恒为 0），所以一行实际只有 14 列可写。
+* **落位**：14 行放在 16 行 cell 的第 1..14 行，第 0 与第 15 行由展开例程 `$80:D23D` 强制清空
+  （`STZ $C100` @ `80D25F`、`STZ $C11E` @ `80D271`）。**cell 是 16×16，可写区是 14×14，
+  右下角 2 列与上下各 1 行永远画不出来。**
+* **运行时**只做 1bpp→2bpp：`plane1 = w | (w>>1)`。那个右移一位是**色平面**复制（描边/阴影用），
+  **不是缩放**。整条链路点→点 1:1，屏幕上也不做放大。
+* 因此**唯一合法的比例是「文泉驿位图 → 14 列 field → 16 px cell」**：`/usr/share/fonts/wqy-bitmap/wenquanyi_13px.pcf`
+  是 bitmap strike（FreeType size 14，asc 12 / desc 3），汉字墨迹恰好 **13 列 × 13 行**，advance 14，
+  46 字抽样里 42 字左bearing 为 0（1 个 1、3 个 2），`装` 是 14 列宽，`（ Ｒ ［ ］` 会顶到第 14 行。
+  日文原版字体的设计盒是**列 2..13 × 行 0..13**（600 个汉字里 462 个正好是这个 bbox）。
+* **丢弃的机制**：`wqyfont.bitmap()` 以画布 `(9+dx, 9+dy)` 落笔后从 x=9 裁 14 列，所以
+  记录列号 = 墨迹列号 + dx。旧的 `WQY_DX = 2` 让 13 列宽的字第 12 列落到记录第 14 列 —— 硬件不画 ——
+  **1,154 个字里 1,023 个在 dx=2 下放不下，其中 1,019 个的右笔真的被切掉**。`WQY_DX = 1` 是不丢笔的最大
+  位移（只有 `装` 等 5 字需回退）。
+* `tools/wqy_calibrate.py` 当初**奖励了这种裁切**：它按「墨迹 bbox 与原版 bbox 的差」打分，被切掉右边的字
+  反而完美匹配（dx=2 误差 1.93 / 40 字被切，dx=1 误差 2.11 / 0 字被切）。全局单偏移本身是对的（保住标点
+  的左下位置），但必须在**不裁切**的约束下选。现在 `wqyfont.ink()` + `fit()` 在落笔前量墨迹并把偏移夹回
+  14×14 内，所以后续几千个字不可能再退回去；`wqy_calibrate.py` 也改成**只在 `clip=0` 的候选里选优**，
+  重跑它现在独立给出 `BEST (no clip): dx=+1 dy=+0 (err 2.11)`（dx=0/1 是仅有的两个零裁切候选，1 更接近原版）。
+* **修正后实测**：右边缘落在记录第 13 列（与日文字体同边）的字 **1,019 / 1,154**，被丢弃的墨点 **0**。
+
 ## 四、验收 gate（按顺序，全部通过才算好构建）
 
 ```
@@ -73,7 +99,7 @@ python3 tools/build_prologue.py --patch          # VERDICT: all checks passed
 python3 tools/prologue_play.py rom_prologue_zh.sfc 96 --boot   # 96 presses, 366 distinct pages, kana=0
 cp <walk log> /tmp/play/boot_walk_zh.txt
 python3 tools/prologue_shots.py /tmp/play/boot_walk_zh.txt docs/prologue_zh   # 88 boxes, 183 sheets
-python3 tools/jisaudit.py docs/prologue_zh rom_prologue_zh.sfc  # 2 foreign slots: 010(￣) 011(＿)
+python3 tools/jisaudit.py docs/prologue_zh rom_prologue_zh.sfc  # on-grid foreign: 0（余下 5 项全是离格噪声，见下）
 python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/55 name records still hold kana or an unknown slot
 ```
 
@@ -87,6 +113,15 @@ python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/55 name records still
 4. `prologue_play.py | grep -c` 在干净日志上会以 1 退出（零匹配），kana=0 即为通过。
 5. `jisaudit` 必须跑在**当前 ROM 之后**重截的帧上，否则会用旧字形的判定冒充新构建。
 6. 不要用 `bytes.replace()` 改二进制；对 ROM 的写入只允许 `tools/build_prologue.py`。
+7. `jisaudit` 的输出按 **on/off grid** 分成两组，**判定只看 `on`**（文本 cell 恒定起于
+   `x % 16 == 15`、`y % 16 == 1`）。`ui_refs.cells()` 会把 14×14 窗口在**每一个像素**上滑动，因此也会
+   报出离格匹配：框线/高亮（`off symbol 010(￣) 011(＿)`），以及**真实 cell 左上 1 px 处的日文字模**
+   （`off inline 210(一) 5DE(三) 7AB(是)`）。后者是 dx=1 之后我们的字形比日文原版恰好左 1 px、上 1 行
+   造成的窗口错位：原版记录墨迹盒是列 2..13 / 行 1..13（如 stock 0x7AB `是`），我们的记录是列 1..13 /
+   行 0..12（同屏那一格的 0x783），于是把 14×14 窗口放在真格子左上 1 px 的 (142,176) 去读，读出来的图
+   案正好等于 stock 记录；而落在格子上 (143,177) 的窗口匹配的是我们自己的 0x783。
+   历史文档里「2 foreign slots: 010/011」这条基线本身就是离格噪声，不要拿它当期望值。
+   本次修正后的实测：**on-grid 2,426 格全部是我们的记录，off 0 owned / 188 foreign**。
 
 ## 五、剩余工作（2026-09-20 目标变更后重估）
 

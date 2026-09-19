@@ -2,8 +2,9 @@
 
 Such a cell is drawn with the stock JIS bitmap.  Inside translated dialog that
 violates the standing rule, so this is the gate that proves the patch draws its
-Chinese from WenQuanYi.  Three groups, reported separately because each has its
-own answer:
+Chinese from WenQuanYi.  Each group below is reported twice, prefixed `on` or `off`
+depending on whether the match landed on the real text grid (see the note before the
+loop); only `on` can indict the patch.  The groups have their own answer:
 
   plate   -- the speaker nameplate (x <= 95 on the first dialog row).  It is drawn
              from name tables no text pointer reaches, the same way the `$E806`
@@ -35,16 +36,23 @@ ours = {int(v, 16) for g in ('fresh', 'inplace', 'at_stock') for v in a[g].value
 table, words = U.record_map(rom)
 sheets = sorted(x for x in os.listdir(DIR) if x.endswith('.png'))
 foreign = collections.defaultdict(lambda: collections.Counter())
+# A text cell always starts at x % 16 == 15, y % 16 == 1 (cell 0 at x=63, rows 161/177/193).
+# `cells` slides its 14x14 window over every pixel, so it also reports off-grid matches:
+# box rules and highlights, and -- since the glyphs sit 1 dot left of the Japanese ones --
+# a neighbour-stock record read 1 px up-and-left of the real cell.  Only on-grid cells can
+# prove the patch drew Japanese, so the verdict is split by that axis.
 for n in sheets:
     for (x, y), idxs in U.cells(os.path.join(DIR, n), table, words).items():
         for i in idxs:
             if i in ours:
                 continue
-            group = 'symbol' if i < T.JIS_KANJI else ('plate' if x <= 95 else 'inline')
+            on = 'on ' if x % 16 == 15 and y % 16 == 1 else 'off '
+            group = on + ('symbol' if i < T.JIS_KANJI
+                          else 'plate' if x <= 95 else 'inline')
             foreign[group][i] += 1
 print('%d sheets, %d foreign slots' % (
     len(sheets), sum(len(v) for v in foreign.values())))
-for group in ('plate', 'inline', 'symbol'):
+for group in ('on plate', 'on inline', 'on symbol', 'off plate', 'off inline', 'off symbol'):
     if not foreign[group]:
         continue
     print('%s: %s' % (group, ' '.join('%03X(%s)x%d' % (i, T.idx_to_char(i), n)
@@ -53,6 +61,6 @@ if json_out:
     json.dump({'note': 'kanji slots the speaker nameplate draws from the stock font, '
                        'measured by %s over %s' % (os.path.basename(__file__), DIR),
                'plate': {'%03X' % i: T.idx_to_char(i)
-                         for i in sorted(foreign['plate'])}},
+                         for i in sorted(foreign['on plate'])}},
               open(json_out, 'w'), ensure_ascii=False, indent=1)
     print('-> %s' % json_out)

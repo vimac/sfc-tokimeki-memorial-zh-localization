@@ -1291,7 +1291,11 @@ MARK = {0x12: '〔姓〕', 0x13: '〔名〕'}
 # lone $09 would silently swallow the two bytes after it.
 MARK_B = {v: k for k, v in MARK.items()}
 LINE_CTRL = (0x14, 0x0C, 0x0A)
-WQY_DX, WQY_DY = 2, 0                # calibrated against the stock font
+# The record draws columns 0..13 of its 16-dot cell and WenQuanYi's 13px strike inks 13
+# columns, so dx=2 -- which the old bbox calibration scored best, because a cropped glyph
+# matches the stock box exactly -- threw away the right stroke of 88% of the vocabulary.
+# dx=1 lands the right edge on column 13 like the Japanese font and drops nothing.
+WQY_DX, WQY_DY = 1, 0
 CTL_RE = re.compile(r'⟦([0-9A-Fa-f]{2,4})⟧')
 
 
