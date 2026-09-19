@@ -27,18 +27,24 @@ d = open(ROM, 'rb').read()
 pool = []
 
 
-def record(s, e):
-    """Glyph-code pairs -> characters, with anything unaccounted for spelled out."""
-    out = []
-    for j in range(s, e, 2):
+def record(s):
+    """(characters, offset just past the terminator) for the record at `s`.
+
+    Read the way the engine reads it: a `$F0-$FF` lead takes the next byte as its
+    operand, and only a `$0A` in a *lead* position ends the record.  Scanning for the
+    byte would cut 诗织 in half, because 诗 is index $060A.
+    """
+    out, j = [], s
+    while d[j] != 0x0A:
         i = ((d[j] << 8) | d[j + 1]) & 0x0FFF
         out.append(slot2ch.get(i) or '{%03X}' % i)
-    return ''.join(out)
+        j += 2
+    return ''.join(out), j + 1
 
 
 for hi in POOL_HEADS:
     offs = [d[hi + 3 + k] for k in range(N_OFFS)]
-    names = [record(hi + o, d.index(0x0A, hi + o)) for o in offs]
+    names = [record(hi + o)[0] for o in offs]
     pool += names
     bad = [n for n in names if '{' in n]
     print('opcode %02X pool @%#x: %2d names, %d slots not ours%s'
@@ -49,9 +55,8 @@ for hi in POOL_HEADS:
 
 off, surnames = SURNAME[0], []
 while off < SURNAME[1]:
-    e = d.index(0x0A, off)
-    surnames.append(record(off, e))
-    off = e + 1
+    name, off = record(off)
+    surnames.append(name)
 bad = [n for n in surnames if '{' in n]
 print('nameplate surnames @%#x: %d names, %d slots not ours%s'
       % (SURNAME[0], len(surnames), len(bad), ': ' + ' '.join(bad) if bad else ''))

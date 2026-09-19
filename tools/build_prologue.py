@@ -140,23 +140,25 @@ NAME_ROWS = NAME_IMM + NAME_POOL
 NAME_SLOTS = 3
 # The heroine name pool the `$E803`/`$E804`/`$E805` calls address.  All three opcodes
 # carry their own 14-entry offset table (`01 <opcode> 0C <offsets>`, at file
-# 0x21A2A6/0x21A2B7/0x21A2C8) and all three resolve to the *same* 15 records, so one
-# edit per record fixes every call site -- and because both the stock and the Chinese
-# name are strings of 2-byte glyph codes, keeping each record's exact code count is
-# enough to keep the distance tables true.  詩織/紐緒/鏡/美樹原/優美/館林 differ from
-# the simplified forms and さん/ちゃん are kana with no Chinese reading at all, so
-# those records cannot be fixed by a font swap; 同学 is the address a school game
-# uses and lands on the same two codes, and ちゃん's three codes become 小同学.
+# 0x21A2A6/0x21A2B7/0x21A2C8) and all three resolve to the *same* 14 records, so one
+# edit per record fixes every call site.  Only the records' *starts* are load-bearing --
+# each is a `$0A`-terminated run of 2-byte glyph codes, so a shorter Chinese name just
+# leaves `$0A` behind itself and every later offset still lands.  詩織/紐緒/鏡/美樹原/
+# 優美/館林 differ from the simplified forms and さん/ちゃん are kana with no Chinese
+# reading at all, so those records cannot be fixed by a font swap.  さん/ちゃん/くん are
+# rendered 桑/酱/君 (the user's standing ruling, 2026-09-20), which is *shorter* than the
+# kana: this ROM has no small-kana code at all (the only half-width thing it holds is
+# the $0153-$01C4 pair-cell band), so the suffix simply costs one cell instead of two.
 # The names themselves follow `reference/`: 紐緒=Himou->纽绪, 鏡=Kagami->镜,
 # 美樹原=Mikihara->美树原, 優美=Yumi-chan->优美, as the Chinese fan translations have
 # them.
 NAME_POOL_TABLE = (
-    (0x21A2D9, '詩織', '诗织'),          (0x21A2DE, '如月さん', '如月同学'),
-    (0x21A2E7, '紐緒さん', '纽绪同学'),  (0x21A2F0, '片桐さん', '片桐同学'),
-    (0x21A2F9, '虹野さん', '虹野同学'),  (0x21A302, '古式さん', '古式同学'),
-    (0x21A30B, '清川さん', '清川同学'),  (0x21A314, '鏡さん', '镜同学'),
-    (0x21A31B, '朝日奈さん', '朝日奈同学'), (0x21A326, '美樹原さん', '美树原同学'),
-    (0x21A331, '優美ちゃん', '小优美同学'), (0x21A33C, '館林さん', '馆林同学'),
+    (0x21A2D9, '詩織', '诗织'),          (0x21A2DE, '如月さん', '如月桑'),
+    (0x21A2E7, '紐緒さん', '纽绪桑'),    (0x21A2F0, '片桐さん', '片桐桑'),
+    (0x21A2F9, '虹野さん', '虹野桑'),    (0x21A302, '古式さん', '古式桑'),
+    (0x21A30B, '清川さん', '清川桑'),    (0x21A314, '鏡さん', '镜桑'),
+    (0x21A31B, '朝日奈さん', '朝日奈桑'), (0x21A326, '美樹原さん', '美树原桑'),
+    (0x21A331, '優美ちゃん', '优美酱'),  (0x21A33C, '館林さん', '馆林桑'),
     (0x21A345, '伊集院', '伊集院'),      (0x21A34C, '良雄', '良雄'),
     (0x21A351, '外井', '外井'),
 )
@@ -300,18 +302,18 @@ UI_TEXT_ROWS = (
     # Chinese reading, so these are re-worded rather than re-pointed; the Chinese forms
     # follow `reference/`'s romanisations the same way the heroine pool does.
     (0x1F970, 6, 'シナモン博士', '肉桂博士', 'R'),
-    (0x1F97D, 6, 'ツヨシさん', '阿强同学', 'R'),
+    (0x1F97D, 6, 'ツヨシさん', '阿强桑', 'R'),
     (0x1F98A, 6, 'Ｕジロー', '小次郎', 'R'),
     (0x1F997, 6, 'なかぢー', '阿中同学', 'R'),
     (0x1F9A4, 6, 'ヨッチ', '小耀同学', 'R'),
     (0x1F9B1, 6, '長作', '长作同学', 'R'),
-    (0x1F9BE, 6, 'しゅうちゃん', '小秀同学', 'R'),
-    (0x1F9CB, 6, '慎さん', '慎同学', 'R'),
-    (0x1F9D8, 6, 'がみちゃん', '阿神同学', 'R'),
+    (0x1F9BE, 6, 'しゅうちゃん', '小秀酱', 'R'),
+    (0x1F9CB, 6, '慎さん', '慎桑', 'R'),
+    (0x1F9D8, 6, 'がみちゃん', '阿神酱', 'R'),
     (0x1F9E5, 6, '寅次郎', '阿寅同学', 'R'),
     (0x1F9F2, 6, 'ダーリン', '亲爱的', 'R'),
-    (0x1F9FF, 6, 'げんさん', '阿元同学', 'R'),
-    (0x1FA0C, 6, 'えとちゃん', '小江同学', 'R'),
+    (0x1F9FF, 6, 'げんさん', '阿元桑', 'R'),
+    (0x1FA0C, 6, 'えとちゃん', '小江酱', 'R'),
     (0x1FA19, 6, 'テロリン', '小特同学', 'R'),
     (0x1FA26, 6, 'のりーん', '小诺同学', 'R'),
     (0x1FA33, 6, '兄貴', '大哥', 'R'),
@@ -2091,13 +2093,17 @@ def macro_bodies(code, char2idx, gloss=(), page=(), verbose=True):
                    else bytes((int(key[:2], 16), int(key[2:], 16))))
             folds[tuple(items)] = raw
     if verbose:
-        span = sum('span' in w for _k, w in late)
+        span = [t for t in late if 'span' in t[1]]
         print('phrase bodies: %d of %d dictionary entries rewritten in place, '
               '%d whose chinese is longer than their own span (neither bank has a '
               'dead zone to move them, so they can only be shortened), %d refused (%s)'
-              % (len(out), len(gloss), span, len(late) - span,
+              % (len(out), len(gloss), len(span), len(late) - len(span),
                  '; '.join('%s %s' % t for t in late if 'span' not in t[1])
                  or 'none'))
+        # Which ones, named: the work order for shortening is per entry, and the count
+        # alone does not say whose boxes are about to report as over budget.
+        for key, why in span:
+            print('  shorten %s (%s): %s' % (key, gloss[key], why))
     return out, folds, late
 
 
@@ -2140,11 +2146,15 @@ def name_bodies(char2idx, rom):
 def name_table_bodies(char2idx, rom):
     """(offset, bytes) re-pointing the name pool and the surname list.
 
-    Stock bytes are checked before anything is written: both tables are addressed by
-    distance, so a row whose offset is off by one would silently rewrite a
-    neighbour's code rather than fail.  A record may not change its code count for
-    the same reason, and every character has to be one this build allocated a slot
-    for -- otherwise the record would point at a slot nobody gave a bitmap.
+    Stock bytes are checked before anything is written: all three offset tables store
+    the *distance* to each record, so a row whose offset is off by one would silently
+    rewrite a neighbour's code rather than fail.  A record may not change its start for
+    the same reason -- but not its length: the engine reads a record the way it reads a
+    text stream (a `$F0-$FF` lead takes its operand, `$0A` ends the run), so a Chinese
+    name that is shorter than the kana it replaces just leaves `$0A` dead bytes behind
+    it, and the next name keeps the offset its three tables already hold.  The dead
+    bytes must be `$0A`, not the blank glyph `$000`: the terminator is where the engine
+    stops, so blanks would be *drawn* as a gap after a name that speaks inline.
     """
     out = []
     for addr, jp, line in NAME_TABLE_ROWS:
@@ -2152,11 +2162,13 @@ def name_table_bodies(char2idx, rom):
         got = ''.join(T.idx_to_char(((rec[j] << 8) | rec[j + 1]) & 0x0FFF) or '?'
                       for j in range(0, len(rec), 2))
         assert got == jp, '%#x holds %r, not %r' % (addr, got, jp)
-        assert len(line) == len(jp), \
-            '%s -> %s changes a %d-code record' % (jp, line, len(jp))
+        assert len(line) <= len(jp), \
+            '%s -> %s overflows a %d-code record' % (jp, line, len(jp))
         missing = [c for c in line if c not in char2idx]
         assert not missing, '%s: no glyph slot for %s' % (line, ''.join(missing))
-        out.append((addr, b''.join(k2(char2idx[c]) for c in line)))
+        body = b''.join(k2(char2idx[c]) for c in line)
+        span = 2 * len(jp) + 1              # codes + the byte that ends the record
+        out.append((addr, body + b'\x0a' * (span - len(body))))
     return out
 
 
@@ -2660,18 +2672,25 @@ def verify_name_tables(char2idx, path):
     """Re-read the two name tables from the written ROM and decode every record.
 
     Length is what makes this worth checking on the built file rather than on the
-    plan: the pool's three offset tables and the nameplate's `$0A` delimiters both
-    address records by distance, so a record that grew would push every name after
-    it out of place -- which shows up as a wrong decode two records later.
+    plan: the pool's three offset tables address records by distance, so a record that
+    grew would push every name after it out of place -- which shows up as a wrong
+    decode two records later.  A record ends at the first `$0A` in a *lead* position,
+    exactly as the engine reads it, so `$0A` tucked under a `$F0-$FF` lead (外井's 井 is
+    index $20A) is an operand and not a terminator.
     """
     slot2ch = {i: c for c, i in char2idx.items()}
     d = open(path, 'rb').read()
     ok, good_rows, rows = True, 0, []
     for addr, jp, line in NAME_TABLE_ROWS:
-        rec = d[addr:addr + 2 * len(jp)]
-        idx = [((rec[j] << 8) | rec[j + 1]) & 0x0FFF for j in range(0, len(rec), 2)]
-        got = ''.join(slot2ch.get(x, '□') for x in idx)
-        good = got == line and d[addr + len(rec)] == 0x0A
+        span = 2 * len(jp) + 1
+        rec = d[addr:addr + span]
+        idx, j = [], 0
+        while j < len(rec) and rec[j] != 0x0A:
+            idx.append(((rec[j] << 8) | rec[j + 1]) & 0x0FFF)
+            j += 2
+        got = ''.join(slot2ch.get(x) or '□' for x in idx)
+        fill = rec[j:]
+        good = got == line and fill == b'\x0a' * len(fill)
         if not good:
             print('names %#x: BROKEN %s -> %r (%s)'
                   % (addr, jp, got, ' '.join('%03X' % x for x in idx)))
