@@ -30,7 +30,9 @@ docs/RELEASE_zh.md        权威状态（md5 / gate / 容量 / 剩余工作）
 docs/research/   逆向证据（*.md 是结论，附地址与偏移）与构建输入/输出
 docs/prologue_zh/  183 张渲染表 + index.txt 转录（可重生成；PNG 不入库）
 docs/history/    旧交接与破解笔记，**非权威**，只查不引（README 里写明为何作废）
-translations/    手工中文稿 *.tsv / *_zh.txt 是真值；pending.json 可重生成、不入库
+docs/ALL_CHARACTERS.txt  wiki 角色资料（15 个人物），人名译法的原始依据
+translations/    手工中文稿 *.tsv / *_zh.txt 是真值；**name_glossary.tsv 是人名对照表**；
+                 pending.json 可重生成、不入库
 reference/       J2E 第三方素材（18 MB），只读输入，不入库
 out/             从日文 ROM dump 出来的分析用文本，可重生成，不入库（当前不存在；
                  需要时由 tools/extract_all.py、tools/dump_text.py、tools/extract_font.py 生成）
@@ -59,6 +61,11 @@ out/             从日文 ROM dump 出来的分析用文本，可重生成，�
 
 ## 四、工程纪律（都是踩过的坑）
 
+* **人名一律照 `translations/name_glossary.tsv`**（依据 `docs/ALL_CHARACTERS.txt` 的 wiki 资料 +
+  对全部日文脚本说话人标签的实测）。表的第 3 列区分 `name`（专名，译法固定）/ `role`（身份词，
+  按上下文）/ `ph`（占位符）；`tools/translate_batch.py` 的 `<N>` 占位就是读这一列，**不要**再往
+  脚本里手写人名列表。踩过的坑：`伊集院レイ` 曾按音译写成「伊集院零」，通行译法是**伊集院丽**
+  （レイ＝麗），而旧列表里还留着三个本作出场数为 0 的二代名字（`皐月優`/`篠原鞠絵`/`鏡美帆`）。
 * **先翻译、后生成字库**：字库是「用到的字」的集合，任何批次只为字库里**还没有**的字付费。
 * **半成品比现状更糟**：整体覆盖 stock 记录之后，未翻译的块不再是日文，而是读得通但完全错误的
   中文。所以「骑乘/覆盖某个 stock 索引」必须与「该索引被所有仍存活的引用翻译完毕」同时发生。

@@ -10,7 +10,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `9710c49b40f5a29d14178d698c99a74f` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
+| `rom_prologue_zh.sfc` | `b56977ac149030da16ecb47eec9e4516` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 `rom_prologue_zh_DRAFT_乱码待修.sfc`、`rom_prologue_zh_jis.sfc`、`tokimeki_chinese_font.sfc`、
@@ -31,7 +31,8 @@ docs/RELEASE_zh.md 本文件（唯一权威状态）
 docs/research/    逆向证据与构建输入（glyph_alloc.json 是构建必读输入，勿删）
 docs/prologue_zh/ 183 张渲染表 + index.txt 转录（可重生成）
 docs/history/     旧交接/破解笔记/乱码截图，非权威（README 说明为何作废）
-translations/     手工中文稿（*.tsv、shrine_zh.json）
+docs/ALL_CHARACTERS.txt  wiki 角色资料（15 个人物的日文名/生日/爱好/声优），人名译法的原始依据
+translations/     手工中文稿（*.tsv、shrine_zh.json）＋ **name_glossary.tsv（人名对照表，翻译必读）**
 start-screenshots/ 日文原版启动流程截图
 rom_original_japanese.sfc / rom_prologue_zh.sfc  母盘与交付盘（根目录只此两颗 .sfc）
 ~/retro/roms/     项目外的 ROM 库：上游命名的原版转储与 .srm
@@ -40,8 +41,8 @@ rom_original_japanese.sfc / rom_prologue_zh.sfc  母盘与交付盘（根目录�
 第一轮删除：`out/`（29 MB 从日文 ROM 解出的 dump，可由 `tools/extract_all.py`、`tools/dump_text.py`、
 `tools/extract_font.py` 重新生成）、68 个属于废弃方案的脚本（旧 JIS 槽位方案、死循环排查期的
 一次性模拟器驱动），以及 4 个引用了已删脚本、删完即坏的工具，共 72 个，`tools/` 从 131 降到 61。
-当时 `tools/build_prologue.py --patch` 仍产出字节完全相同的 `aac6c2af…`（该盘已被第一节的
-9710c49b… 取代），验收链路无恙。
+当时 `tools/build_prologue.py --patch` 仍产出字节完全相同的 `aac6c2af…`（该盘此后又被第一节的
+交付盘取代了两轮：字形位移修正 → 人名修正），验收链路无恙。
 
 第二轮（同日，字形修正之后）再删 21 个：编码破解期的一次性仪表（`align_table`、`build_table`、
 `textdec_final`、`validate_encoding`、`prologue_vocab`）、被 `dis2.py` 取代的反汇编器（`disasm`、
@@ -81,8 +82,8 @@ python3 tools/build_prologue.py --patch
 
 * 文本编码为 `$F0–$FF` 双字节对，12 位索引上限 4095；字形记录 28 字节/个，每页 1170 槽，
   基址 `0x3E8000`，共 3 页（`tools/tmtext.py`）。
-* 本补丁占用 **1146 / 1166** 个可用新槽（86 个 `$40–$9F` 码页项另计），**剩余 20**。
-* 构建报告 `font: 1178/1178 slots carry WenQuanYi (32 of them at stock indices)`，
+* 本补丁占用 **1145 / 1166** 个可用新槽（86 个 `$40–$9F` 码页项另计），**剩余 21**。
+* 构建报告 `font: 1177/1177 slots carry WenQuanYi (32 of them at stock indices)`，
   即屏幕上出现的每一个汉字都是文泉驿点阵，**没有任何一个用 JIS/繁体字形顶替**。
 * 注入量是最小的：只为本补丁真正用到的字生成记录，未用到的槽位保持原样
   （`0 unclaimed slot(s) changed`）。

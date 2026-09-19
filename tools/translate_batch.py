@@ -9,12 +9,27 @@ from collections import Counter
 
 JP = 'reference/j2e_full/scripts_x/Scripts/Japanese/Tksc'
 
-# 人名表 (替换为占位符 <N>)
-NAMES = ['藤崎詩織', '如月未緒', '虹野沙希', '古式ゆかり', '清川望', '鏡美帆',
-         '美樹原愛', '紐緒結奈', '館林見晴', '皐月優', '早乙女優美', '篠原鞠絵',
-         '伊集院レイ', '藤崎', '如月', '虹野', '古式', '清川', '鏡', '美樹原',
-         '紐緒', '館林', '皐月', '早乙女', '篠原', '伊集院', '詩織', '優美',
-         'Saro']
+# 人名表 (替换为占位符 <N>) —— 真值在 translations/name_glossary.tsv，
+# 那里同时给出 wiki 的通行译名，所以不要再在本文件里手写人名：漏一个姓就会让
+# 该角色的所有台词规范化不出同一个 <N>，TM 就白分了。
+GLOSSARY_PATH = 'translations/name_glossary.tsv'
+
+
+def _glossary(path=GLOSSARY_PATH):
+    """{日文: 中文} for every row typed ``name`` in the glossary."""
+    out = {}
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            if line.startswith('#') or not line.strip():
+                continue
+            col = line.rstrip('\n').split('\t')
+            if len(col) >= 3 and col[2] == 'name':
+                out[col[0]] = col[1]
+    return out
+
+
+GLOSSARY = _glossary()
+NAMES = list(GLOSSARY)
 
 # 翻译记忆: 规范化日文(人名-><N>) => 中文
 TM = {
