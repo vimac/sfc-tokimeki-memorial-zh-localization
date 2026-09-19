@@ -1,0 +1,12 @@
+{
+ "note": "kanji slots the speaker nameplate draws from the stock font, measured by jisaudit.py on the 346-row build over docs/prologue_zh and /tmp/play/cap_zh, which agree exactly; the earlier panel words are now re-pointed rows",
+ "plate": {
+  "1EF": "伊",
+  "223": "院",
+  "517": "好",
+  "5BA": "崎",
+  "6A2": "集",
+  "9DB": "藤",
+  "C84": "雄"
+ }
+}
