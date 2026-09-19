@@ -24,7 +24,7 @@
 ## 二、目录归属
 
 ```
-tools/         40 个脚本：验收链路 + 再推导仪表（见 §三）
+tools/         41 个脚本：验收链路 + 再推导仪表（见 §三），外加字符台账 charledger.py
 AGENTS.md      本文件：规则
 docs/RELEASE_zh.md        权威状态（md5 / gate / 容量 / 剩余工作）
 docs/research/   逆向证据（*.md 是结论，附地址与偏移）与构建输入/输出
@@ -123,6 +123,10 @@ out/             从日文 ROM dump 出来的分析用文本，可重生成，�
    的逐字对齐就是这张表，边译边收集、由 #16 定价。
    验收：`in-place glyphs: N records … OK` 增长且 `0 unclaimed slot(s) changed` 不破。
 2. **#16 词表预算 gate**：把「本批新增字模数」变成构建期断言（增量口径，见 §四 第一条）。
+   前半已经落地：`tools/charledger.py`（sqlite 台账在 `out/charledger.sqlite`，**派生物、不是真值**，
+   由 `ingest` 从双语源重算）。`python3 tools/charledger.py report` 把全部中文用字分三档
+   （owned／ride／new），`tail N` 给出**按频次倒序的精简清单**（要砍就先砍尾巴）。
+   96 行草稿实测：12 个未拥有字里 7 个是 ride（59%），5 个 new。
    实测 `translations/pending.json`：**25,769 段 / 74,386 个汉字位置 / 只有 1,254 个不同日文汉字**
    （80% 频次只需 222 字，90% 362 字，99% 856 字），其中 485 字本盘已拥有。
 3. **#17 汉字化的姓名输入键盘**：`$40-$9F` 96 项表与 `$1F2D4` 键盘网格都是可重指的数据表，
