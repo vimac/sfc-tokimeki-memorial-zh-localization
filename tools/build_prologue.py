@@ -87,7 +87,13 @@ OVERLAY = PROMPT + CAPTION
 #      pointer because from there the stream is a `$01` branch table: those bytes
 #      are runtime distance tables, not text (docs/research/control-codes.md).
 #  144: the 序章.
-BLOCKS = ((8, 'block8_zh.txt', 0x1E5E90), (144, 'prologue_zh.txt', END))
+#   0: the daily system / hint pool, and the two `$0A`-terminated script steps the
+#      new-game prompt is drawn from.  Its 726 boxes tile all 14,778 bytes, so the
+#      extent end is just the next block pointer; boxes 0 and 1 get written twice on
+#      purpose -- once by this block, once by PROMPT below -- and both encode the
+#      same two strings, so the later write only replaces bytes with bytes.
+BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA),
+          (8, 'block8_zh.txt', 0x1E5E90), (144, 'prologue_zh.txt', END))
 
 # The default player name.  The prologue's 〔姓〕/〔名〕 markers draw the WRAM buffers at
 # $0E00 and $0E08.  Stock fills them two ways: `LDA #$xxxx` boot sites whose operands are
