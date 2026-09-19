@@ -1,7 +1,8 @@
 # 中文版交付说明 / Chinese patch — delivery status
 
-权威状态文件。`HANDOFF.md` 与 `docs/HANDOFF_old.md` 是上一轮工作的交接记录，其中若干数字已被
-实测推翻（见下文「对 HANDOFF 的更正」），引用前请核对本文件。
+权威状态文件。**动手前先读 `AGENTS.md`**（ROM/文档/脚本的存放规则与工程纪律）。旧交接记录
+（`docs/history/HANDOFF_v1_2026-09-16.md`、`docs/history/HANDOFF_v2_2026-09-18.md`）里的若干数字已被
+实测推翻（见下文「对旧交接的更正」），不得引用。
 
 日期：2026-09-20。
 
@@ -15,25 +16,45 @@
 `rom_prologue_zh_DRAFT_乱码待修.sfc`、`rom_prologue_zh_jis.sfc`、`tokimeki_chinese_font.sfc`、
 `ctrltest_simple.sfc` 及其 `.srm` 存档是历史中间产物（JIS 顶替方案时代），2026-09-20 清理时已删除，
 完整副本保留在 `~/retro/tokimeki.backup.2609200007.tar.gz`。
-当初作为问题证据的 17 张乱码截图已移到 `docs/evidence_2026-09-18_jis/`。
+当初作为问题证据的 17 张乱码截图已归档到 `docs/history/evidence_jis_2026-09-18/`。
+上游命名的原版转储（`Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc`，与母盘
+字节相同）和它的两个 `.srm` 已移出项目，放在 `~/retro/roms/`；**项目根目录从此只留上面这两颗 `.sfc`**，
+所有工具一律按 `rom_original_japanese.sfc` 这个名字读母盘（`tools/extract_all.py`、`tools/romlib.py`
+已改）。
 
-## 一之二、工作区结构（2026-09-20 清理后）
+## 一之二、工作区结构（2026-09-20 两轮清理后）
 
 ```
-tools/            59 个脚本（清理前 131 个）：19 个在验收链路上，其余是文档引用的侦察仪表
-docs/RELEASE_zh.md 本文件
+AGENTS.md         规则：ROM/文档/脚本存放、工程纪律、后续 agent 待办
+tools/            40 个脚本（清理前 131 → 61 → 40）：验收链路 import 闭包 12 个，其余是文档引用的侦察仪表
+docs/RELEASE_zh.md 本文件（唯一权威状态）
 docs/research/    逆向证据与构建输入（glyph_alloc.json 是构建必读输入，勿删）
 docs/prologue_zh/ 183 张渲染表 + index.txt 转录（可重生成）
+docs/history/     旧交接/破解笔记/乱码截图，非权威（README 说明为何作废）
 translations/     手工中文稿（*.tsv、shrine_zh.json）
 start-screenshots/ 日文原版启动流程截图
-rom_original_japanese.sfc / rom_prologue_zh.sfc  母盘与交付盘
+rom_original_japanese.sfc / rom_prologue_zh.sfc  母盘与交付盘（根目录只此两颗 .sfc）
+~/retro/roms/     项目外的 ROM 库：上游命名的原版转储与 .srm
 ```
 
-已删除：`out/`（29 MB 从日文 ROM 解出的 dump，可由 `tools/extract_all.py`、`tools/dump_text.py`、
+第一轮删除：`out/`（29 MB 从日文 ROM 解出的 dump，可由 `tools/extract_all.py`、`tools/dump_text.py`、
 `tools/extract_font.py` 重新生成）、68 个属于废弃方案的脚本（旧 JIS 槽位方案、死循环排查期的
-一次性模拟器驱动），以及 4 个引用了已删脚本、删完即坏的工具，共 72 个，`tools/` 从 131 降到 59。
-删除后 `tools/build_prologue.py --patch`
-仍产出字节完全相同的 `aac6c2af…`（该盘是当时的构建，已被第一节的 9710c49b… 取代），验收链路无恙。
+一次性模拟器驱动），以及 4 个引用了已删脚本、删完即坏的工具，共 72 个，`tools/` 从 131 降到 61。
+当时 `tools/build_prologue.py --patch` 仍产出字节完全相同的 `aac6c2af…`（该盘已被第一节的
+9710c49b… 取代），验收链路无恙。
+
+第二轮（同日，字形修正之后）再删 21 个：编码破解期的一次性仪表（`align_table`、`build_table`、
+`textdec_final`、`validate_encoding`、`prologue_vocab`）、被 `dis2.py` 取代的反汇编器（`disasm`、
+`disasm65816`）、被 `poolscan.py` + `allocate()` 取代的「找空槽」方案（`find_slots`、`slotalloc`、
+`census`、`fontcensus`）、被 `wqyfont.py` 取代的旧注入器 `font_wqy` 与被 `glyphview.py` 取代的
+`show_glyph`、序章提取的早期版本（`prologue_atoms`、`prologue_script`、`prologue_struct`；
+`prologue_boxes` 留着，因为活着的 `block_boxes.py`/`corpusmap.py` 真的 import 它）、J2E 模板生成器
+`build_template`，以及结题的一次性实验（`start_matrix`、`ipsparse`、`price_rows`、`ptrscan`）。
+它们写过的 10 份孤立产物
+（`prologue_atoms.json`、`prologue_script.{json,txt}`、`prologue_frames.txt`、`slot_census.json`、
+`glyph_usage.json`、`free_slots.txt`、
+`block0_segments.txt`、`block0_span.txt`、`system_block_jp.txt`）一并删除；需要时从 git 历史取回。
+删完复跑：`--patch` 仍产出 `9710c49b…`，`jisaudit`/`name_tables` 判定不变。
 
 git 只跟踪源码、文档与手工译文；ROM/存档、`reference/`（18 MB 第三方素材）、`out/`、
 渲染 PNG 与 `translations/pending.json`（可重生成的解包缓存）都在 `.gitignore` 里。
@@ -158,12 +179,20 @@ python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/55 name records still
 同时发生，不能作为中间状态发布。旧的 8 MB / ExLoROM 第 4 页扩容（真实增益只有 586 个字模）在
 3,384 的预算下**不再需要**；`$19Axx` 残句与 romaji 昵称这类零散项，并入整体翻译后自然消化。
 
-## 六、对 HANDOFF 的更正
+## 六、对旧交接（`docs/history/`）的更正
 
 * 主题歌「还差约 150 个字」是**按总字数**算的错账。一批文本只为字库里**还没有**的字付费：
   26 句歌词实测只花 **12** 个字模，本构建已经收录。
-* 「需要解决：正确的槽位寻址公式」（HANDOFF P1）——已解决并写入 `tools/tmtext.py`
+* 「需要解决：正确的槽位寻址公式」（v2 交接 P1）——已解决并写入 `tools/tmtext.py`
   （`GLYPH_BASE + (idx//1170)*0x8000 + (idx%1170)*28`），`$80:D490` 的三次 `SBC #$0492` 与之吻合。
+* v2 交接（`docs/history/HANDOFF_v2_2026-09-18.md` §码表）里的「`0xA0-0xFC` 高字节 × 任意低字节
+  = 2 字节汉字码，走行 delta 表」**是错的**：`$A0-$E7` 是 phrase 宏、`$E8-$EF` 是 sub-text 调用，
+  `$A0-$A7` 具体是句末标点宏，双字节字形只存在于 `$F0-$FF`。同样错的还有
+  `notes_crack_2026-09-17.md` 的「`0x09` = 空格已确认」——`$09` 吃 3 字节，`$80:CC20` 把 16 位操作数
+  装进格游标，它**不是**全角空格。见 `docs/research/glyph-addressing.md` 与
+  `docs/research/control-codes.md`。
+* 「字形偏移按 bbox 校准到原版」这条方法论**要加约束**：记录只有 14 列会被画，按 bbox 打分会奖励
+  把右边切掉的位移（见 §三之二）。`dx=2` 就是这么被选中的，现已改为 `dx=1`。
 * 「P1: 用 S2J_SLOT 把简体字形写入 JIS 槽位」——**思路已按新目标重新采纳，但含义要分清**：
   用户拒绝的是「拿 JIS/繁体字**当成另一个字显示**」（字不对）。而**复用槽位地址**、位图仍是我们
   自己渲染的文泉驿、且该槽位原本的日文汉字与我们的汉字**是同一个字**（如 日/月/藤/院），既不改变

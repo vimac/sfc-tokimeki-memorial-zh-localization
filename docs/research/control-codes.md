@@ -1,7 +1,7 @@
 # Tokimeki Memorial (SFC JP Rev 1) — control-code widths and semantics
 
 Recovered by disassembling every handler reachable from the text dispatcher
-(`$80:CA6D`), not copied from `HANDOFF.md`.
+(`$80:CA6D`), not copied from the archived handoffs in `docs/history/`.
 
 ## Dispatch path (`$80:CAEB`, file `0x4AEB`)
 

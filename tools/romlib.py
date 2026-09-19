@@ -7,8 +7,8 @@ import os
 import struct
 import zlib
 
-ROM_PATH = os.path.join(os.path.dirname(__file__), "..",
-                        "Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc")
+ROM_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "rom_original_japanese.sfc")
 
 _cache = {}
 

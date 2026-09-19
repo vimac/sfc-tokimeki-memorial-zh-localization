@@ -11,7 +11,10 @@
 """
 import struct, json, os
 
-ROM = 'Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROM = os.path.join(ROOT, 'rom_original_japanese.sfc')   # read-only master, md5 cd36eb89…
+OUT = os.path.join(ROOT, 'out', 'script')               # gitignored; safe to delete and regenerate
+os.makedirs(OUT, exist_ok=True)
 NAME_PTR = 0x9872        # 名字块指针表 (145 项)
 TEXT_PTR = 0x9872 + 435  # 文本块指针表
 NBLOCK = 145
@@ -26,7 +29,7 @@ OVERRIDE = {0xF0E7:'ま', 0xF9B3:'日', 0xF6D4:'所', 0xFBEA:'本', 0xFB85:'辺'
             0xF8A7:'大', 0xFA29:'難', 0xFCB8:'落'}
 try:
     import json as _j
-    OVERRIDE.update({int(k,16): v for k, v in _j.load(open('out/script/char_overrides.json')).items()})
+    OVERRIDE.update({int(k,16): v for k, v in _j.load(open(os.path.join(OUT, 'char_overrides.json'))).items()})
 except Exception:
     pass
 ROWDELTA = {0x81:0x72D8,0x82:0x7082,0x83:0x6DBD,0x8A:0x689E,0x8B:0x685A,0x8C:0x6816,0x8D:0x67D3,
@@ -47,7 +50,7 @@ print('名字块指针(前8):', [hex(p) for p in name_ptrs[:8]])
 print('范围: 文本 min=%X max=%X' % (min(text_ptrs), max(text_ptrs)))
 print('范围: 名字 min=%X max=%X' % (min(name_ptrs), max(name_ptrs)))
 json.dump({'name_ptrs': name_ptrs, 'text_ptrs': text_ptrs},
-          open('out/script/pointers.json','w'))
+          open(os.path.join(OUT, 'pointers.json'), 'w'))
 
 # ---------- 解码器 ----------
 def decode_byte(i):
@@ -109,11 +112,10 @@ for idx, i in enumerate(order):
     en = text_ptrs[order[idx+1]] if idx+1 < len(order) else st + 0x2000
     blocks.append((i, st, min(en, st+0x8000)))
 
-os.makedirs('out/script', exist_ok=True)
 total_chars = 0
 total_segs = 0
-with open('out/script/all_blocks.txt', 'w') as fb, \
-     open('out/script/strings.tsv', 'w') as ft:
+with open(os.path.join(OUT, 'all_blocks.txt'), 'w') as fb, \
+     open(os.path.join(OUT, 'strings.tsv'), 'w') as ft:
     ft.write('block\toffset\tbytes\ttext\thex\n')
     for i, st, en in blocks:
         txt, segs = decode_block(st, en)
