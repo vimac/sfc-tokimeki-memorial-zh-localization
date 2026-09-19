@@ -10,7 +10,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `b56977ac149030da16ecb47eec9e4516` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
+| `rom_prologue_zh.sfc` | `3968741b9330f2f19c2e96dbffd0f94a` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 `rom_prologue_zh_DRAFT_乱码待修.sfc`、`rom_prologue_zh_jis.sfc`、`tokimeki_chinese_font.sfc`、
@@ -32,7 +32,8 @@ docs/research/    逆向证据与构建输入（glyph_alloc.json 是构建必读
 docs/prologue_zh/ 183 张渲染表 + index.txt 转录（可重生成）
 docs/history/     旧交接/破解笔记/乱码截图，非权威（README 说明为何作废）
 docs/ALL_CHARACTERS.txt  wiki 角色资料（15 个人物的日文名/生日/爱好/声优），人名译法的原始依据
-translations/     手工中文稿（*.tsv、shrine_zh.json）＋ **name_glossary.tsv（人名对照表，翻译必读）**
+translations/     手工中文稿（*.tsv、shrine_zh.json）＋ **name_glossary.tsv（人名对照表）
+                  ＋ term_glossary.tsv（系统术语对照表：能力点标签等，翻译必读）**
 start-screenshots/ 日文原版启动流程截图
 rom_original_japanese.sfc / rom_prologue_zh.sfc  母盘与交付盘（根目录只此两颗 .sfc）
 ~/retro/roms/     项目外的 ROM 库：上游命名的原版转储与 .srm
@@ -71,8 +72,13 @@ python3 tools/build_prologue.py --patch
 * **序章（block 144）全部 88 个文本框**，从标题界面 → 姓名输入 → 生日/血型 → 藤崎诗织问答 →
   序章蒙太奇 → 第一天字幕 → 状态界面，冷启动 96 次 A 键全程可玩，无死循环、无指针漂移。
 * **每日事件池（block 8）125 个文本框**（晨间独白、提示语）。
-* **系统 UI：绘制脚本 bank（`$180C0–$20000`）912 行**——标题/菜单/状态面板/日历/月份表/
+* **系统 UI：绘制脚本 bank（`$180C0–$20000`）914 行**——标题/菜单/状态面板/日历/月份表/
   存档界面/社团/校庆/社团秘技/相册/音乐试听标签/姓名输入问题流/假名与汉字键盘。
+* **能力点九项标签**（面板 `$1835A–$1839A` 与列表页 `$1AFB8–$1B007`，两处各 9 个）：
+  体力 文科 理科 艺术 运动 杂学 容姿 毅力 **压力**。第 9 项日文是 `ストレス`，但它不是四个假名码，
+  而是半宽双字格 `0x153`(スト)+`0x154`(レス) 两格，所以按字符搜镜像搜不到（见 `AGENTS.md` §四）。
+  这一条由用户提供原版截图 `docs/research/status_panel_jp_original.png` 证实；构建新增 9 行、
+  新增字模 **0** 个（压/力 序章早已拥有）。本批 9 个标签合计只改了 36 字节。
 * **姓名相关**：28 条姓氏表、14×3 说话人名片表、`$1F890` 的 32 条预设姓名池、`$E803/04/05`
   子文本调用；`さん`/`ちゃん` 等称呼改为「同学」「小同学」，宽度与码数不变所以索引表无需改动。
 * **运行时字形**：`$E806` 日期（月/日）、`$E807` 血型（ＡＢＯ/型）等在 stock 槽位就地重写。
@@ -82,8 +88,8 @@ python3 tools/build_prologue.py --patch
 
 * 文本编码为 `$F0–$FF` 双字节对，12 位索引上限 4095；字形记录 28 字节/个，每页 1170 槽，
   基址 `0x3E8000`，共 3 页（`tools/tmtext.py`）。
-* 本补丁占用 **1145 / 1166** 个可用新槽（86 个 `$40–$9F` 码页项另计），**剩余 21**。
-* 构建报告 `font: 1177/1177 slots carry WenQuanYi (32 of them at stock indices)`，
+* 本补丁占用 **1144 / 1166** 个可用新槽（86 个 `$40–$9F` 码页项另计），**剩余 22**。
+* 构建报告 `font: 1176/1176 slots carry WenQuanYi (32 of them at stock indices)`，
   即屏幕上出现的每一个汉字都是文泉驿点阵，**没有任何一个用 JIS/繁体字形顶替**。
 * 注入量是最小的：只为本补丁真正用到的字生成记录，未用到的槽位保持原样
   （`0 unclaimed slot(s) changed`）。

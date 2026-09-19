@@ -345,24 +345,29 @@ UI_TEXT_ROWS = (
     (0x1863C, 6, '「凶だ‥‥。', '「凶兆…。', 'R'),
     (0x1864A, 5, '「げげっ！', '「啊呀！', 'R'),
     (0x18655, 5, '大凶だ…。', '大凶…。', 'R'),
-    # the status panel's eight affinity labels, each followed by the 0x155 mark glyph
-    (0x1835A, 3, '体調' + K, '健康' + K, 'R'),
+    # the status panel's nine affinity labels, each followed by the 0x155 mark glyph.
+    # The ninth is ストレス, spelled with the half-width pair cells 0x153 (スト) and
+    # 0x154 (レス) -- two codes, not four, and no kana character maps to them, so
+    # `UI_KEEP` stands in for both on the Japanese side.
+    (0x1835A, 3, '体調' + K, '体力' + K, 'R'),
     (0x18362, 3, '文系' + K, '文科' + K, 'R'),
     (0x1836A, 3, '理系' + K, '理科' + K, 'R'),
     (0x18372, 3, '芸術' + K, '艺术' + K, 'R'),
     (0x1837A, 3, '運動' + K, '运动' + K, 'R'),
     (0x18382, 3, '雑学' + K, '杂学' + K, 'R'),
-    (0x1838A, 3, '容姿' + K, '容貌' + K, 'R'),
+    (0x1838A, 3, '容姿' + K, '容姿' + K, 'R'),
     (0x18392, 3, '根性' + K, '毅力' + K, 'R'),
-    # the same eight as the list screen's tabs, without the mark
-    (0x1AFB8, 2, '体調', '健康', 'R'),
+    (0x1839A, 3, K + K + K, '压力' + K, 'R'),
+    # the same nine as the list screen's tabs, without the mark
+    (0x1AFB8, 2, '体調', '体力', 'R'),
     (0x1AFC2, 2, '文系', '文科', 'R'),
     (0x1AFCC, 2, '理系', '理科', 'R'),
     (0x1AFD5, 2, '芸術', '艺术', 'R'),
     (0x1AFDF, 2, '運動', '运动', 'R'),
     (0x1AFE9, 2, '雑学', '杂学', 'R'),
-    (0x1AFF3, 2, '容姿', '容貌', 'R'),
+    (0x1AFF3, 2, '容姿', '容姿', 'R'),
     (0x1AFFD, 2, '根性', '毅力', 'R'),
+    (0x1B007, 2, K + K, '压力', 'R'),
     # ---- the rest of the draw-script bank: the profiles, club list, date-spot map,
     # save-file menu, options page and event titles ($18800-$1A460).  Generated from
     # the ROM itself (tools/../uispec + a stock decode) so the Japanese column can not
