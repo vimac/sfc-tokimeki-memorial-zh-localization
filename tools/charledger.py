@@ -1,7 +1,7 @@
 """How many glyph records the whole Chinese vocabulary really costs, and in what order to pay.
 
 Censuses every hanzi our translated sources use (per source, re-runnable), then classifies
-each distinct character as *owned* (the build already holds a record), *ride* (the stock band
+each distinct character as *owned* (the build already holds a record), *inplace* (the stock band
 has an index whose character is exactly this one, so rewriting that record in place is free
 and cannot mis-render surviving Japanese text), or *new* (needs a fresh slot or a B-tier
 takeover).  Because the census is frequency-ordered, the same table is the trimming list: if
@@ -63,7 +63,7 @@ def owned_chars():
 
 
 def claimed_indices():
-    """Indices our own build already points at, so they cannot also be a free ride.
+    """Indices our own build already points at, so they cannot also be ridden in place.
 
     ``at_stock``/``inplace`` hold stock indices that keep their character, which is fine;
     ``fresh`` is the range allocate() handed to our own characters, and an index in it
@@ -129,7 +129,7 @@ def tiered(db, where='', args=()):
         if ch in have:
             tier = 'owned'
         elif idx is not None and idx not in claimed:
-            tier = 'ride'
+            tier = 'inplace'
         else:
             tier = 'new'
         rows.append((ch, n, tier))
@@ -143,7 +143,7 @@ def show(rows, label):
         by[tier][1] += n
     total = sum(n for _, n, _ in rows)
     print('%s: %d distinct hanzi, %d positions' % (label, len(rows), total))
-    for tier in ('owned', 'ride', 'new'):
+    for tier in ('owned', 'inplace', 'new'):
         c, p = by[tier]
         print('  %-5s %4d chars  %7d positions  (%.1f%%)'
               % (tier, c, p, 100.0 * p / max(total, 1)))
@@ -156,7 +156,7 @@ def report(db):
     show(tiered(db, "WHERE src LIKE 'draft:%' AND ch NOT IN "
                     '(SELECT ch FROM usage WHERE src NOT LIKE ?)',
                 ('draft:%',)), 'draft lines, characters the build does not have yet')
-    print('  "ride" is the free tier -- those chars already have a stock index of their own, '
+    print('  "inplace" is the free tier -- those chars already have a stock index of their own, '
           'so a whole-font backfill rewrites the record in place at zero slot cost, and '
           'surviving Japanese text still reads correctly.')
     print('  "new" has to be placed: the fresh pool is what build_prologue.py --patch reports '
