@@ -94,6 +94,10 @@ OVERLAY = PROMPT + CAPTION
 #      same two strings, so the later write only replaces bytes with bytes.
 BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA),
           (8, 'block8_zh.txt', 0x1E5E90), (144, 'prologue_zh.txt', END))
+# Which phrase ($B9) and sub-text ($C3) dictionary entries have a Chinese reading.
+# Rows are key/cap/refs/japanese/chinese/bytes/fit; only key and chinese are read
+# here, the rest is `tools/phrasedict.py` output kept for eyeballing.
+PHRASE_GLOSSARY = os.path.join(ROOT, 'translations', 'phrase_glossary.tsv')
 
 # The default player name.  The prologue's 〔姓〕/〔名〕 markers draw the WRAM buffers at
 # $0E00 and $0E08.  Stock fills them two ways: `LDA #$xxxx` boot sites whose operands are
@@ -152,7 +156,7 @@ NAME_POOL_TABLE = (
     (0x21A2F9, '虹野さん', '虹野同学'),  (0x21A302, '古式さん', '古式同学'),
     (0x21A30B, '清川さん', '清川同学'),  (0x21A314, '鏡さん', '镜同学'),
     (0x21A31B, '朝日奈さん', '朝日奈同学'), (0x21A326, '美樹原さん', '美树原同学'),
-    (0x21A331, '優美ちゃん', '优美小同学'), (0x21A33C, '館林さん', '馆林同学'),
+    (0x21A331, '優美ちゃん', '小优美同学'), (0x21A33C, '館林さん', '馆林同学'),
     (0x21A345, '伊集院', '伊集院'),      (0x21A34C, '良雄', '良雄'),
     (0x21A351, '外井', '外井'),
 )
@@ -1383,12 +1387,16 @@ def ui_text_slots(data):
     return out
 
 
-def parse_body(data, start, stop, sb):
+def parse_body(data, start, stop, sb, names=None):
     """Macro byte span -> (text, ctrls, clean, slots, tokens).
 
     The body ends at its $0A return, which is local to the macro and must not be
     propagated.  $00/$0E/$0F are parameter bytes of the variable/format macros,
     so a body holding them is not plain text.
+
+    ``names`` maps a font index to the character the patch put there, so a body
+    we rewrote reads back as its Chinese rather than as whatever the JIS table
+    calls that slot.
 
     ``slots`` and ``text`` parallel each other: the glyph index the body reads a
     character from, or None where it holds a name marker.  A fold may only be
@@ -1396,6 +1404,8 @@ def parse_body(data, start, stop, sb):
     engine would draw the old Japanese bitmap instead of the new one.  ``tokens``
     is the same content in stream order as ('g', slot) / ('c', byte) pairs.
     """
+    names = names or {}
+    name = lambda i: names.get(i) or T.idx_to_char(i)
     i, chars, ctrls, slots, toks = start, [], [], [], []
 
     def out(clean):
@@ -1417,7 +1427,7 @@ def parse_body(data, start, stop, sb):
             i += 1
         elif b < 0xA0:
             idx = sb[b]
-            c = T.idx_to_char(idx)
+            c = name(idx)
             if not c:
                 return out(False)
             chars.append(c)
@@ -1428,7 +1438,7 @@ def parse_body(data, start, stop, sb):
             return out(False)                        # nested macro
         else:
             idx = ((b << 8) | data[i + 1]) & 0x0FFF
-            chars.append(T.idx_to_char(idx) or '')
+            chars.append(name(idx) or '')
             slots.append(idx)
             toks.append(('g', idx))
             i += 2
@@ -1440,6 +1450,7 @@ class Codec:
 
     def __init__(self, rom):
         self.rom = rom
+        self.names = {}                      # index -> char, set by the verifier
         d = rom.data
         self.sb = {c: rom.sb_entry(c) for c in range(0x40, 0xA0)}
         self.c2code = {}
@@ -1461,10 +1472,12 @@ class Codec:
         return base + o, base + self.sub_next.get(o, 0xFFFF)
 
     def phrase(self, code):
-        return parse_body(self.rom.data, *self.phrase_span(code), sb=self.sb)
+        return parse_body(self.rom.data, *self.phrase_span(code), sb=self.sb,
+                          names=self.names)
 
     def sub(self, hi, lo):
-        return parse_body(self.rom.data, *self.sub_span(hi, lo), sb=self.sb)
+        return parse_body(self.rom.data, *self.sub_span(hi, lo), sb=self.sb,
+                          names=self.names)
 
     def body(self, code_str):
         """The macro bytes a folded atom's 'code' really expands to, minus the $0A.
@@ -1985,15 +1998,107 @@ def line_items(code, seg, line, char2idx, repaged=frozenset()):
     return items, folds
 
 
-def encode_all(code, segs, zh, char2idx, page):
+def encode_all(code, segs, zh, char2idx, page, dict_folds=()):
     """(Encoder, [bytes per segment], [items per segment]) for one code page."""
     lines, folds = [], {}
     for seg, line in zip(segs, zh):
         it, f = line_items(code, seg, line, char2idx, frozenset(page.values()))
         lines.append(it)
         folds.update(f)
+    folds.update(dict_folds)
     enc = Encoder(code, char2idx, folds, page)
     return enc, [enc.encode(it)[0] for it in lines], lines
+
+
+def macro_span(code, key):
+    """(lo, hi) -- the file span one dictionary code owns, up to the next entry."""
+    return (code.phrase_span(int(key, 16)) if len(key) == 2
+            else code.sub_span(int(key[:2], 16), int(key[2:], 16)))
+
+
+def phrase_glossary(path=None):
+    """{macro code: Chinese} for the dictionary entries a translation exists for."""
+    p = path or PHRASE_GLOSSARY
+    if not os.path.exists(p):
+        return {}
+    return {f[0].lower(): f[4].strip() for f in
+            (l.rstrip('\n').split('\t') for l in open(p, encoding='utf-8'))
+            if len(f) > 4 and re.fullmatch(r'[0-9a-fA-F]{2}([0-9a-fA-F]{2})?', f[0])
+            and f[4].strip()}
+
+
+def macro_bodies(code, char2idx, gloss=(), page=(), verbose=True):
+    """([($B9/$C3 rewrite, cap, key, jp, zh)], {fold: call bytes}, [(key, why not)]).
+
+    A 2-3 byte box is not a layout problem when its sentence does not live in the
+    box: block 0's 1,370 macro calls draw from 178 shared bodies, so rewriting one
+    body localises every box that calls it while the box spends its original call
+    bytes.  The body is replaced *inside its own span* -- the phrase and sub-text
+    tables are never touched, because an index no text block mentions is still
+    reached dynamically by the variable codes (see 'Space' in the module docstring).
+    An entry whose Chinese is longer than its span gets no fold either, so its
+    boxes report as over budget instead of failing somewhere obscure.  Nothing
+    can be relocated: the phrase bank's only gap is a table at its start and the
+    sub-text bank's 1,883 spans tile the whole 32 KB, so the fix is to shorten
+    that entry's chinese until it fits (2026-09-20, 172 of 178 fit that way).
+
+    This runs on the *settled* code page, because a page entry is what makes
+    「我才是」 4 bytes instead of 7.  The price: if a later batch moves a character
+    out of the page, that entry's fold disappears and its boxes come up over
+    budget in the grid audit -- the same loud, fixable symptom the shared code page
+    already has everywhere else (§四: every batch can squeeze an old box).
+    """
+    enc = Encoder(code, char2idx, (), page)
+    slot2ch = {i: c for c, i in char2idx.items()}
+    # Read a body back through the code page this build *installs*: a page entry is
+    # one byte, and the engine resolves it with the patched table, not the JP one.
+    dec = Codec(code.rom)
+    dec.sb = dict(code.sb)
+    for ch, cd in page.items():
+        dec.sb[cd] = char2idx[ch]
+    dec.names = slot2ch
+    gloss = gloss or phrase_glossary()
+    out, folds, late = [], {}, []
+    for key in sorted(gloss):
+        lo, hi = macro_span(code, key)
+        jp, ctrl, clean, slots, _ = parse_body(code.rom.data, lo, hi, sb=code.sb)
+        items = zh_tokens(gloss[key])
+        if not clean or ctrl or any(s is None for s in slots):
+            late.append((key, 'body is not plain text'))
+            continue
+        if any(not t or t.startswith('⟦') or t in MARK_B for t in items):
+            late.append((key, 'chinese is not plain text'))
+            continue
+        if any(enc.single(t) is None for t in items):
+            late.append((key, 'no glyph slot for %r' % gloss[key]))
+            continue
+        body = enc.encode(items)[0]
+        # Read the encoding back the way the engine will, through *our* slot map:
+        # a byte below $40 or a $A0-$A7 box code that is the low half of a
+        # $F0-$FF glyph pair is an operand and inert, but one the parser reaches
+        # on its own would open a box mid-body.  A same-form translation (清川望
+        # for 清川望) still has to pass this, because rewriting the body is what
+        # moves it off the Japanese font's slots.
+        back, c2 = decode_stream(body, 0, len(body), dec, slot2ch)
+        if c2 or back != gloss[key]:
+            late.append((key, 'body decodes as %r%s'
+                         % (back, ' +ctrl %s' % bytes(c2).hex() if c2 else '')))
+        elif len(body) + 1 > hi - lo:
+            late.append((key, '%d B chinese + $0A > %d B span' % (len(body), hi - lo)))
+        else:
+            out.append(((lo, body + b'\x0a'), hi - lo, key, jp, gloss[key]))
+            raw = (bytes([int(key, 16)]) if len(key) == 2
+                   else bytes((int(key[:2], 16), int(key[2:], 16))))
+            folds[tuple(items)] = raw
+    if verbose:
+        span = sum('span' in w for _k, w in late)
+        print('phrase bodies: %d of %d dictionary entries rewritten in place, '
+              '%d whose chinese is longer than their own span (neither bank has a '
+              'dead zone to move them, so they can only be shortened), %d refused (%s)'
+              % (len(out), len(gloss), span, len(late) - span,
+                 '; '.join('%s %s' % t for t in late if 'span' not in t[1])
+                 or 'none'))
+    return out, folds, late
 
 
 def prompt_bodies(enc):
@@ -2112,7 +2217,7 @@ def grid_score(ctx, seg_bytes):
     return over, broken
 
 
-def balance_pages(ctxs, code, char2idx, chars, page):
+def balance_pages(ctxs, code, char2idx, chars, page, dict_folds=()):
     """Grow the shared code page toward the boxes the fixed grids squeeze.
 
     A 1-byte code page entry is worth one byte to every occurrence of that
@@ -2124,12 +2229,19 @@ def balance_pages(ctxs, code, char2idx, chars, page):
     """
     pinned = []
     for _ in range(24):
-        scored = [(ctx, encode_all(code, ctx['segs'], ctx['zh'], char2idx, page)[1])
+        scored = [(ctx, encode_all(code, ctx['segs'], ctx['zh'], char2idx, page,
+                                   dict_folds)[1])
                   for ctx in ctxs]
         tot = [grid_score(ctx, sb) for ctx, sb in scored]
         over = sum(o for o, _ in tot)
         if not over:
             return page, pinned, tot
+        # A byte saved is a byte saved, whichever box it comes from -- so the
+        # tie-break goes to the character that earns its one-byte code most often.
+        # A pin is sticky (frequency order alone would evict it again), and one
+        # spent on a character no translated line uses yet is one the next batch
+        # still needs.  Being folded into a dictionary call elsewhere is not a
+        # reason to skip it: the box that spells it out still pays per character.
         big = [(ctx, sb) for (ctx, sb), (o, _) in zip(scored, tot) if o]
         cand = {t for ctx, sb in big
                 for bi, bx in enumerate(ctx['boxes'][1:])
@@ -2139,22 +2251,27 @@ def balance_pages(ctxs, code, char2idx, chars, page):
                                                 ctx['spans'][bi][1]]))
                 if t in char2idx and t not in page}
         best = None
-        for c in sorted(cand, key=lambda c: (chars[c], c))[:40]:
+        for c in sorted(cand, key=lambda c: (-chars.get(c, 0), c))[:40]:
             trial = build_code_page(chars, code, char2idx, pinned + [c],
                                     verbose=False)
             t2 = [grid_score(ctx, encode_all(code, ctx['segs'], ctx['zh'],
-                                             char2idx, trial)[1])
+                                             char2idx, trial, dict_folds)[1])
                   for ctx in ctxs]
             o = sum(x[0] for x in t2)
-            if o < over and (best is None or o < best[0]):
+            if o < over and (best is None or o < best[0]
+                             or (o == best[0] and chars.get(c, 0)
+                                 > chars.get(best[1], 0))):
                 best = (o, c, trial)
         if best is None:
             return page, pinned, tot
-        print('  pin %r: over-budget %d B' % (best[1], best[0]))
+        print('  pin %r (%d occurrence%s, over-budget now %d B)'
+              % (best[1], chars.get(best[1], 0),
+                 '' if chars.get(best[1], 0) == 1 else 's', best[0]))
         pinned.append(best[1])
         page = best[2]
     return page, pinned, [grid_score(ctx, encode_all(code, ctx['segs'], ctx['zh'],
-                                                     char2idx, page)[1])
+                                                     char2idx, page,
+                                                     dict_folds)[1])
                           for ctx in ctxs]
 
 
@@ -2275,7 +2392,8 @@ def block_ctx(rom, code, blk, hi, path):
     return ctx
 
 
-def patch(rom, code, written, char2idx, need, page, edits=(), inplace=()):
+def patch(rom, code, written, char2idx, need, page, edits=(), inplace=(),
+          bodies=()):
     """written = [(block, file offset, bytes, cap)] for every translated block."""
     out = bytearray(rom.data)
     for blk, s, body, cap in written:
@@ -2284,6 +2402,10 @@ def patch(rom, code, written, char2idx, need, page, edits=(), inplace=()):
         for i in range(s + len(body), s + cap):
             out[i] = 0xFF
     for addr, b in edits:
+        out[addr:addr + len(b)] = b
+    for (addr, b), cap, key, jp, zh in bodies:
+        assert len(b) <= cap, 'dictionary %s: %d bytes in a %d byte span' % (
+            key, len(b), cap)
         out[addr:addr + len(b)] = b
     nrec = 0
     for ch, rec in wqy_records(char2idx, need).items():
@@ -2306,12 +2428,17 @@ def patch(rom, code, written, char2idx, need, page, edits=(), inplace=()):
           % (nrec + len(inplace), len(inplace),
              ' '.join(sorted('%s@%03X' % (c, i) for c, i in inplace.items())),
              len(page)))
-    audit(rom.data, out, [(b, s, cap) for b, s, _, cap in written])
+    for (addr, b), cap, key, jp, zh in bodies[:4]:
+        print('  dict %s @%#x: %d/%d bytes  %s -> %s'
+              % (key, addr, len(b), cap, jp, zh))
+    if len(bodies) > 4:
+        print('  ...and %d more dictionary bodies' % (len(bodies) - 4))
+    audit(rom.data, out, [(b, s, cap) for b, s, _, cap in written], bodies)
     return written
 
 
 
-def audit(orig, out, written=(), quiet=b'\xff'):
+def audit(orig, out, written=(), bodies=(), quiet=b'\xff'):
     """List every byte range the patch touched, with what it is."""
     # Every block range comes from the build's own table, so a mistyped offset
     # there shows up as UNEXPECTED territory instead of slipping through.
@@ -2340,6 +2467,10 @@ def audit(orig, out, written=(), quiet=b'\xff'):
     known += [('block %d text' % blk, (lo, lo + cap))
               for blk, lo, cap in written]
     known += [('play label %d' % i, w) for i, w in enumerate(PLAY_LABEL_REGIONS)]
+    # A rewritten dictionary body lives in bank $B9/$C3, outside every text
+    # pointer, so without this the audit would call those bytes unknown ground.
+    known += [('dictionary body', (lo, lo + len(b)))
+              for (lo, b), _cap, _key, _jp, _zh in bodies]
 
     def label(a):
         for k, v in known:
@@ -2417,6 +2548,7 @@ def verify(char2idx, ctx, dst, total):
     slot2ch = {i: c for c, i in char2idx.items()}
     patch_rom = T.Rom(OUT_ROM)
     pcode = Codec(patch_rom)
+    pcode.names = slot2ch               # a rewritten body reads back as Chinese
     txt, ctrls = decode_stream(patch_rom.data, dst, dst + total,
                                pcode, slot2ch)
     want_txt = ''.join(l.replace('|', '') for l in ctx['zh'])
@@ -2710,17 +2842,27 @@ def plan(rom=None, verbose=True):
     extra_need += [c for _, _, _, line, _ in UI_TEXT_ROWS for c in line
                    if c not in (UI_KEEP, ' ') and c not in chars
                    and c not in extra_need]
+    # A dictionary body we rewrite is Chinese text too, and a character that only
+    # ever appears inside one still needs its record.
+    gloss = phrase_glossary()
+    extra_need += [c for zh in gloss.values() for c in zh
+                   if c not in chars and c not in extra_need]
     need = [t for t in chars if not t.startswith('=')] + extra_need
     char2idx, new = allocate(need, code, verbose)
-    page, pinned, scores = balance_pages(ctxs, code, char2idx, chars,
-                                        build_code_page(chars, code, char2idx,
-                                                        verbose=verbose))
+    # The code page settles first, without any help from the dictionary, and only
+    # then do the bodies get priced — against that settled page.  A page entry is
+    # what makes 「我才是」 4 bytes instead of 7, so judging a body on the static
+    # 2 B/hanzi model reports boxes as unfixable that the real build fits.
+    page, pinned, scores = balance_pages(
+        ctxs, code, char2idx, chars,
+        build_code_page(chars, code, char2idx, verbose=verbose))
+    mb, dict_folds, dict_late = macro_bodies(code, char2idx, gloss, page, verbose)
     if verbose:
         print('page (%d codes): %s' % (len(page), ''.join(sorted(page))))
     folds, out = {}, []
     for ctx in ctxs:
         enc, seg_bytes, lines = encode_all(code, ctx['segs'], ctx['zh'],
-                                           char2idx, page)
+                                           char2idx, page, dict_folds)
         folds.update(enc.words)
         body, bad = pack_boxes(ctx['boxes'], ctx['spans'], seg_bytes)
         # A box that breaks the grid is left unpadded here so main() can print the
@@ -2728,11 +2870,16 @@ def plan(rom=None, verbose=True):
         ctx.update({'enc': enc, 'seg_bytes': seg_bytes, 'lines': lines,
                     'body': body, 'bad': bad})
         out.append(ctx)
+    # `scores` comes from the fold-aware encode, not from the balancing pass:
+    # balance_pages has to price the page before the bodies exist, so its own
+    # numbers are conservative by construction (a fold can only shorten a box).
+    scores = [grid_score(ctx, ctx['seg_bytes']) for ctx in out]
     enc = Encoder(code, char2idx, folds, page)   # every block's folds, for overlays
     return {'rom': rom, 'code': code, 'ctxs': out, 'by_blk': {c['blk']: c for c in out},
             'inplace': inplace_glyphs(code, need),
             'chars': chars, 'need': need, 'new': new, 'char2idx': char2idx,
-            'page': page, 'pinned': pinned, 'scores': scores, 'enc': enc}
+            'page': page, 'pinned': pinned, 'scores': scores, 'enc': enc,
+            'bodies': mb, 'dict_folds': dict_folds, 'dict_late': dict_late}
 
 
 def report(pl, path=None):
@@ -2786,8 +2933,9 @@ def main():
             dump_segments(code, ctx['segs'], p)
             print('wrote %s' % os.path.relpath(p, ROOT))
         return
-    print('folded JP macros: %d, pinned for the grid: %s'
-          % (len(pl['enc'].words) - len(TERM_MACRO), ''.join(pl['pinned'])))
+    print('folded JP macros: %d, dictionary folds: %d, pinned for the grid: %s'
+          % (len(pl['enc'].words) - len(TERM_MACRO) - len(pl['dict_folds']),
+             len(pl['dict_folds']), ''.join(pl['pinned'])))
     bad = 0
     for ctx, (over, broken) in zip(ctxs, pl['scores']):
         print('block %d: jp grid %d bytes, chinese content %d, %d over, %d broken'
@@ -2843,13 +2991,14 @@ def main():
     written = [(ctx['blk'], ctx['lo'], ctx['body'], ctx['hi'] - ctx['lo'])
                for ctx in ctxs]
     patch(rom, code, written, pl['char2idx'], pl['need'], pl['page'], edits,
-          pl['inplace'])
+          pl['inplace'], pl['bodies'])
     ok = bank_ok
     for ctx in ctxs:
         o = verify(pl['char2idx'], ctx, ctx['lo'], len(ctx['body']))
         print('block %d round trip: %s' % (ctx['blk'], 'OK' if o else 'FAILED'))
         ok &= o
     pcode = Codec(T.Rom(OUT_ROM))
+    pcode.names = {i: c for c, i in pl['char2idx'].items()}
     o = verify_prompt(pl['char2idx'], pcode)
     print('prompt boxes: %s' % ('OK' if o else 'FAILED'))
     ok &= o

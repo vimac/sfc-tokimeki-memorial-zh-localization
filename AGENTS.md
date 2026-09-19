@@ -31,7 +31,7 @@ tools/         42 个脚本：验收链路 + 再推导仪表（见 §三），�
 AGENTS.md      本文件：规则
 docs/RELEASE_zh.md        权威状态（md5 / gate / 容量 / 剩余工作）
 docs/research/   逆向证据（*.md 是结论，附地址与偏移）与构建输入/输出
-docs/prologue_zh/  183 张渲染表 + index.txt 转录（可重生成；PNG 不入库）
+docs/prologue_zh/  181 张渲染表 + index.txt 转录（可重生成；PNG 不入库）
 docs/history/    旧交接与破解笔记，**非权威**，只查不引（README 里写明为何作废）
 docs/ALL_CHARACTERS.txt  wiki 角色资料（15 个人物），人名译法的原始依据
 translations/    手工中文稿 *.tsv / *_zh.txt 是真值；**name_glossary.tsv（人名）与
@@ -113,6 +113,13 @@ out/             从日文 ROM dump 出来的分析用文本，可重生成，�
 * **句子的组成部分可能散在三个 bank**：`$A0-$EF` 的 phrase 体和 `$E8xx` 的 sub-text 体会被
   调用点插入句中，所以整段连续字节扫描会**查不到游戏明明显示的句子**。定位文本先数相邻字节对，
   再跟 `SUB_TABLE + (BE16 & $07FF)*2`。
+  反过来的用法才是省字节的那条路：**紧格子里的句子活在词典里**，改一条词典体就同时覆盖所有调用它的框
+  （`translations/phrase_glossary.tsv` ＋ `macro_bodies()`）。两条硬约束：
+  ① 词典体**只能写进自己那段**，不能搬位置——phrase bank 唯一的 752 B 间隔就是那张偏移量表，
+  sub-text 表的 1,883 段铺满整个 32 KB，而「静态没人引用」的索引会被 `⟦E806⟧/⟦ECA5⟧` 这类变量码动态取到；
+  ② 没换掉的日文词典体是**不可见的**（框自己拼中文时不发调用字节），所以「172/178」是完成态不是半成品。
+  另：给词典算长度必须在**码表定下来之后**（`plan()` 的顺序是 `build_code_page` → `balance_pages` →
+  `macro_bodies` → `encode_all`），回读要用**装上本次码表**的解码器，否则放得下的条目会被误判成超长。
 * **`«A0»-«A7»` 是随机的句号变体**：同一行冷启动之间结尾标点会 legitimately 变化，不是 bug。
 * **闪烁的粉色前进箭头**会盖住它所在的格子，OCR 出一堆假「坏字形」；诊断疑似坏字要裁格子
   跟 `glyph_offset(idx)` 记录做位距，dist 0-2 才算真画错了。

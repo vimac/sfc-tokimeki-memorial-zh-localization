@@ -1,5 +1,8 @@
 # 共享短语词典（phrase `$A0-$EF` / sub-text `$E8xx` 宏体）。block 0 有 1,370 处引用这 178 个码，改一次宏体就全覆盖，所以 2-3 B 的紧格子照样能译——句子本来就不在框里。
-# bytes 按「汉字 2 B／半角 1 B」保守估；fit=relocate 的条目正文比当前 span 长，要把表项重指到 bank 死区（`tools/macroband.py` 实测过可用空间，任务 #18）。
+# bytes 按「汉字 2 B／半角 1 B」保守估；fit=relocate 的条目正文比当前 span 长。
+# 2026-09-20 实测：phrase bank 只有开头 752 B 是另一张表（内容 00-05），sub bank 1,883 个 span 无缝铺满，
+# **两个 bank 都没有死区可搬**，所以 relocate 只能靠把译文改短到 span 内（fit=tuned 的那些）。
+# 未改短的条目不会被调用（框里没这段字就不发这个码），日文宏体也就不会被画出来——不是缺陷。
 # ecf0「アイ」/ecf4「ソー」是外来词碎片，**待核**；eca5 是赛况滚动条的前导空白填充，保持原样。
 key	cap	refs	japanese	chinese	bytes	fit
 ead0	9	33	きらめき高校	光辉高校	8	ok
@@ -9,12 +12,12 @@ c9	5	20	ちょっと	那个	4	ok
 ea95	9	20	もらった詩集	送我的诗集	10	relocate
 ed23	5	16	紐緒	纽绪	4	ok
 ecf5	5	15	如月	如月	4	ok
-e2	3	14	あら	哎呀	4	relocate
+e2	3	14	あら	呀	4	tuned
 ed2d	5	14	片桐	片桐	4	ok
 ed76	5	14	用事	有事	4	ok
 ec98	7	13	美樹原	美树原	6	ok
 e980	11	12	知りたいんだけど	我想知道啦	10	ok
-ea92	7	12	ことについて	关于那件事	10	relocate
+ea92	7	12	ことについて	关于这事	10	tuned
 ea94	9	12	（しまった！	（糟了！	8	ok
 eb32	6	12	こちらこそ	我才是	6	relocate
 e840	16	11	デートの約束があったんだ	我和人约会约好了	16	relocate
@@ -23,9 +26,9 @@ e912	11	11	（俺は、とりあえず	（我，总之先	12	relocate
 e913	14	11	三国一の極悪人だー	三国第一的大坏蛋	16	relocate
 e983	9	11	これでは、おれは	这样我不就	10	relocate
 ea06	8	11	とることにした	就这么定了	10	relocate
-ea93	8	11	嫌われてるぜ	被讨厌了啊	10	relocate
+ea93	8	11	嫌われてるぜ	讨人厌	10	tuned
 eb40	7	11	（良かった	（太好了	8	relocate
-eb69	6	11	みたいだぞ	好像是这样	10	relocate
+eb69	6	11	みたいだぞ	看来是	10	tuned
 b7	8	9	優美ちゃん	小优美	6	ok
 b8	7	9	どうしたの	怎么了	6	ok
 e0	6	9	女の子	女孩子	6	relocate
@@ -41,7 +44,7 @@ ed0b	5	7	情報	情报	4	ok
 bb	8	6	面白かった	真有意思	8	relocate
 cf	6	6	どうして	为什么	6	relocate
 eaaa	9	6	約束があるの	有约在先	8	ok
-eb62	6	6	よろしくね	请多关照	8	relocate
+eb62	6	6	よろしくね	多多关照	8	tuned
 ec7b	4	6	そうよ	是呀	4	relocate
 ed74	5	6	駄目	不行	4	ok
 d0	5	5	いいわよ	没关系	6	relocate
@@ -50,13 +53,13 @@ e9a3	10	5	この部だったんだ	是这个社团啊	12	relocate
 e9f7	8	5	そうなんですか	是这样吗	8	relocate
 ea86	8	5	ですけれども	话是这么说	10	relocate
 eb26	9	5	サンキュー	多谢啦	6	ok
-ebca	5	5	よろしく	拜托了	6	relocate
+ebca	5	5	よろしく	拜托	6	tuned
 ebe4	5	5	じゃあな	回见	4	ok
 ec7a	7	5	伊集院	伊集院	6	ok
 ecfd	5	5	評価	评价	4	ok
 ea1f	9	4	それじゃ、また	那，回头见	10	relocate
 ebd7	7	4	の誕生日	的生日	6	ok
-ec74	5	4	教えて	告诉我	6	relocate
+ec74	5	4	教えて	说说	6	tuned
 ec8f	7	4	クラブ	社团	4	ok
 ecf7	5	4	詩集	诗集	4	ok
 b4	6	3	それじゃあ	那么	4	ok
@@ -71,7 +74,7 @@ eb4b	11	3	甲子園目指	瞄准甲子园	10	ok
 eb6b	8	3	バイバーイ	拜拜	4	ok
 ec11	6	3	この部に	进这个社	8	relocate
 ec71	6	3	良かった	太好了	6	relocate
-ec80	5	3	この間	前几天	6	relocate
+ec80	5	3	この間	上次	6	tuned
 ec8d	7	3	リズム	节奏	4	ok
 eccf	5	3	自分	自己	4	ok
 ecd1	5	3	全然	根本	4	ok
@@ -91,9 +94,9 @@ ea74	11	2	デートスポット	约会圣地	8	ok
 eb1f	6	2	しちゃった	已经做了	8	relocate
 eb36	6	2	があるから	因为有	6	relocate
 eb3e	9	2	ボーリング	保龄球	6	ok
-eb47	8	2	待ち合わせ	碰头地点	8	relocate
+eb47	8	2	待ち合わせ	碰头	8	tuned
 eb65	11	2	ウェルカム	欢迎	4	ok
-ebbb	5	2	せっかく	好不容易	8	relocate
+ebbb	5	2	せっかく	难得	8	tuned
 ec2f	8	2	チェック	确认	4	ok
 ec75	4	2	こっち	这边	4	relocate
 ec84	7	2	水族館	水族馆	6	ok
@@ -101,9 +104,9 @@ ec86	7	2	植物園	植物园	6	ok
 ec89	7	2	美術館	美术馆	6	ok
 ec9c	5	2	お前も	你也	4	ok
 eced	5	2	水泳	游泳	4	ok
-ed66	5	2	楽勝	轻松赢	6	relocate
+ed66	5	2	楽勝	轻松	6	tuned
 ed75	4	2	一緒	一起	4	relocate
-c7	5	1	そ、そう	是，是吗	8	relocate
+c7	5	1	そ、そう	啊，是	8	tuned
 cd	5	1	行こうよ	走吧	4	ok
 dd	5	1	本当に	真的	4	ok
 df	4	1	たわね	才不是	6	relocate
@@ -131,13 +134,13 @@ eb1a	6	1	そう言えば	说起来	6	relocate
 eb22	7	1	どうしよう	怎么办	6	ok
 eb2d	6	1	こんにちは	你好	4	ok
 eb3d	7	1	分かってる	我知道	6	ok
-eb43	7	1	信じられな	不敢相信	8	relocate
+eb43	7	1	信じられな	不敢信	8	tuned
 eb4e	7	1	危なかった	好险	4	ok
 eb57	9	1	サッカー部	足球队	6	ok
 eb5a	6	1	いただける	能收到	6	relocate
 eb73	8	1	古式ゆかり	古式由加利	10	relocate
 eb8d	10	1	朝日奈夕子	朝日奈夕子	10	relocate
-ebba	6	1	いいけど	虽然可以	8	relocate
+ebba	6	1	いいけど	倒也是	8	tuned
 ebbe	5	1	しようか	要不要	6	relocate
 ebc2	6	1	ちょうど	正好	4	ok
 ebc9	7	1	ラッキー	走运	4	ok
@@ -150,16 +153,16 @@ ebe0	5	1	もちろん	当然	4	ok
 ebe1	5	1	いたんだ	我在过	6	relocate
 ebe8	6	1	恥ずかし	难为情	6	relocate
 ebef	9	1	紐緒結奈	纽绪结奈	8	ok
-ebf6	5	1	ええーっ	哎——	6	relocate
+ebf6	5	1	ええーっ	哎	6	tuned
 ebff	9	1	虹野沙希	虹野沙希	8	ok
 ec0a	9	1	片桐彩子	片桐彩子	8	ok
 ec33	9	1	大変面白	非常有意思	10	relocate
 ec37	9	1	無理矢理	硬拉着我	8	ok
-ec38	8	1	人体実験	人体实验	8	relocate
-ec76	5	1	この前	前几天	6	relocate
-ec77	3	1	ふーん	唔——	6	relocate
+ec38	8	1	人体実験	人体实验	8	tuned
+ec76	5	1	この前	那天	6	tuned
+ec77	3	1	ふーん	唔	6	tuned
 ec7c	5	1	欲しい	想要	4	ok
-ec7f	4	1	やっと	好不容易	8	relocate
+ec7f	4	1	やっと	可算	8	tuned
 ec81	7	1	コアラ	树袋熊	6	ok
 ec85	6	1	雰囲気	气氛	4	ok
 ec87	5	1	頑張り	加油	4	ok
@@ -168,7 +171,7 @@ ec95	7	1	好雄君	好雄	4	ok
 ec97	7	1	文化祭	文化祭	6	ok
 ec9a	5	1	本日は	今天	4	ok
 eca9	2	1	清川望	清川望	6	relocate
-eccb	4	1	だって	因为嘛	6	relocate
+eccb	4	1	だって	因为	6	tuned
 ecd8	5	1	感動	感动	4	ok
 ecdc	3	1	人気	人气	4	relocate
 ece0	5	1	ＯＫ	行了	4	ok
