@@ -1820,38 +1820,81 @@ def nameplate_glyphs(need):
     return {c: int(k, 16) for k, c in json.load(open(p))['plate'].items() if c in need}
 
 
+def stock_binding(need, code):
+    """{char: index} for characters the JIS kanji band already addresses by itself.
+
+    The band holds 3,015 kanji and `char_to_idx` says which index draws which of them,
+    so a Chinese character that *is* one of those codepoints needs no new slot at all:
+    point its codes at the stock index and rewrite that one record.  Zero slot cost, and
+    the reason it is safe is the same equality -- every surviving Japanese reference to
+    that index (text blocks, the $A0-$EF phrase bodies, the draw-script bank's ~1,700
+    labels, the nameplate) keeps naming the very character it meant to name, only now in
+    WenQuanYi.  That is the whole-font backfill the user authorised on 2026-09-20; what
+    this function refuses is the B-tier version, retargeting an index at an *unrelated*
+    hanzi, which would silently rewrite Japanese words into wrong Chinese ones.
+
+    Three characters are held back even when the band has them.  Chars in `code.c2code`
+    own a 1-byte SB code, and `Encoder.sb_of` would then shortcut them to that byte at
+    the exact moment `build_code_page` hands the same code, repointed, to some other
+    char -- 日 would start drawing 执.  A low byte inside `TERM` makes the pair read as a
+    box terminator to every raw-byte audit tool, which is how a good build gets reported
+    as a broken one.  And the band test is `idx_to_char(idx) == c` rather than a bare
+    index lookup, so a one-way map can never bind two characters to one record.
+    """
+    bound = {}
+    for c in sorted(set(need)):
+        if (c in SB_SHARE or c in code.c2code or c in MARK_B
+                or c.startswith('⟦')):
+            continue
+        idx = T.char_to_idx(c)
+        if idx is None or not T.JIS_KANJI <= idx < T.MAX_INDEX:
+            continue
+        if T.idx_to_char(idx) != c or (idx & 0xFF) in TERM:
+            continue
+        bound[c] = idx
+    return bound
+
+
 def allocate(need, code, verbose=True):
     """char -> glyph slot.
 
-    A character only keeps an existing slot when it is shared punctuation that a
-    1-byte SB code already renders (。「」、？… （）).  Everything else --
-    including kanji that also exist in JIS, where the simplified form differs --
-    gets an unreferenced slot and a WenQuanYi record, so the Japanese font is
-    never rewritten, nothing Japanese changes shape, and no Chinese character is
-    ever rendered with a Japanese glyph.
+    Two kinds of slot.  A character the JIS band already draws at our exact codepoint
+    keeps that stock index (`stock_binding`), plus shared punctuation that a 1-byte SB
+    code renders (。「」、？… （）); everything else -- simplified forms the band has
+    under a different codepoint, and characters outside JIS -- gets an unreferenced
+    slot.  All of them receive a WenQuanYi record, so no Chinese character is ever
+    rendered with a Japanese glyph, and the only Japanese text a stock rewrite touches
+    is text that reads the same way afterwards.
     The kana-variant slots are excluded on top: they are drawn through the
     redirect at $80:D4BD and no text pointer reveals them.  So are the UI slots
     and the speaker nameplate's, for the same reason.
     """
     shared = {c for c in need if c in SB_SHARE and c in code.c2code}
-    new = sorted(set(c for c in need if c not in shared and c not in MARK_B
-                     and not c.startswith('⟦')))
+    bound = stock_binding(need, code)
+    new = sorted(set(c for c in need if c not in shared and c not in bound
+                     and c not in MARK_B and not c.startswith('⟦')))
     used = (used_slots(code) | kana_remap_slots(code.rom.data)
             | preset_name_slots(code.rom.data) | ui_text_slots(code.rom.data)
             | ui_drawn_slots()
             | set(nameplate_glyphs(need).values()))
-    pool = [i for i in range(T.JIS_KANJI, T.MAX_INDEX) if i not in used]
+    # A bound index may well have been free -- the band is 3,015 wide and `used` only
+    # sees what a pointer reaches -- so take the bindings out of the pool before the
+    # rest of the characters draw from it.  That is what keeps 耽 from being handed
+    # 0x8DD twice over.
+    pool = [i for i in range(T.JIS_KANJI, T.MAX_INDEX)
+            if i not in used and i not in set(bound.values())]
     if len(pool) < len(new):
         raise SystemExit('not enough free slots: %d free, %d needed'
                          % (len(pool), len(new)))
     char2idx = dict(zip(new, pool))
+    char2idx.update(bound)
     for c in shared:
         char2idx[c] = code.sb[code.c2code[c]]
     if verbose:
         print('glyphs: %d chars, %d on fresh slots %s..%s of %d usable, '
-              '%d shared SB punctuation'
+              '%d at their own stock index, %d shared SB punctuation'
               % (len(char2idx), len(new), hex(pool[0]), hex(pool[-1]),
-                 len(pool), len(char2idx) - len(new)))
+                 len(pool), len(bound), len(char2idx) - len(new) - len(bound)))
     return char2idx, new
 
 

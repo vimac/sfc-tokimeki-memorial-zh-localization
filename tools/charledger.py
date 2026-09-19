@@ -63,11 +63,13 @@ def owned_chars():
 
 
 def claimed_indices():
-    """Indices our own build already points at, so they cannot also be ridden in place.
+    """Indices our own build already points at, so they cannot also be rewritten in place.
 
-    ``at_stock``/``inplace`` hold stock indices that keep their character, which is fine;
-    ``fresh`` is the range allocate() handed to our own characters, and an index in it
-    already draws a *different* hanzi -- riding it would silently corrupt that character.
+    ``at_stock``/``inplace`` are bound to their own character -- `allocate`'s
+    `stock_binding` only binds on an exact codepoint match, and `char_to_idx` is
+    injective, so an index in them can never be the one some other character needs.
+    ``fresh`` is the range allocate() handed out, and an index in it already draws a
+    *different* hanzi; rewriting it would silently corrupt that character.
     """
     import json
     g = json.load(open(ALLOC, encoding='utf-8'))
@@ -159,9 +161,10 @@ def report(db):
     print('  "inplace" is the free tier -- those chars already have a stock index of their own, '
           'so a whole-font backfill rewrites the record in place at zero slot cost, and '
           'surviving Japanese text still reads correctly.')
-    print('  "new" has to be placed: the fresh pool is what build_prologue.py --patch reports '
-          '(22 spare right now); the rest waits for the end-of-game B-tier takeover, one stock '
-          'index at a time, as its last Japanese reference gets translated.')
+    print('  "new" has to be placed: the fresh pool is what build_prologue.py prints on its '
+          '`glyphs:` line every build -- read it there, never here, because this file is a '
+          'snapshot and that one is the ledger.  The rest waits for the end-of-game B-tier '
+          'takeover, one stock index at a time, as its last Japanese reference gets translated.')
     print('  trimming order = frequency tail: tools/charledger.py tail 60')
 
 

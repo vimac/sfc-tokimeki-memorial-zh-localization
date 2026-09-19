@@ -10,7 +10,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `3968741b9330f2f19c2e96dbffd0f94a` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
+| `rom_prologue_zh.sfc` | `4059c0cbc50a7a870f2f3006d6f77b20` | **交付版本**（4 MB LoROM，日版 Rev 1 基线） |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 `rom_prologue_zh_DRAFT_乱码待修.sfc`、`rom_prologue_zh_jis.sfc`、`tokimeki_chinese_font.sfc`、
@@ -88,9 +88,17 @@ python3 tools/build_prologue.py --patch
 
 * 文本编码为 `$F0–$FF` 双字节对，12 位索引上限 4095；字形记录 28 字节/个，每页 1170 槽，
   基址 `0x3E8000`，共 3 页（`tools/tmtext.py`）。
-* 本补丁占用 **1144 / 1166** 个可用新槽（86 个 `$40–$9F` 码页项另计），**剩余 22**。
-* 构建报告 `font: 1176/1176 slots carry WenQuanYi (32 of them at stock indices)`，
+* **槽位账（2026-09-20 就地改写落地后重算）**：本批 1,152 个字里
+  **617 个绑在自己码位的 stock 索引上**（A 档，`allocate()` 的 `stock_binding()`，零槽位成本），
+  8 个共用标点走 `$40–$9F` 单字节码，只有 **527 个**真正占用新槽 —— 可用新槽 1,091，**剩余 564**。
+  同一次构建改前是 1,144/1,166、只剩 22，也就是说这一步把可用容量放大了 **25 倍**；
+  剩下 527 个新槽的字都是 JIS 带里**没有码位**的简体专用字（见 气 绘 压 运 习 说 你 吗…）。
+* 构建报告 `font: 1169/1169 slots carry WenQuanYi (642 of them at stock indices)`，
   即屏幕上出现的每一个汉字都是文泉驿点阵，**没有任何一个用 JIS/繁体字形顶替**。
+  （1,176 条生成记录落在 1,169 个槽上：7 个名字牌/数字格与本批用字同码位，合并了。）
+* 就地改写的安全性就是「码位相等」这一条断言：`T.idx_to_char(T.char_to_idx(c)) == c` 才绑，
+  所以仍在读那条索引的日文（文本块、`$A0–$EF` 宏体、绘制脚本 bank 的 ~1,700 条标签、姓名牌）
+  事后读到的还是同一个字。守卫：`bank glyph slots: 0 collisions`、`0 unclaimed slot(s) changed`。
 * 注入量是最小的：只为本补丁真正用到的字生成记录，未用到的槽位保持原样
   （`0 unclaimed slot(s) changed`）。
 
@@ -127,7 +135,7 @@ python3 tools/build_prologue.py --patch          # VERDICT: all checks passed
 python3 tools/prologue_play.py rom_prologue_zh.sfc 96 --boot   # 96 presses, 366 distinct pages, kana=0
 cp <walk log> /tmp/play/boot_walk_zh.txt
 python3 tools/prologue_shots.py /tmp/play/boot_walk_zh.txt docs/prologue_zh   # 88 boxes, 183 sheets
-python3 tools/jisaudit.py docs/prologue_zh rom_prologue_zh.sfc  # on-grid foreign: 0（余下 5 项全是离格噪声，见下）
+python3 tools/jisaudit.py docs/prologue_zh rom_prologue_zh.sfc  # on-grid foreign: 0（余下 3 项全是离格噪声，见下）
 python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/55 name records still hold kana or an unknown slot
 ```
 
@@ -143,13 +151,16 @@ python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/55 name records still
 6. 不要用 `bytes.replace()` 改二进制；对 ROM 的写入只允许 `tools/build_prologue.py`。
 7. `jisaudit` 的输出按 **on/off grid** 分成两组，**判定只看 `on`**（文本 cell 恒定起于
    `x % 16 == 15`、`y % 16 == 1`）。`ui_refs.cells()` 会把 14×14 窗口在**每一个像素**上滑动，因此也会
-   报出离格匹配：框线/高亮（`off symbol 010(￣) 011(＿)`），以及**真实 cell 左上 1 px 处的日文字模**
-   （`off inline 210(一) 5DE(三) 7AB(是)`）。后者是 dx=1 之后我们的字形比日文原版恰好左 1 px、上 1 行
-   造成的窗口错位：原版记录墨迹盒是列 2..13 / 行 1..13（如 stock 0x7AB `是`），我们的记录是列 1..13 /
-   行 0..12（同屏那一格的 0x783），于是把 14×14 窗口放在真格子左上 1 px 的 (142,176) 去读，读出来的图
-   案正好等于 stock 记录；而落在格子上 (143,177) 的窗口匹配的是我们自己的 0x783。
+   报出离格匹配：框线/高亮（`off symbol 010(￣) 011(＿)`），以及**真实 cell 左上 1 px 处仍存活的日文字模**
+   （当前构建只剩 `off inline 210(一)`）。后者是 dx=1 之后我们的字形比日文原版恰好左 1 px、上 1 行
+   造成的窗口错位：原版记录墨迹盒是列 2..13 / 行 1..13，我们的记录是列 1..13 / 行 0..12，
+   于是把 14×14 窗口放在真格子左上 1 px 处去读，读出来的图案正好等于那条**没被改写过的** stock 记录；
+   而落在格子上（正确位置）的窗口匹配的是我们自己的记录。
    历史文档里「2 foreign slots: 010/011」这条基线本身就是离格噪声，不要拿它当期望值。
-   本次修正后的实测：**on-grid 2,426 格全部是我们的记录，off 0 owned / 188 foreign**。
+   **这一条同时是就地改写的屏幕侧证据**：上一个构建的离格项里有 `5DE(三)` 与 `7AB(是)`，
+   这次两者消失，正是因为 A 档把 0x5DE/0x7AB 那两条记录就地换成了文泉驿的 `三`/`是`——
+   离 1 px 的窗口再也读不到日文字模，而落在格子上的窗口读到的还是同一个字。
+   本次构建实测：**on-grid 零外来记录，off 只剩 3 项噪声（210x21 / 010x66 / 011x34）**。
 
 ## 五、剩余工作（2026-09-20 目标变更后重估）
 
@@ -165,7 +176,7 @@ python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/55 name records still
 | 源文本不同汉字 | **1,259**，且 **100% 已在 stock 汉字带内**（`BIGTOKI.EUC` 1267、`bigtoki2.euc` 1294，互相印证） |
 | 源文本不同假名 | 158 个，占**位置数的 62.3%**，在译文里几乎全部消失 |
 | 可寻址字模 | `MAX_INDEX 0xDB6` = **3,510**；其中 **126** 个的 pair 低字节撞 TERM（`$0A`、`$A0-$A7`）会被回退扫描切断 → **3,384 可用**；汉字带 3,057，假名区 453 在无人再发 1 字节假名码后可回收 |
-| 就地改写率 | 96 行真实译文（`translations/TKSC2/3_zh.tsv`）实测：**66% 的目标汉字已有字模**；需新增的 34% 是一批**封闭**的简体独有高频字（为 这 说 还 门 间 阳 让 变 办 …），早于语料饱和 |
+| 就地改写率 | 96 行真实译文（`translations/TKSC2/3_zh.tsv`）实测：**66% 的目标汉字已有字模**；需新增的 34% 是一批**封闭**的简体独有高频字（为 这 说 还 门 间 阳 让 变 办 …），早于语料饱和。**已落地**：`allocate()` 的 `stock_binding()` 把本批 1,152 字中 **617 字**绑回各自的 stock 索引，新槽开销从 1,144 降到 **527**（可用新槽 1,091，剩 **564**） |
 | 字节 | 同内容中文只用 **0.58 倍**字形数；两批已译文本 **0/213 个 box 溢出**，省 18% 与 24% → box 平铺可谈，不是墙 |
 | 1 字节码表 | `$40-$9F` = 96 项：71 假名 + 15 汉字 + 3 符号，**0 个 ASCII**，94 个不同目标槽位 → 不存在「半字节英文字母」问题 |
 | 行内控制码 | 整个抽取语料里只有 `<N>`（3,943 次）与 `<END>`（309 次），译者需保留的控制面就这两项 |
@@ -181,9 +192,12 @@ python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/55 name records still
    sub-text 体在 bank `$C3`；翻完 160 个 TEXT_PTRS block 也覆盖不到它们，只走 block 的「零日文」
    审计会**假通过**。
 
-**唯一必须记住的代价**：整体覆盖 stock 记录之后，尚未翻译的块不再是显示日文，而是显示**读得通但
-完全错误**的中文——半成品比现状更糟。所以「就地改写／覆盖」必须与「该索引被所有仍存活的引用翻译完毕」
-同时发生，不能作为中间状态发布。旧的 8 MB / ExLoROM 第 4 页扩容（真实增益只有 586 个字模）在
+**必须记住的代价**：整体覆盖 stock 记录之后，尚未翻译的块不再是显示日文，而是显示**读得通但
+完全错误**的中文——半成品比现状更糟。所以**「把索引改指成别的语素」（B 档）**必须与「该索引被所有
+仍存活的引用翻译完毕」同时发生，不能作为中间状态发布。**但不受此限的是「同码位就地改写」（A 档）**：
+只要新记录画的正是该索引本来的那个码位（`T.idx_to_char(idx) == c`），残余日文读到的仍是同一个字，
+换的只是字体，所以随时可做——这正是本批 617 个字所走的路。判据只有一句：改完之后那个索引还读得出原文吗？
+旧的 8 MB / ExLoROM 第 4 页扩容（真实增益只有 586 个字模）在
 3,384 的预算下**不再需要**；`$19Axx` 残句与 romaji 昵称这类零散项，并入整体翻译后自然消化。
 
 ## 六、对旧交接（`docs/history/`）的更正
