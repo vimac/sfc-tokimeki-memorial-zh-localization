@@ -23,7 +23,9 @@ translations/pending.json
 # index.txt (the transcript) IS tracked. The 乱码 screenshots that motivated the rebuild are
 # tracked too -- they cannot be recreated -- but they live in docs/history/ now (non-authoritative).
 docs/prologue_zh/*.png
-docs/research/render_rom_prologue_zh/
+# Same for render_prologue.py's per-block output dirs: box_*.png + sheets are pure
+# derived evidence (labels.txt is what the gate reads), regenerate with one command.
+docs/research/render_rom_prologue_zh*/
 
 __pycache__/
 *.pyc

@@ -21,7 +21,7 @@ ea92	7	12	ことについて	关于这事	10	tuned
 ea94	9	12	（しまった！	（糟了！	8	ok
 eb32	6	12	こちらこそ	我才是	6	relocate
 e840	16	11	デートの約束があったんだ	我已经有别的安排了	14	ok
-e911	11	11	怒ってるみたいだぞ	她好像在生气	12	relocate
+e911	11	11	怒ってるみたいだぞ	她在生气	8	tuned
 e912	11	11	（俺は、とりあえず	（我，总之先	12	relocate
 e913	14	11	三国一の極悪人だー	三国第一的大坏蛋	16	relocate
 e983	9	11	これでは、おれは	这样我不就	10	relocate
@@ -72,7 +72,7 @@ eaf9	10	3	昨日は文集を	昨天的文集	10	relocate
 eb23	9	3	失礼します	打扰了	6	ok
 eb4b	11	3	甲子園目指	瞄准甲子园	10	ok
 eb6b	8	3	バイバーイ	拜拜	4	ok
-ec11	6	3	この部に	进这个社	8	relocate
+ec11	6	3	この部に	这个社	5	tuned
 ec71	6	3	良かった	太好了	6	relocate
 ec80	5	3	この間	上次	6	tuned
 ec8d	7	3	リズム	节奏	4	ok
@@ -141,7 +141,7 @@ eb5a	6	1	いただける	能收到	6	relocate
 eb73	8	1	古式ゆかり	古式由加利	10	relocate
 eb8d	10	1	朝日奈夕子	朝日奈夕子	10	relocate
 ebba	6	1	いいけど	倒也是	8	tuned
-ebbe	5	1	しようか	要不要	6	relocate
+ebbe	5	1	しようか	行吧	3	tuned
 ebc2	6	1	ちょうど	正好	4	ok
 ebc9	7	1	ラッキー	走运	4	ok
 ebcc	6	1	たまには	偶尔也	6	relocate
