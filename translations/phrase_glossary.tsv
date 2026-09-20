@@ -91,7 +91,7 @@ ea05	15	2	プラネタリウム	天文馆	6	ok
 ea66	10	2	何だ、また君か	怎么又是你	10	relocate
 ea6f	9	2	わりと読めたよ	读得挺顺的	8	tuned
 ea74	11	2	デートスポット	约会圣地	8	ok
-eb1f	6	2	しちゃった	已经做了	8	relocate
+eb1f	6	2	しちゃった	做了	8	tuned
 eb36	6	2	があるから	因为有	6	relocate
 eb3e	9	2	ボーリング	保龄球	6	ok
 eb47	8	2	待ち合わせ	碰头	8	tuned
@@ -138,8 +138,8 @@ eb43	7	1	信じられな	不敢信	8	tuned
 eb4e	7	1	危なかった	好险	4	ok
 eb57	9	1	サッカー部	足球队	6	ok
 eb5a	6	1	いただける	收到	4	OK
-eb73	8	1	古式ゆかり	古式由加利	10	relocate
-eb8d	10	1	朝日奈夕子	朝日奈夕子	10	relocate
+eb73	8	1	古式ゆかり	由加利	10	tuned
+eb8d	10	1	朝日奈夕子	朝日奈	10	tuned
 ebba	6	1	いいけど	倒也是	8	tuned
 ebbe	5	1	しようか	行吧	3	tuned
 ebc2	6	1	ちょうど	正好	4	ok
@@ -171,9 +171,9 @@ ec95	7	1	好雄君	好雄君	6	ok
 ec97	7	1	文化祭	文化祭	6	ok
 ec9a	5	1	本日は	今天	4	ok
 eca9	2	1	清川望	清川望	6	relocate
-eccb	4	1	だって	因为	6	tuned
+eccb	4	1	だって	嘛	6	tuned
 ecd8	5	1	感動	感动	4	ok
-ecdc	3	1	人気	人气	4	relocate
+ecdc	3	1	人気	火	4	tuned
 ece0	5	1	ＯＫ	行了	4	ok
 ece2	4	1	気持	心情	4	relocate
 ece3	5	1	舞台	舞台	4	ok
@@ -225,7 +225,7 @@ e928	10	1	あっ、おみくじでも	求支签	6	ok
 ec25	6	1	引かない	不抽吗	6	ok
 e8e1	13	1	大吉しかないのかもね	全是大吉吧	10	ok
 ebb6	7	1	普通です	挺普通	6	ok
-ed34	4	1	元日	元旦	4	ok
+ed34	4	1	元日	新年	4	tuned
 ecd3	5	1	最高	最好	4	ok
 ebc1	6	1	帰ろうか	回吧	4	ok
 be	6	1	そうですか	这样呀	6	ok
@@ -234,7 +234,7 @@ e8bd	18	2	アハッピーニューイヤー	哈哈新年好	10	ok
 ec47	7	3	アイシー	收到	4	ok
 ebe2	7	1	ソーリー	抱歉啦	6	ok
 eae1	8	1	お願いしたわ	许的愿	6	ok
-ebd3	5	1	だから、	所以呀	6	ok
+ebd3	5	1	だから、	所以	6	tuned
 ec6b	9	1	学業成就	学业有成	8	ok
 ec6c	9	2	健康祈願	身体健康	8	ok
 ebb7	6	2	知らない	不知道	6	ok
