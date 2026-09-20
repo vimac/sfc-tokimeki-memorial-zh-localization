@@ -51,6 +51,7 @@ SOURCES = (
     ('block108', 'docs/research/block108_zh.txt'),
     ('block68', 'docs/research/block68_zh.txt'),
     ('block21', 'docs/research/block21_zh.txt'),
+    ('block70', 'docs/research/block70_zh.txt'),
 )
 
 # Draft translations that are *not* in the ROM yet -- pricing them is the whole point of
