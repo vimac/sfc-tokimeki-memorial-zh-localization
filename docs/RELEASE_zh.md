@@ -10,7 +10,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `6e386a17a323c01bfe09b7d840f1c8c2` | **验收盘**（4 MB LoROM，日版 Rev 1 基线）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
+| `rom_prologue_zh.sfc` | `751b648115f1197719f6344f9a1dcd66` | **验收盘**（4 MB LoROM，日版 Rev 1 基线）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 根目录只留上面两颗 `.sfc`；上游命名的原版转储与 `.srm` 在 `~/retro/roms/`，全量备份在 `~/retro/tokimeki.backup.2609200007.tar.gz`（两轮清理删掉的废弃脚本/中间盘只从 git 历史找回）。所有工具一律按 `rom_original_japanese.sfc` 读母盘。
@@ -109,6 +109,16 @@ python3 tools/build_prologue.py --patch
   「。」收尾的引号体**——box 20 的 `|「……。」` 报 `terminator a0 vs a4`，改成 `|「……。`
   与日文同形才对齐。验收：19 块全 `0 over, 0 broken`；19 区间 render 全 `0 kana, 0 "?"`；
   name_tables PASS；charledger 20 源 1,301 字，缺口只剩 2 个 A 档就地字。
+  **批次C：block 68 前缀续推（段 165–334／框 71–150，2026-09-21）**：文化祭后半——逛展览送
+  诗集/文集（三分支）、演讲与舞台的好评、后台排演打气、演出评价（好评/冷场两组）。
+  词典本批新增 35 条正文（辛苦啦/展出的/都是社员/编的诗集/第一次上台/不温不火…）。
+  新踩的编码课：**同一中文正文挂在两个宏码上会互相打架**——`b4`（それじゃあ，1 B）与
+  `ebde`（あんなに，2 B）正文都调成了「那么」，全局 dict_folds 后写覆盖先写，所有「那么」
+  都被迫吃 2 B 的 ebde，block 96 框 42（预算 2 B）就此超 1 B。正解是让 2 B 那条改口
+  （ebde→那样），「那么」统一折回 1 B 的 b4，全线还各省 1 B。另实测：**折叠宏后面补
+  「。」不省字节**（省字节只能砍真词或换页内 1 B 字）。零和连带修 block 126/131/132
+  （下次联络→联络 等）。验收：19 块全 `0 over, 0 broken`；19 区间 render（含 68 的 0:150）
+  全 `0 kana, 0 "?"`；name_tables PASS；charledger 20 源 1,314 字。
 * **系统提示/旁白池（block 0）box 0–724（1,617 段）全译完工**（前十六批）：新游戏提示菜单
   （「从序章开始」「跳过序章」）、约会被放鸽子、新创刊杂志、光辉中央公园、生物节律专栏、
   美术馆/水族馆/体育场/植物园/保龄球/天文馆、唱卡拉 OK 与画展的反应句、「袖龙」那条情报，
@@ -222,8 +232,8 @@ python3 tools/build_prologue.py --patch
 * **槽位账（block 0 全译完工）**：本批 1,274 个字里
   **673 个绑在自己码位的 stock 索引上**（A 档，零槽位成本），
   8 个共用标点走 `$40–$9F` 单字节码，只有 **593 个**真正占用新槽 —— 可用新槽 1,084，**剩余 491**。
-  最新一次（批次B 之后）构建口径：`glyphs: 1355 chars, 626 on fresh slots 0x1c6..0xdb5 of 1069 usable,
-  721 at their own stock index, 8 shared SB punctuation`——额度依旧不是墙（AGENTS §四）。
+  最新一次（批次C 之后）构建口径：`glyphs: 1368 chars, 634 on fresh slots 0x1c6..0xdb5 of 1067 usable,
+  726 at their own stock index, 8 shared SB punctuation`——额度依旧不是墙（AGENTS §四）。
   就地改写落地前同一次构建是 1,144/1,166、只剩 22，也就是说这一步把可用容量放大了 **25 倍**；
   剩下 563 个新槽的字都是 JIS 带里**没有码位**的简体专用字（见 气 绘 压 运 习 说 你 吗…）。
 * 构建报告 `font: 1279/1279 slots carry WenQuanYi (696 of them at stock indices)`，
@@ -432,7 +442,7 @@ python3 tools/jisaudit.py docs/prologue_zh rom_prologue_zh.sfc  # on-grid foreig
 > **码表零和**（见 §四 第 8 条），不是字数额度：block 0 余下那 206 框仍在同一 517 空槽额度里。
 
 1. **翻译 25,777 行**。已完成：序章 88 box、block 8 的 125 box、block 0 全书 725 box（1,617 段）、
-   TKSC 剧本 16 块（2/18/32/35/38/44/68/95/96/97/99/107/108/126/131/132，68 为前缀在推，明细见 §二）、
+   TKSC 剧本 16 块（2/18/32/35/38/44/68/95/96/97/99/107/108/126/131/132，68 为前缀在推（已至框 150/557），明细见 §二）、
    系统 UI 与 914 行字卡、名字表、共享短语词典 174 条，以及对白 98 行（`translations/TKSC2/3_zh.tsv`）。
    **block 0 已完工；下一大块是 `pending.json` 的 142 个 TKSC 剧本文件 / 25,769 段**，按块推进、同一套
    「先写顺、build 点名才裁」的流程。
