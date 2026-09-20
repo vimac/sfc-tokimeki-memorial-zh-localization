@@ -35,6 +35,16 @@ SOURCES = (
     # are not shipped yet simply are not in it -- nothing here may assume it is whole.
     ('block0', 'docs/research/block0_zh.txt'),
     ('block2', 'docs/research/block2_zh.txt'),
+    ('block32', 'docs/research/block32_zh.txt'),
+    ('block35', 'docs/research/block35_zh.txt'),
+    ('block38', 'docs/research/block38_zh.txt'),
+    ('block18', 'docs/research/block18_zh.txt'),
+    ('block44', 'docs/research/block44_zh.txt'),
+    ('block95', 'docs/research/block95_zh.txt'),
+    ('block107', 'docs/research/block107_zh.txt'),
+    ('block126', 'docs/research/block126_zh.txt'),
+    ('block131', 'docs/research/block131_zh.txt'),
+    ('block132', 'docs/research/block132_zh.txt'),
 )
 
 # Draft translations that are *not* in the ROM yet -- pricing them is the whole point of

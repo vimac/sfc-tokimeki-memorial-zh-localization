@@ -95,6 +95,10 @@ OVERLAY = PROMPT + CAPTION
 BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (8, 'block8_zh.txt', 0x1E5E90), (32, 'block32_zh.txt', 0x27AC58),
           (35, 'block35_zh.txt', 0x1CAD18), (38, 'block38_zh.txt', 0x26D5E2),
+          (18, 'block18_zh.txt', 0x25010F), (44, 'block44_zh.txt', 0x240A8A),
+          (95, 'block95_zh.txt', 0x27A999), (107, 'block107_zh.txt', 0x1E82BB),
+          (126, 'block126_zh.txt', 0x230527), (131, 'block131_zh.txt', 0x26D139),
+          (132, 'block132_zh.txt', 0x23F2B4),
           (144, 'prologue_zh.txt', END))
 # Which phrase ($B9) and sub-text ($C3) dictionary entries have a Chinese reading.
 # Rows are key/cap/refs/japanese/chinese/bytes/fit; only key and chinese are read
