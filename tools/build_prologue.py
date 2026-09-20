@@ -120,6 +120,13 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (76, 'block76_zh.txt', 0x2588F8), (139, 'block139_zh.txt', 0x230E38),
           (120, 'block120_zh.txt', 0x25A040), (51, 'block51_zh.txt', 0x27C8A2),
           (55, 'block55_zh.txt', 0x20BBC8), (109, 'block109_zh.txt', 0x27B68B),
+          (116, 'block116_zh.txt', 0x218CC8), (62, 'block62_zh.txt', 0x1CDD3B),
+          (122, 'block122_zh.txt', 0x207333), (123, 'block123_zh.txt', 0x1FF605),
+          (125, 'block125_zh.txt', 0x26D298), (129, 'block129_zh.txt', 0x25FB95),
+          (115, 'block115_zh.txt', 0x1D95B4), (113, 'block113_zh.txt', 0x1D5632),
+          (111, 'block111_zh.txt', 0x1E8585), (50, 'block50_zh.txt', 0x23104F),
+          (101, 'block101_zh.txt', 0x239E24), (104, 'block104_zh.txt', 0x218390),
+          (114, 'block114_zh.txt', 0x26BD04), (15, 'block15_zh.txt', 0x250A51),
           (144, 'prologue_zh.txt', END))
 # Which phrase ($B9) and sub-text ($C3) dictionary entries have a Chinese reading.
 # Rows are key/cap/refs/japanese/chinese/bytes/fit; only key and chinese are read
