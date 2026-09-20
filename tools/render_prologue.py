@@ -123,6 +123,12 @@ def montage(items, path, cols=3):
 def main():
     rom = T.Rom(ROM)
     code = B.Codec(rom)
+    # The span tables come from the source ROM: name-pool records sit in the
+    # sub-text table's dead zone, and their patched glyph pairs re-parse as
+    # body offsets there (see patched_codec in build_prologue).
+    ref = B.Codec(B.T.Rom(B.SRC_ROM))
+    code.ph_off, code.ph_next = ref.ph_off, ref.ph_next
+    code.sub_off, code.sub_next = ref.sub_off, ref.sub_next
     enc = json.load(open('docs/research/block%d_enc.json' % BLK,
                          encoding='utf-8'))
     total, cov = enc['total'], enc['cov']

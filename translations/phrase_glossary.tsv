@@ -23,15 +23,15 @@ eb32	6	12	こちらこそ	我才是	6	relocate
 e840	16	11	デートの約束があったんだ	我已经有别的安排了	14	ok
 e911	11	11	怒ってるみたいだぞ	她在生气	8	tuned
 e912	11	11	（俺は、とりあえず	（我，总之先	12	relocate
-e913	14	11	三国一の極悪人だー	三国第一的大坏蛋	16	relocate
-e983	9	11	これでは、おれは	这样我不就	10	relocate
+e913	14	11	三国一の極悪人だー	天下第一坏蛋	12	OK
+e983	9	11	これでは、おれは	那我不就	8	OK
 ea06	8	11	とることにした	就这么定了	10	relocate
 ea93	8	11	嫌われてるぜ	讨人厌	10	tuned
 eb40	7	11	（良かった	（太好了	8	relocate
 eb69	6	11	みたいだぞ	看来是	10	tuned
 b7	8	9	優美ちゃん	优美酱	6	ok
 b8	7	9	どうしたの	怎么了	6	ok
-e0	6	9	女の子	女孩子	6	relocate
+e0	6	9	女の子	女孩	4	OK
 e871	13	9	ありがとうございました	多谢款待	8	ok
 e9a2	9	9	これからよろしく	今后请多关照	12	relocate
 eb29	9	8	プレゼント	礼物	4	ok
@@ -129,7 +129,7 @@ ea9b	7	1	あぁ、いいよ	啊，没事	8	relocate
 eae8	8	1	まぁ、いいか	算了，好吧	10	relocate
 eaf3	8	1	あっ、待って	啊，等等	8	relocate
 eb10	7	1	しょうがない	没办法	6	ok
-eb18	7	1	恥ずかしい	好难为情	8	relocate
+eb18	7	1	恥ずかしい	难为情	6	OK
 eb1a	6	1	そう言えば	说起来	6	relocate
 eb22	7	1	どうしよう	怎么办	6	ok
 eb2d	6	1	こんにちは	你好	4	ok
@@ -137,7 +137,7 @@ eb3d	7	1	分かってる	我知道	6	ok
 eb43	7	1	信じられな	不敢信	8	tuned
 eb4e	7	1	危なかった	好险	4	ok
 eb57	9	1	サッカー部	足球队	6	ok
-eb5a	6	1	いただける	能收到	6	relocate
+eb5a	6	1	いただける	收到	4	OK
 eb73	8	1	古式ゆかり	古式由加利	10	relocate
 eb8d	10	1	朝日奈夕子	朝日奈夕子	10	relocate
 ebba	6	1	いいけど	倒也是	8	tuned
@@ -151,7 +151,7 @@ ebd1	5	1	よろしい	可以吗	6	relocate
 ebd8	7	1	悪いけど	不好意思	8	relocate
 ebe0	5	1	もちろん	当然	4	ok
 ebe1	5	1	いたんだ	我在过	6	relocate
-ebe8	6	1	恥ずかし	难为情	6	relocate
+ebe8	6	1	恥ずかし	害臊	4	OK
 ebef	9	1	紐緒結奈	纽绪结奈	8	ok
 ebf6	5	1	ええーっ	哎	6	tuned
 ebff	9	1	虹野沙希	虹野沙希	8	ok

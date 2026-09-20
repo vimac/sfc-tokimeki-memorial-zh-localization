@@ -2606,6 +2606,26 @@ def decode_stream(d, start, end, code, slot2ch):
     return ''.join(text), ctrls
 
 
+def patched_codec():
+    """Codec for the patched ROM, with the phrase/sub-text span tables of the source.
+
+    The offset tables themselves are never rewritten -- dictionary bodies are
+    replaced in place -- but the speaker-name pool and the place pool store
+    their records inside the sub-text table's dead zone (file 0x21A1D7..), and
+    a rewritten record's glyph pair re-parses as a body offset once the tables
+    are rebuilt from the patched bytes, hijacking some other entry's span end
+    in any reader that does that (this build: 「优美酱」's 美 = F4 AC at an even
+    offset read as 0xACF4, collapsing e898's span to 1 byte).  The engine only
+    ever reads a body's *start* offset and runs to $0A, so the source tables
+    are the correct reference for a re-reader too.
+    """
+    code = Codec(T.Rom(OUT_ROM))
+    ref = Codec(T.Rom(SRC_ROM))
+    code.ph_off, code.ph_next = ref.ph_off, ref.ph_next
+    code.sub_off, code.sub_next = ref.sub_off, ref.sub_next
+    return code
+
+
 def verify(char2idx, ctx, dst, total):
     """Round-trip the patched ROM against the intended Chinese text.
 
@@ -2615,7 +2635,7 @@ def verify(char2idx, ctx, dst, total):
     """
     slot2ch = {i: c for c, i in char2idx.items()}
     patch_rom = T.Rom(OUT_ROM)
-    pcode = Codec(patch_rom)
+    pcode = patched_codec()
     pcode.names = slot2ch               # a rewritten body reads back as Chinese
     txt, ctrls = decode_stream(patch_rom.data, dst, dst + total,
                                pcode, slot2ch)
