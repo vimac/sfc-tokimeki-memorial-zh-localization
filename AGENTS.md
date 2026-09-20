@@ -54,16 +54,22 @@ out/             从日文 ROM dump 出来的分析用文本，可重生成，�
 
 ## 三、验收 gate（顺序即语义，全绿才算好构建）
 
-见 `docs/RELEASE_zh.md` §四：`build_prologue.py --patch` → `prologue_play.py … --boot` →
-`prologue_shots.py` → `jisaudit.py` → `name_tables.py`。要点：
+**两层。** 每批译文必过的是静态层：`build_prologue.py --patch`（三块全要 `0 over, 0 broken`）→
+`render_prologue.py rom_prologue_zh.sfc <block> <first:last>`（从**已打补丁的盘**逐框出图并回读标签，
+判据 `0 kana cells, 0 "?" cells`）→ `name_tables.py` → `charledger.py ingest|report`。
+模拟器层（`prologue_play.py … --boot` → `prologue_shots.py` → `jisaudit.py`）**只在改动会出现在序章画面时跑**：
+序章块本身、UI/人名表、或那些画面用到的字模。block 0 的电话池在序章里根本看不到，
+拿 walk 去验它等于没验（用户 2026-09-20 明确要求减少这种重复）。详见 `docs/RELEASE_zh.md` §四。要点：
 
-1. 字幕与帧必须来自**同一次** walk。
+1. 走模拟器层时，字幕与帧必须来自**同一次** walk。
 2. `jisaudit` 的判定只看 **`on`（落在文本网格 x%16==15、y%16==1 上）** 那一半；
    `off` 是滑窗噪声，不是缺陷。
 3. `prologue_play.py | grep -c` 在干净日志上以 1 退出，kana=0 即通过。
 4. 禁止用 `bytes.replace()` 之类改二进制；对 ROM 的写入只允许走构建脚本。
 5. 构建是确定性、1.5 秒的，所以**每次编辑后都重跑**，让 round-trip 断言去证明编码。
 6. **文案定稿之后才 `--patch`**。trace 走的是磁盘上那颗盘，中途改译文就得整条链重跑。
+7. 新框的**终止符必须等于日文那框的终止码**：`pack_boxes` 报 `terminator a0 vs a1` 就是末行写成了
+   `？` 而要 `。`，`a0 vs a4` 就是多写了 `。」`（A4＝。」）而 A0＝。 才对齐——这是编码对齐，不是文案问题。
 
 ## 四、工程纪律（都是踩过的坑）
 
@@ -129,6 +135,15 @@ out/             从日文 ROM dump 出来的分析用文本，可重生成，�
   ② 没换掉的日文词典体是**不可见的**（框自己拼中文时不发调用字节），所以「172/178」是完成态不是半成品。
   另：给词典算长度必须在**码表定下来之后**（`plan()` 的顺序是 `build_code_page` → `balance_pages` →
   `macro_bodies` → `encode_all`），回读要用**装上本次码表**的解码器，否则放得下的条目会被误判成超长。
+* **译文行里不要手写「宏码引用」去省字节**：正文是纯文本的宏（`⟦C9⟧`＝那个、`⟦AB⟧`＝`…`+`$14`、
+  `⟦E911⟧`）画的就是它自己那条词典体，所以**照抄 `phrase_glossary.tsv` 的中文**就行——
+  `dict_folds`／`TERM_MACRO` 会自动把它压回同样的 1-2 字节，而 `verify()` 的 round trip 会拿
+  展开后的正文去比，写引用形式必然对不上。只有正文里含 `$00/$0E/$0F` 或嵌套宏的**可变体**
+  才必须写码（`⟦E800⟧/⟦E801⟧` 由 WRAM 打印的年/月/日、`⟦ECA5⟧` 「○高校获胜」），
+  因为中文没法替它们说话。`line_items()` 现在直接拒绝前一种写法并回显它读作什么。
+  顺带：`⟦E802⟧` 不是宏文本，它是 **21 个约会地点**那张池子的调用（`$01 <wr> <21 距离>`，
+  head file `0x21A1BF`，记录起点在 `0x21A1D7–0x21A2A6`，跟姓名池同一套「只有起点起作用」的机制，
+  见 `PLACE_TABLE` 与 `tools/name_tables.py`）。
 * **`«A0»-«A7»` 是随机的句号变体**：同一行冷启动之间结尾标点会 legitimately 变化，不是 bug。
 * **闪烁的粉色前进箭头**会盖住它所在的格子，OCR 出一堆假「坏字形」；诊断疑似坏字要裁格子
   跟 `glyph_offset(idx)` 记录做位距，dist 0-2 才算真画错了。

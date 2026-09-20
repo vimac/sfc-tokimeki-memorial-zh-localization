@@ -175,7 +175,33 @@ SURNAME_TABLE = (
     (0x180F4, '早乙女', '早乙女'), (0x180FB, '伊集院', '伊集院'),
     (0x18102, '好雄', '好雄'),
 )
-NAME_TABLE_ROWS = NAME_POOL_TABLE + SURNAME_TABLE
+# The 21 date locations the `$E802` call selects between at runtime -- the place the
+# player just picked, spliced into sentences like 「⟦E800⟧に ⟦E802⟧へ 行かない？」.  Same
+# shape as the heroine pool: `01 <wram-lo> <21 distances>` at file 0x21A1BF, with the
+# distance for selector value V read at head+3+V and the record starting at head+dist,
+# `$0A`-terminated (the byte before the first distance, 0x0B here, is never addressed --
+# `$01` jumps from head+3).  So again only the starts are load-bearing.  The 22nd byte
+# after the distances is `f4`, the lead of 近所の公園's first glyph, which is why a naive
+# walk of this entry reads garbage: the records run to 0x21A2A6, well past the 53-byte
+# "span" the pointer table reports for $E802.
+# Wording is fixed by the location menu in the draw-script bank (`0X1A2EC`-`0X1A44D`),
+# which is already translated: 电玩城/歌厅/泳池/溜冰场, so this pool must not invent a
+# second name for the same place.  海 has room for one glyph only, and 月/日/年 in the
+# date macros need no translation at all -- they are kanji we redraw in place.
+PLACE_TABLE = (
+    (0x21A1D7, '近所の公園', '附近的公园'),   (0x21A1E2, 'きらめき中央公園', '光辉中央公园'),
+    (0x21A1F3, 'ショッピング街', '商业街'),   (0x21A202, '水族館', '水族馆'),
+    (0x21A209, '動物園', '动物园'),           (0x21A210, '植物園', '植物园'),
+    (0x21A217, 'プラネタリウム', '天文馆'),   (0x21A226, '美術館', '美术馆'),
+    (0x21A22D, '図書館', '图书馆'),           (0x21A234, 'ゲームセンター', '电玩城'),
+    (0x21A243, 'ボーリング場', '保龄球场'),   (0x21A250, 'カラオケ屋', '歌厅'),
+    (0x21A25B, '遊園地', '游乐园'),           (0x21A262, 'スタジアム', '体育场'),
+    (0x21A26D, '映画館', '电影院'),           (0x21A274, 'コンサート会場', '演唱会会场'),
+    (0x21A283, 'プール', '泳池'),             (0x21A28A, '海', '海'),
+    (0x21A28D, '神社', '神社'),               (0x21A292, 'スケート場', '溜冰场'),
+    (0x21A29D, 'スキー場', '滑雪场'),
+)
+NAME_TABLE_ROWS = NAME_POOL_TABLE + SURNAME_TABLE + PLACE_TABLE
 # ------------------------------------------------------------------ name entry
 # The pre-prologue question/label strings.  They are not TEXT_PTRS blocks: they are
 # short draw scripts -- a run of 2-byte glyph codes followed by the engine's own
@@ -247,17 +273,18 @@ K = UI_KEEP
 
 
 def card(n, what):
-    """A `〜ときめき★X〜` title card, keeping the stock decoration codes in place.
+    """A `〜ときめき★X〜` title card, redrawn from our own font cell by cell.
 
-    The nine festival titles all open with the same six codes (`〜ときめき★`) and close
-    with `〜`, so `UI_KEEP` can copy those three marks through untouched -- they are
-    symbols no Chinese character stands in for -- at the exact indices the stock script
-    uses them.  The Chinese label goes in the remaining cell, blank-padded, so the card
-    keeps its width.
+    The nine festival titles all open with `〜ときめき★` and close with `〜`; both marks
+    are characters the patch already draws (the culture-festival cards use them), so the
+    line writes them literally and the star lands on the same WenQuanYi record the
+    Saotome lines use, instead of a second, Japanese-font star on the same screen.
+    The Chinese label goes in the remaining cell, blank-padded, so the card keeps its
+    width.
     """
     pad = n - 7 - len(what)
     assert pad >= 0, '%s does not fit a %d-code card' % (what, n)
-    return K + '心跳  ' + K + what + ' ' * pad + K
+    return '〜心跳  ★' + what + ' ' * pad + '〜'
 
 
 UI_TEXT_ROWS = (
@@ -761,13 +788,13 @@ UI_TEXT_ROWS = (
     (0X1BEA8, 16, '［ボタンを押すとプレイ開始です］', '［按下按键就开始游戏］', 'R'),
     (0X1BEC9, 16, '早乙女「すごーい、あたったあ。」', '早乙女「好厉害，猜中啦。」', 'R'),
     (0X1BEEA, 18, '早乙女「よし、残るはあと一組だっ！」', '早乙女「好，只剩最后一组！」', 'R'),
-    (0X1BF0F, 17, '早乙女「さすが先輩。冴えてるう★」', '早乙女「不愧是学长，眼力真亮」', 'R'),
+    (0X1BF0F, 17, '早乙女「さすが先輩。冴えてるう★」', '早乙女「不愧是前辈，真灵光啊★」', 'R'),
     (0X1BF32, 20, '早乙女「ま、一回くらいは仕方ないよね。」', '早乙女「嘛，错一次也没办法。」', 'R'),
     (0X1BF5B, 21, '早乙女「惜しいっ！お手つきは後１回だよ。」', '早乙女「可惜！只剩一次机会了。」', 'R'),
     (0X1BF86, 17, '早乙女「ちがう、ちがうってばあ！」', '早乙女「不对，我说不对啦！」', 'R'),
     (0X1BFA9, 19, '早乙女「コアラカードだあ★ラッキー。」', '早乙女「是树袋熊卡，真幸运。」', 'R'),
     (0X1BFD0, 19, '早乙女「あーあ、シャッフルカードだ。」', '早乙女「唉，是洗牌卡呀。」', 'R'),
-    (0X1BFF7, 17, '早乙女「お見事！やったね、先輩\ue000」', '早乙女「真漂亮！太好了，学长」', 'R'),
+    (0X1BFF7, 17, '早乙女「お見事！やったね、先輩\ue000」', '早乙女「真漂亮！太好了，前辈」', 'R'),
     # The date-planning and club system messages, one `$0A`-terminated draw script per
     # line.  `その日は、クリスマス` / `パーティーの日だ。` are one sentence the engine
     # breaks with a `$14` line control, so the two Chinese rows are written to read
@@ -811,8 +838,8 @@ UI_TEXT_ROWS = (
     (0X1ABFD,  3, '玉入れ', '投球', 'R'),
     (0X1AC04,  4, '大玉運び', '运大球', 'R'),
     (0X1AC1A,  3, 'ひみつ', '秘密', 'R'),
-    (0X1AC22,  5, '戦闘★豪州', '战斗\ue000澳洲', 'R'),
-    (0X1AC2D,  5, '戦闘☆中国', '战斗\ue000中国', 'R'),
+    (0X1AC22,  5, '戦闘★豪州', '战斗★澳洲', 'R'),
+    (0X1AC2D,  5, '戦闘☆中国', '战斗☆中国', 'R'),
     (0X1AC39,  4, '不良戦闘', '街头斗殴', 'R'),
     (0X1AC42,  3, '番長戦', '头目战', 'R'),
     (0X1AC4A,  4, '紐緒ロボ', '纽绪机甲', 'R'),
@@ -913,8 +940,12 @@ UI_TEXT_ROWS = (
     (0X195C3,  3, '左ボタ', '左键', 'R'),
     (0X195D1,  1, '速', '快', 'R'),
     (0X195E0,  1, '遅', '慢', 'R'),
+    # A label whose cells alternate glyph codes with $40-$9F code-page bytes can only be
+    # translated cell by cell: the single-byte cells keep whatever the global page says.
+    # What must never survive is a kana record, so the trailing cell of ファイル and of
+    # ゴールデンウィーク is blanked rather than kept.
     (0X195FD,  2, 'ファ', '文件', 'R'),
-    (0X19602,  1, 'ル', '\ue000', 'R'),
+    (0X19602,  1, 'ル', ' ', 'R'),
     (0X19642,  8, '３．ＬＯＡＤ中止', '３．读取中断', 'R'),
     (0X19654,  4, 'ＬＯＡＤ', '读取存档', 'R'),
     (0X1966C,  4, 'ＬＯＡＤ', '读取存档', 'R'),
@@ -931,7 +962,7 @@ UI_TEXT_ROWS = (
     (0X1976A,  1, 'ゴ', '黄', 'R'),
     (0X1976D,  2, 'ルデ', '金', 'R'),
     (0X19772,  2, 'ウィ', '周', 'R'),
-    (0X19777,  1, 'ク', '\ue000', 'R'),
+    (0X19777,  1, 'ク', ' ', 'R'),
     (0X197E7,  2, '勤労', '勤劳', 'R'),
     (0X197F5,  2, '勤労', '勤劳', 'R'),
     (0X19804,  4, '天皇誕生', '天皇诞生', 'R'),
@@ -999,14 +1030,14 @@ UI_TEXT_ROWS = (
     # The culture-festival literature display: a song card, four essays by
     # the heroines and the player, and the first two classroom plays.  Each line
     # is its own placement run, so a sentence that wraps mid-way keeps its break.
-    (0X1C6E8, 12, '〜女々しい野郎どもの詩〜', '〜窝囊汉子的诗〜', 'R'),
+    (0X1C6E8, 12, '〜女々しい野郎どもの詩〜', '〜描写阴柔男子的诗歌〜', 'R'),
     (0X1C701,  9, '窓に映る景色は', '窗前映出的景色', 'R'),
     (0X1C714,  9, '偽りに 溢れて', '尽是虚伪', 'R'),
     (0X1C727,  9, '僕の胸を冷たい', '让我心头冰凉', 'R'),
     (0X1C73A,  9, '暗闇が閉ざすよ', '黑暗紧闭心门', 'R'),
-    (0X1C74D, 11, 'Ａｈ 君がいるならば', ' \ue000\ue000 有你在身边', 'R'),
+    (0X1C74D, 11, 'Ａｈ 君がいるならば', '啊〜 有你在身边', 'R'),
     (0X1C764, 10, '抱きしめたいのに', '想紧紧抱住你', 'R'),
-    (0X1C779, 12, 'Ａｈ 時を戻せるならば', ' \ue000\ue000 若能回到当年', 'R'),
+    (0X1C779, 12, 'Ａｈ 時を戻せるならば', '啊〜 若能回到当年', 'R'),
     (0X1C792,  9, '帰りたい今すぐ', '现在就想要回去', 'R'),
     (0X1C7B2, 13, '題名  「僕の高校生活」', '题目 「我的高中生活」', 'R'),
     (0X1C7CE, 14, '「入学してからあっという間に', '「入学以来转眼间', 'R'),
@@ -1104,10 +1135,10 @@ UI_TEXT_ROWS = (
     (0X1D4F6, 14, '「頭に付けてるマークは字牌。', '「头上戴的记号是麻将牌。', 'R'),
     (0X1D515, 13, '自慢のリーチで敵を討つ！', '用得意的立直一击克敌！', 'R'),
 # The rest of the two classroom plays and the third one: the mahjong hero finishes his
-# attack, the 山吹姬 cast list (whose letters stay stock glyph codes -- they are latin,
-# not hanzi, so ``UI_KEEP`` just pins the record the Japanese font already draws), then
-# the fairy tale itself.  The dwarf/witch lines are Snow White told badly on purpose, so
-# the Chinese keeps the stage-ham delivery rather than cleaning it up.
+# attack, the 山吹姬 cast list (its full-width latin letters are written out so they get
+# their own records -- Ａ/Ｂ were already redrawn for the blood types, the rest were still
+# the Japanese font's), then the fairy tale itself.  The dwarf/witch lines are Snow White
+# told badly on purpose, so the Chinese keeps the stage-ham delivery rather than tidying it.
     (0X1D533, 22, 'ヤクマンの国から僕らの為に、きたぞ、我等の', '从役满之国来到我们身边，我们的', 'R'),
     (0X1D560, 10, 'ウラドラマン！！」', '乌拉德拉曼！！」', 'R'),
     (0X1D57D,  8, '「テンパイ！！」', '「听牌！！」', 'R'),
@@ -1135,15 +1166,15 @@ UI_TEXT_ROWS = (
     (0X1D8C8, 23, 'だが、本当の平和な日が来るその日まで、マジラ', '但是，在真正的和平之日到来之前，马吉拉', 'R'),
     (0X1D8F7, 18, 'は私達のために戦ってくれるだろう！', '会继续为我们战斗下去！', 'R'),
     (0X1D91E, 22, 'ありがとう！ありがとう、僕らのマジラ！！」', '谢谢你！谢谢你，我们的马吉拉！！」', 'R'),
-    (0X1D94D,  4, '山吹姫', '\ue000山吹姬', 'R'),
-    (0X1D961,  3, '王子', '\ue000王子', 'R'),
-    (0X1D968,  5, '小人 Ａ', '\ue000矮人 \ue000', 'R'),
-    (0X1D973,  5, '小人 Ｂ', '\ue000矮人 \ue000', 'R'),
-    (0X1D97E,  5, '小人 Ｃ', '\ue000矮人 \ue000', 'R'),
-    (0X1D989,  5, '小人 Ｄ', '\ue000矮人 \ue000', 'R'),
-    (0X1D994,  5, '小人 Ｅ', '\ue000矮人 \ue000', 'R'),
-    (0X1D99F,  5, '小人 Ｆ', '\ue000矮人 \ue000', 'R'),
-    (0X1D9AA,  5, '小人 Ｇ', '\ue000矮人 \ue000', 'R'),
+    (0X1D94D,  4, '山吹姫', ' 山吹姬', 'R'),
+    (0X1D961,  3, '王子', ' 王子', 'R'),
+    (0X1D968,  5, '小人 Ａ', ' 矮人 Ａ', 'R'),
+    (0X1D973,  5, '小人 Ｂ', ' 矮人 Ｂ', 'R'),
+    (0X1D97E,  5, '小人 Ｃ', ' 矮人 Ｃ', 'R'),
+    (0X1D989,  5, '小人 Ｄ', ' 矮人 Ｄ', 'R'),
+    (0X1D994,  5, '小人 Ｅ', ' 矮人 Ｅ', 'R'),
+    (0X1D99F,  5, '小人 Ｆ', ' 矮人 Ｆ', 'R'),
+    (0X1D9AA,  5, '小人 Ｇ', ' 矮人 Ｇ', 'R'),
     (0X1D9BB, 15, '「むかしむかしの、そのむかし。', '「从前从前，很久以前。', 'R'),
     (0X1D9DC, 21, '森の中に一人の女の子が暮らしていました。', '在森林深处，住着一个女孩子。', 'R'),
     (0X1DA09, 23, 'その女の子の名前は「山吹姫」といい、森に映え', '那个女孩的名字叫「山吹公主」，她就像', 'R'),
@@ -1215,7 +1246,7 @@ UI_TEXT_ROWS = (
         (0X1E4FE, 11, 'デートの下見の 水族館', '约会踩点的 水族馆', 'R'),
         (0X1E518, 13, '彼女のかわりに 付き合う私', '我代替她 和他约会', 'R'),
         (0X1E536, 13, '待ち合わせに 遅れてきても', '约定的时间 就算迟到', 'R'),
-        (0X1E554, 12, '謝る素振りは 一つないの', '道歉的样子 一点没有', 'R'),
+        (0X1E554, 12, '謝る素振りは 一つないの', '丝毫没有 要道歉的样子', 'R'),
         (0X1E570, 11, '髪の毛 触ってるときは', '头发 被摸到的时候', 'R'),
         (0X1E58A, 10, '彼女思い出してるのね', '是在想着她吧', 'R'),
         (0X1E5A2, 12, 'サカナの様に 言葉なしで', '就像鱼儿一样 没有言语', 'R'),
@@ -1237,7 +1268,7 @@ UI_TEXT_ROWS = (
         (0X1E808,  9, '風船は 知らぬ間に', '气球在 不知不觉', 'R'),
         (0X1E834, 12, '割れるショックも 大きい', '破掉的冲击 也很大', 'R'),
         (0X1E868, 14, '通用しない 聖書（バイブル）', '派不上用场 的圣经', 'R'),
-        (0X1E8A0,  8, '割と 難しい宿題', '还挺 难的功课', 'R'),
+        (0X1E8A0,  8, '割と 難しい宿題', '相当 难的作业', 'R'),
 # The ending credits that roll after a clear: the role labels and the staff lines whose
 # names the preset pool has already renamed (青山 和浩, 吉冈 思远).  The romaji nicknames
 # stay as they are because they are handles, not words.
@@ -1278,7 +1309,7 @@ UI_TEXT_ROWS = (
         (0X1EECA, 14, '函館 次郎    小椋 雅史', '函馆 次郎    小椋 雅史', 'R'),
         (0X1EEF4, 13, '村井 聖夜    荘 司朗', '村井 圣夜    庄 司朗', 'R'),
         (0X1EF60, 13, 'いもほれいまい  安達昌宣',
-         K * 7 + '  安达昌宣', 'R'),
+         '为心动所迷的我  安达昌宣', 'R'),
 )
 PRESET_NAMES = (0x1F890, 0x1F970)     # the pool itself: 32 x 7-byte preset names
 KANA_REMAP_LIST = 0x54E4             # $80:D4E4, zero-terminated source indices
@@ -1982,7 +2013,27 @@ def line_items(code, seg, line, char2idx, repaged=frozenset()):
                          % (len(runs) - 1, [r[0] for r in runs], line))
     items, folds = [], {}
     for (jptext, ctrls, macs), zt in zip(runs, zruns):
-        items += zh_tokens(zt)
+        toks = zh_tokens(zt)
+        for t in toks:
+            if not t.startswith('⟦'):
+                continue
+            raw = bytes.fromhex(t[1:-1])
+            # A cite whose body is plain text is not a citation, it is that text:
+            # the engine will draw the body, the round trip will compare the body,
+            # and the dictionary fold recompacts the body's own Chinese into the
+            # same 1-2 bytes.  Only a variable/format body ($00/$0E/$0F or a nested
+            # macro) has to be written as its code, because nothing else can say it.
+            if len(raw) == 1 and 0xA0 <= raw[0] < 0xE8:
+                text, _, clean, _, _ = code.phrase(raw[0])
+            elif len(raw) == 2 and 0xE8 <= raw[0] < 0xF0:
+                text, _, clean, _, _ = code.sub(*raw)
+            else:
+                continue
+            if clean:
+                raise SystemExit('line cites %s, a plain-text macro that reads %r; '
+                                 'write that Chinese instead (the fold recompacts it)'
+                                 % (t, text))
+        items += toks
         items += [('=%02X' % c) for c in ctrls]
         for ftext, fraw, fctrl, fslots, fbody in macs:
             ftoks = zh_tokens(ftext)
@@ -2326,7 +2377,11 @@ def wqy_records(char2idx, need, dy_extra='。、，！？…：；'):
 # a birthday date and `$E807` a blood type into two prologue lines, and their bodies
 # live in bank $C3 -- no text block can re-layout them, so the six glyphs they draw
 # are the last characters the translated prologue still shows in the Japanese font.
-RUNTIME_CALLS = (0xE806, 0xE807)
+# `$E800`/`$E801` are the same kind of call (month/day, and year/month/day, printed
+# from WRAM by `$0F` around a 月/日/年 glyph) and block 0's phone invitations use them,
+# so those three kanji join the in-place set too.  `$E802`'s place names are translated
+# as records, not glyphs -- see PLACE_TABLE.
+RUNTIME_CALLS = (0xE800, 0xE801, 0xE806, 0xE807)
 
 
 def runtime_glyphs(code):
@@ -2461,6 +2516,7 @@ def audit(orig, out, written=(), bodies=(), quiet=b'\xff'):
              ('default-name code', (0x28b50, 0x28b80)),
              ('preset name table', (0x1f890, 0x1f970)),
              ('name pool', (0x21A2D9, 0x21A356)),
+             ('place pool', (0x21A1D7, 0x21A2A6)),
              ('surname name table', (0x180C0, 0x18107)),
              ('name-entry ui', UI_TEXT_REGION),
              ('nickname pool', NICK_POOL),
