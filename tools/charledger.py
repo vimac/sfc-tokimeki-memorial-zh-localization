@@ -34,6 +34,7 @@ SOURCES = (
     # Block 0's file grows one box-run at a time from segment 0, so the lines that
     # are not shipped yet simply are not in it -- nothing here may assume it is whole.
     ('block0', 'docs/research/block0_zh.txt'),
+    ('block2', 'docs/research/block2_zh.txt'),
 )
 
 # Draft translations that are *not* in the ROM yet -- pricing them is the whole point of

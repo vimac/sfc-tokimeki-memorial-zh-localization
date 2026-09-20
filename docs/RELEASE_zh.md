@@ -10,7 +10,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `79a9ad9c6b2328bee3ac41689e6b9d24` | **验收盘**（4 MB LoROM，日版 Rev 1 基线）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
+| `rom_prologue_zh.sfc` | `83fd32d755b2c4c7e47320fadf20a5d6` | **验收盘**（4 MB LoROM，日版 Rev 1 基线）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 根目录只留上面两颗 `.sfc`；上游命名的原版转储与 `.srm` 在 `~/retro/roms/`，全量备份在 `~/retro/tokimeki.backup.2609200007.tar.gz`（两轮清理删掉的废弃脚本/中间盘只从 git 历史找回）。所有工具一律按 `rom_original_japanese.sfc` 读母盘。
@@ -50,6 +50,14 @@ python3 tools/build_prologue.py --patch
 * **序章（block 144）全部 88 个文本框**，从标题界面 → 姓名输入 → 生日/血型 → 藤崎诗织问答 →
   序章蒙太奇 → 第一天字幕 → 状态界面，冷启动 96 次 A 键全程可玩，无死循环、无指针漂移。
 * **每日事件池（block 8）125 个文本框**（晨间独白、提示语）。
+* **TKSC 全剧本开工（2026-09-20 试点打通）**：145 个 TEXT_PTRS 块里 **69 块管线就绪**（BOX 收尾、
+  无吃操作数控制码）；65 块是事件脚本块（`$01/$09/$0F` 等吃操作数的控制码，要按 `ctrl_advance.py`
+  先做逐块走读才谈得上译）、2 块末尾无终止码、9 块 walk 丢字节——这三类是后续工程。
+  **block 2（藤崎诗织的约会等候事件，95 段/43 框/624 B）全译落库**：BLOCKS 注册任意块的流程验证
+  打通（`(N, 'blockN_zh.txt', 地址序下一块起点)`），含 `⟦ECA5⟧` 变量宏与名牌码两种代表性结构；
+  6 个框因子词典外 sub-text 宏（e8d0 等 8 个）字节枯竭只能弃码直写汉字、译文偏瘦——等词典扩容后可回胖。
+  下一批起按「同模板家族」翻：blocks 3/23/26/29/32/35/38/41/47 与 block 2 是逐字相同的等候事件模板
+  （只换女主名牌与形容词变体），其中 32（古式）/35（清川）/38（镜）最小。
 * **系统提示/旁白池（block 0）box 0–724（1,617 段）全译完工**（前十六批）：新游戏提示菜单
   （「从序章开始」「跳过序章」）、约会被放鸽子、新创刊杂志、光辉中央公园、生物节律专栏、
   美术馆/水族馆/体育场/植物园/保龄球/天文馆、唱卡拉 OK 与画展的反应句、「袖龙」那条情报，
@@ -209,6 +217,7 @@ python3 tools/build_prologue.py --patch
 ```
 python3 tools/build_prologue.py --patch          # VERDICT: all checks passed；三块都要 0 over, 0 broken
 python3 tools/render_prologue.py rom_prologue_zh.sfc 0 0:724   # boxes 0:724 rendered, 0 kana cells, 0 "?" cells
+python3 tools/render_prologue.py rom_prologue_zh.sfc 2 0:42    # boxes 0:42 rendered, 0 kana cells, 0 "?" cells
 python3 tools/render_prologue.py rom_prologue_zh.sfc 8 0:124   # 125 boxes, 0 kana, 0 "?"
 python3 tools/render_prologue.py rom_prologue_zh.sfc 144 0:87  # 88 boxes, 0 kana, 0 "?"
 python3 tools/name_tables.py rom_prologue_zh.sfc # PASS: 0/76 name records still hold kana or an unknown slot

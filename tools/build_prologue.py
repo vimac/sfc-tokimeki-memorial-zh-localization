@@ -92,7 +92,7 @@ OVERLAY = PROMPT + CAPTION
 #      extent end is just the next block pointer; boxes 0 and 1 get written twice on
 #      purpose -- once by this block, once by PROMPT below -- and both encode the
 #      same two strings, so the later write only replaces bytes with bytes.
-BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA),
+BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (8, 'block8_zh.txt', 0x1E5E90), (144, 'prologue_zh.txt', END))
 # Which phrase ($B9) and sub-text ($C3) dictionary entries have a Chinese reading.
 # Rows are key/cap/refs/japanese/chinese/bytes/fit; only key and chinese are read
