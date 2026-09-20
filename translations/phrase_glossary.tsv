@@ -44,10 +44,10 @@ ed0b	5	7	情報	情报	4	ok
 bb	8	6	面白かった	真有意思	8	relocate
 cf	6	6	どうして	为什么	6	relocate
 eaaa	9	6	約束があるの	有约在先	8	ok
-eb62	6	6	よろしくね	多多关照	8	tuned
+eb62	6	6	よろしくね	多关照	8	tuned
 ec7b	4	6	そうよ	是呀	4	relocate
 ed74	5	6	駄目	不行	4	ok
-d0	5	5	いいわよ	没关系	6	relocate
+d0	5	5	いいわよ	行吧	6	relocate
 e899	13	5	どうして、来なかったの	你怎么没来呀	12	ok
 e9a3	10	5	この部だったんだ	是这个社团啊	12	relocate
 e9f7	8	5	そうなんですか	是这样吗	8	relocate
@@ -226,7 +226,7 @@ e928	10	1	あっ、おみくじでも	求支签	6	ok
 ec25	6	1	引かない	不抽吗	6	ok
 e8e1	13	1	大吉しかないのかもね	全是大吉吧	10	ok
 ebb6	7	1	普通です	挺普通	6	ok
-ed34	4	1	元日	新年	4	tuned
+ed34	4	1	元日	元旦	4	tuned
 ecd3	5	1	最高	最好	4	ok
 ebc1	6	1	帰ろうか	回吧	4	ok
 be	6	1	そうですか	这样呀	6	ok
@@ -239,7 +239,7 @@ ebd3	5	1	だから、	所以	6	tuned
 ec6b	9	1	学業成就	学业有成	8	ok
 ec6c	9	2	健康祈願	身体健康	8	ok
 ebb7	6	2	知らない	不知道	6	ok
-ecd4	4	1	何度	每次	4	ok
+ecd4	4	1	何度	每回	4	ok
 ed4e	5	2	大凶	大凶	4	ok
 ed6f	5	1	遠吠	狗吠	4	ok
 ecd6	5	1	結果	结果	4	ok
