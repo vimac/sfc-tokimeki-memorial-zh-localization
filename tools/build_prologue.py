@@ -1005,21 +1005,9 @@ UI_TEXT_ROWS = (
     (0X19553,  4, '設定終了', '设置结束', 'R'),
     # A label whose cells alternate glyph codes with $40-$9F code-page bytes can only be
     # translated cell by cell: the single-byte cells keep whatever the global page says.
-    # What must never survive is a kana record, so the trailing cell of ファイル and of
+    # What must never survive is a kana record, so the trailing cell of
     # ゴールデンウィーク is blanked rather than kept.
-    (0X195FD,  2, 'ファ', '文件', 'R'),
-    (0X19602,  1, 'ル', ' ', 'R'),
-    (0X19642,  8, '３．ＬＯＡＤ中止', '３．读取中断', 'R'),
-    (0X19654,  4, 'ＬＯＡＤ', '读取存档', 'R'),
-    (0X1966C,  4, 'ＬＯＡＤ', '读取存档', 'R'),
-    (0X1967F,  4, 'ＬＯＡＤ', '读取存档', 'R'),
-    (0X19690,  4, 'ＬＯＡＤ', '读取存档', 'R'),
-    (0X1969D,  2, 'コマ', '假名', 'R'),
-    (0X196A2,  4, 'ド入力時', '输入时', 'R'),
-    (0X196D1,  4, '１．記録', '１．存档', 'R'),
-    (0X196E3,  4, '２．記録', '２．存档', 'R'),
-    (0X196FA,  4, 'ＬＯＡＤ', '读取存档', 'R'),
-    (0X1970F,  4, 'ＬＯＡＤ', '读取存档', 'R'),
+    # (The file-menu runs all moved to UI_LINE_ROWS once the whole-line mechanism landed.)
     (0X19737,  4, '建国記念', '建国纪念', 'R'),
     (0X19760,  1, '緑', '绿', 'R'),
     (0X1976A,  1, 'ゴ', '黄', 'R'),
@@ -1393,8 +1381,8 @@ UI_LINE_ROWS = (
     (0X19504, 19, 'デート場所を指定してください', '请指定约会的地点'),
     (0X19519, 17, 'マウス・パッド設定', '鼠标与手柄的设定'),
     (0X1952C, 13, '⟦ECE8⟧出力速度設定', '文字输出速度'),
-    (0X1953B,  7, 'データ⟦EC15⟧', '存档'),
-    (0X19544, 13, 'データＬＯＡＤ', '读取存档'),
+    (0X1953B,  7, 'データ⟦EC15⟧', '存储'),
+    (0X19544, 13, 'データＬＯＡＤ', '读取进度'),
     (0X1955D, 19, 'カーソル移動速度設定', '光标移动速度设定'),
     (0X19572, 19, 'マウス決定ボタン設定', '鼠标确认键设定'),
     (0X19587,  5, '⟦E966⟧速い', '快'),
@@ -1405,6 +1393,28 @@ UI_LINE_ROWS = (
     (0X195CF,  5, '⟦EA61⟧速い', '快'),
     (0X195D6,  6, '⟦EA61⟧普通', '中'),
     (0X195DE,  5, '⟦EA61⟧遅い', '慢'),
+    # The file menu.  The prompt line opens right after the slot-number splice
+    # (１．〔ctrl〕２．〔ctrl〕...), so it carries the `loose` flag; the rest are
+    # whole pool entries.  A trailing «A0» stays outside the span and draws the
+    # 。 for free.  0x1968D keeps its two ⟦0B newlines -- the only control byte
+    # the walk admits -- so the three-line layout survives.
+    (0X195FD, 14, 'ファイルを⟦ED4F⟧して⟦EC7E⟧', '请选择存储进度', True),
+    (0X1960D, 10, '３．⟦EC15⟧中止', '３．取消'),
+    (0X19619, 11, '⟦EC15⟧を中止します', '取消存储'),
+    (0X19626, 12, '⟦EC16⟧１に⟦EC15⟧しました', '已存入进度１'),
+    (0X19634, 12, '⟦EC16⟧２に⟦EC15⟧しました', '已存入进度２'),
+    (0X19642, 16, '３．ＬＯＡＤ中止', '３．取消读取'),
+    (0X19654, 17, 'ＬＯＡＤを中止します', '已取消读取'),
+    (0X19667, 17, '⟦EC16⟧１をＬＯＡＤします', '开始读取进度１'),
+    (0X1967A, 17, '⟦EC16⟧２をＬＯＡＤします', '开始读取进度２'),
+    (0X1968D, 42, '⟦EC15⟧とＬＯＡＤは⟦0B⟧平日コマンド入力時でしか⟦0B⟧実行できません',
+     '存储与读取只能⟦0B⟧在工作日的指令输入⟦0B⟧时进行'),
+    (0X196B9, 10, '１．未使用', '存储进度１'),
+    (0X196C5, 10, '２．未使用', '存储进度２'),
+    (0X196D1, 16, '１．記録されていません', '进度１暂无存档'),
+    (0X196E3, 16, '２．記録されていません', '进度２暂无存档'),
+    (0X196F5, 19, '⟦EC16⟧１はＬＯＡＤできません', '无法读取进度１'),
+    (0X1970A, 19, '⟦EC16⟧２はＬＯＡＤできません', '无法读取进度２'),
 )
 PRESET_NAMES = (0x1F890, 0x1F970)     # the pool itself: 32 x 7-byte preset names
 KANA_REMAP_LIST = 0x54E4             # $80:D4E4, zero-terminated source indices
@@ -2418,11 +2428,12 @@ def jp_sb_page(rom):
 
 
 def ui_line_walk(data, addr, n):
-    """Tokenise a line span: ('g',idx) ('b',code) ('p',code) ('s',hi,lo).
+    """Tokenise a line span: ('g',idx) ('b',code) ('p',code) ('s',hi,lo) ('c',0x0B).
 
-    The contract (see UI_LINE_ROWS) is that no operand-eating control byte appears
-    inside the span, and the span ends on a token boundary -- either proves the row
-    names a real line pool entry rather than a slice of the drawing script.
+    The contract (see UI_LINE_ROWS) is that the only control byte inside the span
+    is $0B -- the zero-operand newline (docs/research/control-codes.md) -- and the
+    span ends on a token boundary; either proves the row names a real line pool
+    entry rather than a slice of the drawing script.
     """
     toks, i, end = [], addr, addr + n
     while i < end:
@@ -2437,6 +2448,8 @@ def ui_line_walk(data, addr, n):
             toks.append(('p', b)); i += 1
         elif b >= 0x40:
             toks.append(('b', b)); i += 1
+        elif b == 0x0B:
+            toks.append(('c', b)); i += 1
         else:
             raise AssertionError('%#x: control byte $%02X inside the span' % (i, b))
     return toks
@@ -2451,9 +2464,20 @@ def ui_line_text(toks, sbjp):
             out.append(sbjp[t[1]] or '??')
         elif t[0] == 'p':
             out.append('«%02X»' % t[1])
+        elif t[0] == 'c':
+            out.append('⟦0B⟧')
         else:
             out.append('⟦%02X%02X⟧' % (t[1], t[2]))
     return ''.join(out)
+
+
+LINE_NL = '⟦0B⟧'          # in-line newline, kept at its Japanese offset
+
+
+def line_bytes(char2idx, line):
+    """Chinese line text (with optional ⟦0B⟧ splices) -> the span bytes."""
+    segs = line.split(LINE_NL)
+    return b'\x0b'.join(b''.join(k2(char2idx[c]) for c in seg) for seg in segs)
 
 
 def ui_line_bodies(char2idx, rom):
@@ -2469,22 +2493,25 @@ def ui_line_bodies(char2idx, rom):
         for c in range(a2, a2 + 2 * n2):
             seen[c] = ('ui', a2)
     sbjp = jp_sb_page(rom)
-    for addr, n, jp, line in UI_LINE_ROWS:
+    for addr, n, jp, line, loose in (r + (False,) * (5 - len(r))
+                                     for r in UI_LINE_ROWS):
         hit = [c for c in range(addr, addr + n) if c in seen]
         assert not hit, '%#x overlaps the %s row at %#x' % (
             addr, seen[hit[0]][0], seen[hit[0]][1])
         for c in range(addr, addr + n):
             seen[c] = ('line', addr)
-        assert rom.data[addr - 1] in (0x2E, 0x0A), \
-            '%#x does not start right after a line delimiter' % addr
+        if not loose:                       # a splice line starts on control operands
+            assert rom.data[addr - 1] in (0x2E, 0x0A), \
+                '%#x does not start right after a line delimiter' % addr
         assert rom.data[addr + n] in (0x2E, 0x0A, 0xA0), \
             '%#x+%d is %#02X, not a delimiter' % (addr, n, rom.data[addr + n])
         got = ui_line_text(ui_line_walk(rom.data, addr, n), sbjp)
         assert got == jp, '%#x holds %r, not %r' % (addr, got, jp)
-        assert 2 * len(line) <= n, '%s needs %d B, the span has %d' % (line, 2 * len(line), n)
-        missing = [c for c in line if c not in char2idx]
+        text = line.replace(LINE_NL, '')
+        missing = [c for c in text if c not in char2idx]
         assert not missing, '%s: no glyph slot for %s' % (line, ''.join(missing))
-        body = b''.join(k2(char2idx[c]) for c in line)
+        body = line_bytes(char2idx, line)
+        assert len(body) <= n, '%s needs %d B, the span has %d' % (line, len(body), n)
         out.append((addr, body + b'\x0a' * (n - len(body))))
     return out
 
@@ -2495,12 +2522,16 @@ def verify_ui_lines(char2idx, path):
     exp = ui_line_bodies(char2idx, T.Rom(SRC_ROM))
     d = open(path, 'rb').read()
     ok, good_rows, rows = True, 0, []
-    for (addr, n, jp, line), (a2, b2) in zip(UI_LINE_ROWS, exp):
+    for (addr, n, jp, line), (a2, b2) in zip((r[:4] for r in UI_LINE_ROWS), exp):
         assert a2 == addr
         good = bytes(d[addr:addr + n]) == b2
         toks, got = [], ''
         i = addr
-        while i < addr + n and d[i] >= 0xF0:
+        while i < addr + n and (d[i] >= 0xF0 or d[i] == 0x0B):
+            if d[i] == 0x0B:
+                got += LINE_NL
+                i += 1
+                continue
             idx = ((d[i] << 8) | d[i + 1]) & 0x0FFF
             got += slot2ch.get(idx) or '?'
             i += 2
@@ -3188,7 +3219,8 @@ def plan(rom=None, verbose=True):
     extra_need += [c for _, _, _, line, _ in UI_TEXT_ROWS for c in line
                    if c not in (UI_KEEP, ' ') and c not in chars
                    and c not in extra_need]
-    extra_need += [c for _, _, _, line in UI_LINE_ROWS for c in line
+    extra_need += [c for row in UI_LINE_ROWS
+                   for c in row[3].replace(LINE_NL, '')
                    if c not in chars and c not in extra_need]
     # A dictionary body we rewrite is Chinese text too, and a character that only
     # ever appears inside one still needs its record.
@@ -3342,7 +3374,7 @@ def main():
              ' '.join(line for _, _, _, line, _ in UI_TEXT_ROWS)))
     print('lines  %d bank line rows -> %s'
           % (len(UI_LINE_ROWS),
-             ' '.join(line for _, _, _, line in UI_LINE_ROWS)))
+             ' '.join(row[3] for row in UI_LINE_ROWS)))
     if '--stats' in sys.argv:
         return
     bank_ok = verify_bank_slots(pl['char2idx'], pl['new'])
