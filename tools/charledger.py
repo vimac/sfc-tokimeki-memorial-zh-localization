@@ -67,6 +67,7 @@ SOURCES = (
     ('block137', 'docs/research/block137_zh.txt'),
     ('block92', 'docs/research/block92_zh.txt'),
     ('block46', 'docs/research/block46_zh.txt'),
+    ('block24', 'docs/research/block24_zh.txt'),
     ('block22', 'docs/research/block22_zh.txt'),
     ('block84', 'docs/research/block84_zh.txt'),
     ('block85', 'docs/research/block85_zh.txt'),
