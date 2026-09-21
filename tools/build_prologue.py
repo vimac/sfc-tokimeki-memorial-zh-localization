@@ -1000,27 +1000,9 @@ UI_TEXT_ROWS = (
     # The mouse/keyboard setup help panel and the save-slot list, then the names the
     # calendar shows for each fixed date -- holiday and heroine birthday.  Every row is
     # 1-8 codes because the panel interleaves a placement opcode between its words, and
-    # six of them spell one label across that seam.
-    (0X19504,  1, 'デ', '存', 'R'),
-    (0X19508,  2, '場所', '档位', 'R'),
-    (0X1950D,  2, '指定', '选择', 'R'),
-    (0X19519,  5, 'マウス・パ', '鼠标与手柄', 'R'),
-    (0X19524,  3, 'ド設定', '的设定', 'R'),
+    # six of them spell one label across that seam.  (The date prompts and the whole
+    # mouse/pad settings screen moved to UI_LINE_ROWS: their SB seams garble.)
     (0X19553,  4, '設定終了', '设置结束', 'R'),
-    (0X1955D,  1, 'カ', '光', 'R'),
-    (0X19560,  8, 'ソル移動速度設定', '标移动速度设定', 'R'),
-    (0X19572,  7, 'マウス決定ボタ', '鼠标确认键', 'R'),
-    (0X19581,  2, '設定', '设定', 'R'),
-    (0X19589,  1, '速', '快', 'R'),
-    (0X19598,  1, '遅', '慢', 'R'),
-    (0X1959D,  3, 'マウス', '鼠标键', 'R'),
-    (0X195A5,  2, '決定', '确认', 'R'),
-    (0X195AA,  3, '右ボタ', '右键', 'R'),
-    (0X195B6,  3, 'マウス', '鼠标键', 'R'),
-    (0X195BE,  2, '決定', '确认', 'R'),
-    (0X195C3,  3, '左ボタ', '左键', 'R'),
-    (0X195D1,  1, '速', '快', 'R'),
-    (0X195E0,  1, '遅', '慢', 'R'),
     # A label whose cells alternate glyph codes with $40-$9F code-page bytes can only be
     # translated cell by cell: the single-byte cells keep whatever the global page says.
     # What must never survive is a kana record, so the trailing cell of ファイル and of
@@ -1073,8 +1055,6 @@ UI_TEXT_ROWS = (
     (0X184F0,  5, 'オプション', '选项', 'R'),
     (0X18531,  4, '効果音', '效果音', 'R'),
     (0X18569,  4, '背景番号', '背景编号', 'R'),
-    (0X19544,  1, 'デ', '读', 'R'),
-    (0X19547,  5, 'タＬＯＡＤ', '取存档', 'R'),
     (0X198F4,  5, 'スタジアム', '体育场', 'R'),
     (0X19A22,  5, '彫刻展開催', '雕塑展', 'R'),
     (0X1C970,  5, '藤崎 詩織', '藤崎 诗织', 'R'),
@@ -1391,6 +1371,40 @@ UI_TEXT_ROWS = (
         (0X1EEF4, 13, '村井 聖夜    荘 司朗', '村井 圣夜    庄 司朗', 'R'),
         (0X1EF60, 13, 'いもほれいまい  安達昌宣',
          '为心动所迷的我  安达昌宣', 'R'),
+)
+
+# A label whose bytes alternate glyph codes with $40-$9F code-page bytes and
+# dictionary calls cannot be fixed cell by cell: every surviving kana SB byte
+# draws whatever the *Chinese* page now says (ッ→慨, ー→我), and every hijacked
+# glyph index draws our fresh pool.  These rows re-encode a whole line inside its
+# original span: text becomes pure 2-byte glyph cells, the leftover bytes become
+# $0A (the engine stops at the first one, so padding never draws), and the line's
+# delimiters ($2E joins, $0A/A0 ends) stay outside the span.  A span may hold
+# glyph cells, SB bytes, «A0-E7» phrase calls and ⟦E8-EF xx⟧ sub-text calls --
+# the swallowed calls are simply no longer emitted -- but never an
+# operand-eating control byte (<$40 outside a call), which is how the date-print
+# slot labels (⟦E801⟧) stay untouched.  `jp` is the span decoded through the
+# Japanese page, an assertion that the row names the string actually there.
+UI_LINE_ROWS = (
+    # Date scheduling prompts (the phone-call flow) and the mouse/pad settings
+    # screen -- the garble the user screenshotted (鼠标与手柄慨 / 东西行力速度 /
+    # デ我タSAVE / 快这慢这).
+    (0X194F0, 18, 'デートする日を指定してください', '请指定约会的日子'),
+    (0X19504, 19, 'デート場所を指定してください', '请指定约会的地点'),
+    (0X19519, 17, 'マウス・パッド設定', '鼠标与手柄的设定'),
+    (0X1952C, 13, '⟦ECE8⟧出力速度設定', '文字输出速度'),
+    (0X1953B,  7, 'データ⟦EC15⟧', '存档'),
+    (0X19544, 13, 'データＬＯＡＤ', '读取存档'),
+    (0X1955D, 19, 'カーソル移動速度設定', '光标移动速度设定'),
+    (0X19572, 19, 'マウス決定ボタン設定', '鼠标确认键设定'),
+    (0X19587,  5, '⟦E966⟧速い', '快'),
+    (0X1958E,  6, '⟦E966⟧普通', '中'),
+    (0X19596,  5, '⟦E966⟧遅い', '慢'),
+    (0X1959D, 23, 'マウスでの決定を右ボタンにする', '用右键确认'),
+    (0X195B6, 23, 'マウスでの決定を左ボタンにする', '用左键确认'),
+    (0X195CF,  5, '⟦EA61⟧速い', '快'),
+    (0X195D6,  6, '⟦EA61⟧普通', '中'),
+    (0X195DE,  5, '⟦EA61⟧遅い', '慢'),
 )
 PRESET_NAMES = (0x1F890, 0x1F970)     # the pool itself: 32 x 7-byte preset names
 KANA_REMAP_LIST = 0x54E4             # $80:D4E4, zero-terminated source indices
@@ -2395,6 +2409,112 @@ def ui_text_bodies(char2idx, rom):
     return out
 
 
+def jp_sb_page(rom):
+    """code -> char for the $40-$9F band as the *Japanese* page holds it."""
+    d = rom.data
+    return {0x40 + i: T.idx_to_char(((d[T.SB_TABLE + 2 * i] << 8)
+                                      | d[T.SB_TABLE + 2 * i + 1]) & 0x0FFF)
+            for i in range(96)}
+
+
+def ui_line_walk(data, addr, n):
+    """Tokenise a line span: ('g',idx) ('b',code) ('p',code) ('s',hi,lo).
+
+    The contract (see UI_LINE_ROWS) is that no operand-eating control byte appears
+    inside the span, and the span ends on a token boundary -- either proves the row
+    names a real line pool entry rather than a slice of the drawing script.
+    """
+    toks, i, end = [], addr, addr + n
+    while i < end:
+        b = data[i]
+        if b >= 0xF0:
+            assert i + 1 < end, '%#x: glyph cell runs off the span end' % i
+            toks.append(('g', ((b << 8) | data[i + 1]) & 0x0FFF)); i += 2
+        elif b >= 0xE8:
+            assert i + 1 < end, '%#x: sub-text call runs off the span end' % i
+            toks.append(('s', b, data[i + 1])); i += 2
+        elif b >= 0xA0:
+            toks.append(('p', b)); i += 1
+        elif b >= 0x40:
+            toks.append(('b', b)); i += 1
+        else:
+            raise AssertionError('%#x: control byte $%02X inside the span' % (i, b))
+    return toks
+
+
+def ui_line_text(toks, sbjp):
+    out = []
+    for t in toks:
+        if t[0] == 'g':
+            out.append(T.idx_to_char(t[1]) or '?')
+        elif t[0] == 'b':
+            out.append(sbjp[t[1]] or '??')
+        elif t[0] == 'p':
+            out.append('«%02X»' % t[1])
+        else:
+            out.append('⟦%02X%02X⟧' % (t[1], t[2]))
+    return ''.join(out)
+
+
+def ui_line_bodies(char2idx, rom):
+    """(offset, bytes) re-encoding whole line-pool entries as pure glyph cells.
+
+    Each row replaces its span with 2-byte WenQuanYi cells and pads the rest with
+    $0A -- the engine stops at the first one, so the padding never draws and the
+    next line keeps the offset its pool already holds.  The delimiters outside the
+    span ($2E joins, $0A/A0 ends) are never touched.
+    """
+    out, seen = [], {}
+    for a2, n2, _, _, _ in UI_TEXT_ROWS:
+        for c in range(a2, a2 + 2 * n2):
+            seen[c] = ('ui', a2)
+    sbjp = jp_sb_page(rom)
+    for addr, n, jp, line in UI_LINE_ROWS:
+        hit = [c for c in range(addr, addr + n) if c in seen]
+        assert not hit, '%#x overlaps the %s row at %#x' % (
+            addr, seen[hit[0]][0], seen[hit[0]][1])
+        for c in range(addr, addr + n):
+            seen[c] = ('line', addr)
+        assert rom.data[addr - 1] in (0x2E, 0x0A), \
+            '%#x does not start right after a line delimiter' % addr
+        assert rom.data[addr + n] in (0x2E, 0x0A, 0xA0), \
+            '%#x+%d is %#02X, not a delimiter' % (addr, n, rom.data[addr + n])
+        got = ui_line_text(ui_line_walk(rom.data, addr, n), sbjp)
+        assert got == jp, '%#x holds %r, not %r' % (addr, got, jp)
+        assert 2 * len(line) <= n, '%s needs %d B, the span has %d' % (line, 2 * len(line), n)
+        missing = [c for c in line if c not in char2idx]
+        assert not missing, '%s: no glyph slot for %s' % (line, ''.join(missing))
+        body = b''.join(k2(char2idx[c]) for c in line)
+        out.append((addr, body + b'\x0a' * (n - len(body))))
+    return out
+
+
+def verify_ui_lines(char2idx, path):
+    """Re-read the re-encoded lines from the written ROM and decode them back."""
+    slot2ch = {i: c for c, i in char2idx.items()}
+    exp = ui_line_bodies(char2idx, T.Rom(SRC_ROM))
+    d = open(path, 'rb').read()
+    ok, good_rows, rows = True, 0, []
+    for (addr, n, jp, line), (a2, b2) in zip(UI_LINE_ROWS, exp):
+        assert a2 == addr
+        good = bytes(d[addr:addr + n]) == b2
+        toks, got = [], ''
+        i = addr
+        while i < addr + n and d[i] >= 0xF0:
+            idx = ((d[i] << 8) | d[i + 1]) & 0x0FFF
+            got += slot2ch.get(idx) or '?'
+            i += 2
+        good &= got == line
+        if not good:
+            print('ui line %#x: BROKEN %r -> %r (%s)'
+                  % (addr, line, got, b2.hex(' ')))
+        ok &= good
+        good_rows += good
+        rows.append(line)
+    print('bank lines: %d/%d -> %s' % (good_rows, len(UI_LINE_ROWS), ' '.join(rows)))
+    return ok
+
+
 def grid_score(ctx, seg_bytes):
     """(over bytes, broken boxes) -- what the code page balancing minimises."""
     over = broken = 0
@@ -3068,6 +3188,8 @@ def plan(rom=None, verbose=True):
     extra_need += [c for _, _, _, line, _ in UI_TEXT_ROWS for c in line
                    if c not in (UI_KEEP, ' ') and c not in chars
                    and c not in extra_need]
+    extra_need += [c for _, _, _, line in UI_LINE_ROWS for c in line
+                   if c not in chars and c not in extra_need]
     # A dictionary body we rewrite is Chinese text too, and a character that only
     # ever appears inside one still needs its record.
     gloss = phrase_glossary()
@@ -3201,7 +3323,8 @@ def main():
     report(pl)
     edits = (prompt_bodies(pl['enc']) + name_bodies(pl['char2idx'], rom)
              + name_table_bodies(pl['char2idx'], rom)
-             + ui_text_bodies(pl['char2idx'], rom))
+             + ui_text_bodies(pl['char2idx'], rom)
+             + ui_line_bodies(pl['char2idx'], rom))
     for (addr, b), (_, span, line), tag in zip(edits, OVERLAY,
                                                ('prompt',) * len(PROMPT)):
         print('%-8s %#07x: %r -> %d/%d bytes %s'
@@ -3217,6 +3340,9 @@ def main():
     print('ui     %d name-entry runs -> %s'
           % (len(UI_TEXT_ROWS),
              ' '.join(line for _, _, _, line, _ in UI_TEXT_ROWS)))
+    print('lines  %d bank line rows -> %s'
+          % (len(UI_LINE_ROWS),
+             ' '.join(line for _, _, _, line in UI_LINE_ROWS)))
     if '--stats' in sys.argv:
         return
     bank_ok = verify_bank_slots(pl['char2idx'], pl['new'])
@@ -3242,6 +3368,7 @@ def main():
     ok &= o
     ok &= verify_name_tables(pl['char2idx'], OUT_ROM)
     ok &= verify_ui_text(pl['char2idx'], OUT_ROM)
+    ok &= verify_ui_lines(pl['char2idx'], OUT_ROM)
     ok &= verify_inplace(pl['inplace'], pl['char2idx'])
     ok &= verify_font(pl)
     print('VERDICT: %s' % ('all checks passed' if ok else 'SEE ABOVE'))
