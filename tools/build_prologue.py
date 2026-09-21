@@ -50,7 +50,7 @@ Codec.walk() and by the disassembly documented in docs/research/glyph-addressing
 
 usage: python3 tools/build_prologue.py [--dump|--stats|--patch]
 """
-import sys, os, re, json, collections
+import sys, os, re, json, collections, unicodedata
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
 import wqyfont as W
@@ -145,7 +145,7 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (4, 'block4_zh.txt', 0x27EF59), (30, 'block30_zh.txt', 0x211467),
           (37, 'block37_zh.txt', 0x22772D), (25, 'block25_zh.txt', 0x22A5B2),
           (40, 'block40_zh.txt', 0x1CF251), (20, 'block20_zh.txt', 0x275E9F),
-          (33, 'block33_zh.txt', 0x1F3BD1), (34, 'block34_zh.txt', 0x23400B),
+          (33, 'block33_zh.txt', 0x1F3BD1), (34, 'block34_zh.txt', 0x233FE7),
           (10, 'block10_zh.txt', 0x1E970C), (39, 'block39_zh.txt', 0x261547),
           (43, 'block43_zh.txt', 0x1F93A3), (45, 'block45_zh.txt', 0x278F29),
           (88, 'block88_zh.txt', 0x1EB357),
@@ -1425,6 +1425,13 @@ LINE_CTRL = (0x14, 0x0C, 0x0A)
 # matches the stock box exactly -- threw away the right stroke of 88% of the vocabulary.
 # dx=1 lands the right edge on column 13 like the Japanese font and drops nothing.
 WQY_DX, WQY_DY = 1, 0
+# The Japanese font hangs its full-width alnum band three rows above the kanji
+# window (ink rows 1..11 vs 0..13), and the birthday echo / blood-type row draw
+# the record verbatim -- at WQY_DY the digits sit on rows 4..13 and visibly ride
+# low.  Copy the Japanese placement for exactly that band.
+def wqy_dy(ch):
+    n = unicodedata.normalize('NFKC', ch)
+    return WQY_DY - 3 if ch != n and n.isascii() and n.isalnum() else WQY_DY
 CTL_RE = re.compile(r'⟦([0-9A-Fa-f]{2,4})⟧')
 
 
@@ -2493,7 +2500,7 @@ def wqy_records(char2idx, need, dy_extra='。、，！？…：；'):
         idx = char2idx.get(ch)
         if idx is None:
             continue
-        out[ch] = W.record(ch, WQY_DX, WQY_DY + (1 if ch in dy_extra else 0))
+        out[ch] = W.record(ch, WQY_DX, wqy_dy(ch) + (1 if ch in dy_extra else 0))
     return out
 
 
@@ -2547,7 +2554,7 @@ def inplace_records(glyphs, char2idx):
     for ch, idx in glyphs.items():
         assert idx not in taken or taken[idx] == ch, \
             'in-place glyph %s@%03X collides with %s' % (ch, idx, taken.get(idx))
-    return {idx: W.record(ch, WQY_DX, WQY_DY) for ch, idx in glyphs.items()}
+    return {idx: W.record(ch, WQY_DX, wqy_dy(ch)) for ch, idx in glyphs.items()}
 
 
 def block_ctx(rom, code, blk, hi, path):
