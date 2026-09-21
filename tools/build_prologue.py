@@ -128,6 +128,29 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (101, 'block101_zh.txt', 0x239E24), (104, 'block104_zh.txt', 0x218390),
           (114, 'block114_zh.txt', 0x26BD04), (15, 'block15_zh.txt', 0x250A51),
           (24, 'block24_zh.txt', 0x1E7B36),
+          (71, 'block71_zh.txt', 0x22FFE2), (135, 'block135_zh.txt', 0x26EC90),
+          (141, 'block141_zh.txt', 0x239FCE),
+          (65, 'block65_zh.txt', 0x1CCAA5),
+          (64, 'block64_zh.txt', 0x1FFFC5), (31, 'block31_zh.txt', 0x277D09),
+          (42, 'block42_zh.txt', 0x207FD7), (134, 'block134_zh.txt', 0x26D6DC),
+          (130, 'block130_zh.txt', 0x208184),
+          (16, 'block16_zh.txt', 0x2157B7), (127, 'block127_zh.txt', 0x1D38C2),
+          (128, 'block128_zh.txt', 0x27019D),
+          (23, 'block23_zh.txt', 0x1F6C0A), (26, 'block26_zh.txt', 0x1D0008),
+          (29, 'block29_zh.txt', 0x245E9B), (41, 'block41_zh.txt', 0x238C21),
+          (47, 'block47_zh.txt', 0x1D7A88), (110, 'block110_zh.txt', 0x27AEA4),
+          (3, 'block3_zh.txt', 0x1D58DC), (17, 'block17_zh.txt', 0x23F66A),
+          (19, 'block19_zh.txt', 0x1EFA64), (74, 'block74_zh.txt', 0x257FBB),
+          (5, 'block5_zh.txt', 0x1CA6D1), (69, 'block69_zh.txt', 0x23C95A),
+          (4, 'block4_zh.txt', 0x27EF59), (30, 'block30_zh.txt', 0x211467),
+          (37, 'block37_zh.txt', 0x22772D), (25, 'block25_zh.txt', 0x22A5B2),
+          (40, 'block40_zh.txt', 0x1CF251), (20, 'block20_zh.txt', 0x275E9F),
+          (33, 'block33_zh.txt', 0x1F3BD1), (34, 'block34_zh.txt', 0x23400B),
+          (10, 'block10_zh.txt', 0x1E970C), (39, 'block39_zh.txt', 0x261547),
+          (43, 'block43_zh.txt', 0x1F93A3), (45, 'block45_zh.txt', 0x278F29),
+          (88, 'block88_zh.txt', 0x1EB357),
+          (60, 'block60_zh.txt', 0x1D2534), (48, 'block48_zh.txt', 0x251A55),
+          (81, 'block81_zh.txt', 0x20CA2B), (80, 'block80_zh.txt', 0x24179D),
           (144, 'prologue_zh.txt', END))
 # Which phrase ($B9) and sub-text ($C3) dictionary entries have a Chinese reading.
 # Rows are key/cap/refs/japanese/chinese/bytes/fit; only key and chinese are read
@@ -1812,18 +1835,24 @@ class Encoder:
 
 # ------------------------------------------------------------------- glyphs
 
-def used_slots(code):
+def used_slots(code, registered=()):
     """Glyph slots any *text* or *name* block can reach, so none may be reused.
 
     Name blocks (pointer table 0x9872) hold the speaker and menu word lists that
     the prologue draws, so their glyphs are load-bearing too; a false positive
     here merely costs the allocator a slot.
+    `registered` is the set of TEXT_PTRS block numbers whose zh file already
+    replaces the block in the patched ROM.  Their raw Japanese bytes never
+    render again, so they contribute no slots -- that is the runway for every
+    later registration wave.  Their dictionary calls are still visited with
+    glyph collection on: a phrase body without a Chinese row (the `shorten`
+    list) still draws its Japanese from any caller, registered included.
     """
     d = code.rom.data
     rom = code.rom
     used, done = set(), set()
 
-    def visit(start, stop, depth, chain):
+    def visit(start, stop, depth, chain, glyphs=True):
         if (start, stop) in done or depth > 3:
             return
         done.add((start, stop))
@@ -1833,7 +1862,8 @@ def used_slots(code):
             if b < 0x40:
                 i += 1
             elif b < 0xA0:
-                used.add(code.sb[b])
+                if glyphs:
+                    used.add(code.sb[b])
                 i += 1
             elif b < 0xE8:
                 if b not in chain:
@@ -1852,7 +1882,8 @@ def used_slots(code):
                           chain | {k})
                 i += 2
             else:
-                used.add(((b << 8) | d[i + 1]) & 0x0FFF)
+                if glyphs:
+                    used.add(((b << 8) | d[i + 1]) & 0x0FFF)
                 i += 2
 
     def extents(table):
@@ -1861,8 +1892,15 @@ def used_slots(code):
             nxt = next((s for s in starts if s > a), None)
             yield a, min(len(d), (nxt if nxt and nxt - a < 0x4000 else a + 0x2000))
 
-    for a, stop in extents(rom.text_ptr):
-        visit(a, stop, 0, frozenset())
+    reg = set(registered)
+    for i in range(T.PTR_COUNT):
+        a = rom.text_ptr(i)
+        if not a:
+            continue
+        for s, stop in extents(rom.text_ptr):
+            if s == a:
+                visit(a, stop, 0, frozenset(), glyphs=(i not in reg))
+                break
     for a, stop in extents(rom.name_ptr):
         visit(a, min(stop, a + 0x200), 0, frozenset())
     return used
@@ -1929,14 +1967,21 @@ def stock_binding(need, code):
     index lookup, so a one-way map can never bind two characters to one record.
     """
     bound = {}
+    # Kana cells are drawn through the $80:D4BD redirect and rewrite into a
+    # *different* glyph than their index names, so binding below the kanji band
+    # must skip them.  Everything else that round-trips to itself is the same
+    # A-tier in-place rewrite -- full-width Latin/symbols included.
+    kana_cells = kana_remap_slots(code.rom.data)
     for c in sorted(set(need)):
         if (c in SB_SHARE or c in code.c2code or c in MARK_B
                 or c.startswith('⟦')):
             continue
         idx = T.char_to_idx(c)
-        if idx is None or not T.JIS_KANJI <= idx < T.MAX_INDEX:
+        if idx is None or not 0 <= idx < T.MAX_INDEX:
             continue
         if T.idx_to_char(idx) != c or (idx & 0xFF) in TERM:
+            continue
+        if idx < T.JIS_KANJI and idx in kana_cells:
             continue
         bound[c] = idx
     return bound
@@ -1960,7 +2005,7 @@ def allocate(need, code, verbose=True):
     bound = stock_binding(need, code)
     new = sorted(set(c for c in need if c not in shared and c not in bound
                      and c not in MARK_B and not c.startswith('⟦')))
-    used = (used_slots(code) | kana_remap_slots(code.rom.data)
+    used = (used_slots(code, registered={b for b, _, _ in BLOCKS})
             | preset_name_slots(code.rom.data) | ui_text_slots(code.rom.data)
             | ui_drawn_slots()
             | set(nameplate_glyphs(need).values()))
@@ -1968,11 +2013,25 @@ def allocate(need, code, verbose=True):
     # sees what a pointer reaches -- so take the bindings out of the pool before the
     # rest of the characters draw from it.  That is what keeps 耽 from being handed
     # 0x8DD twice over.
+    # When the kanji band runs dry the pool extends into the *unused* cells below it
+    # (spare ku1/ku2 punctuation variants, geometric marks, free latin, the half-width
+    # extras above the redirect window, and the hiragana band).  Those records are
+    # plain 28-byte slots at the same addressing; `used` already contains every cell a
+    # live pointer reaches plus everything the $AB-$FC kana redirect table points at,
+    # so claiming the rest takes no glyph the engine still draws.  The gojūon chart's
+    # fidelity was waived (user 2026-09-20), and no intermediate deliverable ships, so
+    # this is pool widening, not the B/C-band retargeting reserved for the final pass.
+    boundset = set(bound.values())
     pool = [i for i in range(T.JIS_KANJI, T.MAX_INDEX)
-            if i not in used and i not in set(bound.values())]
+            if i not in used and i not in boundset]
+    pool += [i for i in range(1, T.JIS_KANJI)
+             if i not in used and i not in boundset]
     if len(pool) < len(new):
-        raise SystemExit('not enough free slots: %d free, %d needed'
-                         % (len(pool), len(new)))
+        nojis = [c for c in new if T.char_to_idx(c) is None]
+        raise SystemExit('not enough free slots: %d free, %d needed; '
+                         'new=%d no-JIS=%s bound-rejected=%s'
+                         % (len(pool), len(new), len(new), nojis,
+                            [c for c in new if c not in nojis]))
     char2idx = dict(zip(new, pool))
     char2idx.update(bound)
     for c in shared:
