@@ -163,7 +163,12 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (73, 'block73_zh.txt', 0x22858C), (11, 'block11_zh.txt', 0x26E726),
           (143, 'block143_zh.txt', 0x247F7A),
           (102, 'block102_zh.txt', 0x2256C0),
-          (136, 'block136_zh.txt', 0x1ED1A2), (133, 'block133_zh.txt', 0x19E92),
+          (136, 'block136_zh.txt', 0x1ED1A2),
+          # block 133 dropped: its grid hit resolved lo/hi = 0x194ef/0x19e92, inside the
+          # settings draw-script bank (BANK_TEXT_REGION).  Every real dialog block sits
+          # >= 0x1c8000; 133 was the lone grid-scan false positive, and packing Chinese
+          # over the panel's interleaved placement opcodes clobbered the save/options
+          # screens (black-screen boot).  Those labels are owned by UI_TEXT_ROWS instead.
           (118, 'block118_zh.txt', 0x2644D1), (117, 'block117_zh.txt', 0x1E7FAB),
           (98, 'block98_zh.txt', 0x20032E), (119, 'block119_zh.txt', 0x22BEB1),
           (13, 'block13_zh.txt', 0x1DFFFD), (142, 'block142_zh.txt', 0x1DC865),
@@ -1925,6 +1930,11 @@ def used_slots(code, registered=()):
 
 
 SB_SHARE = set('「」（）、。？…‥')
+
+# Always pinned into the 86-code page (see plan(): the `bd` dictionary body
+# 朝日奈同学 needs 日 as a 1-byte code or it outgrows its own 8 B span and
+# every box that calls it reverts to the 8 B literal).
+FORCE_PIN = ('日',)
 # The only characters allowed to keep a Japanese slot: shared full-width
 # punctuation, not a hanzi.  The SB band also shortcuts 15 high-frequency kanji
 # (私 今 行 何 当 思 張 来 日 気 見 出 人 一 言); spare_codes() hands those codes
@@ -2392,7 +2402,7 @@ def grid_score(ctx, seg_bytes):
     return over, broken
 
 
-def balance_pages(ctxs, code, char2idx, chars, page, dict_folds=()):
+def balance_pages(ctxs, code, char2idx, chars, page, dict_folds=(), seeds=()):
     """Grow the shared code page toward the boxes the fixed grids squeeze.
 
     A 1-byte code page entry is worth one byte to every occurrence of that
@@ -2402,7 +2412,9 @@ def balance_pages(ctxs, code, char2idx, chars, page, dict_folds=()):
     over-budget across all blocks, until nothing helps.  Returns
     (page, pinned, [(over, broken) per block]).
     """
-    pinned = []
+    pinned = [c for c in seeds if c in char2idx and c not in SB_SHARE]
+    if pinned:
+        page = build_code_page(chars, code, char2idx, pinned, verbose=False)
     for _ in range(24):
         scored = [(ctx, encode_all(code, ctx['segs'], ctx['zh'], char2idx, page,
                                    dict_folds)[1])
@@ -3060,9 +3072,18 @@ def plan(rom=None, verbose=True):
     # then do the bodies get priced — against that settled page.  A page entry is
     # what makes 「我才是」 4 bytes instead of 7, so judging a body on the static
     # 2 B/hanzi model reports boxes as unfixable that the real build fits.
+    # FORCE_PIN: 「日」 must hold a 1-byte page code, or the `bd` body
+    # 朝日奈同学 costs 8 B and cannot fit its own 8 B span -- `macro_bodies`
+    # prices bodies with folds=() (no nesting), so the eb8d 朝日奈 fold cannot
+    # shrink it either.  When bd does not fold, every box that calls it reverts
+    # to the literal and ~30 tight 朝日奈同学 boxes across blocks 0/20/21/22/67/
+    # 85/104/118 become mathematically unfixable by wording.  At 7 B + $0A the
+    # body sits exactly in its span again -- the state block 85 shipped in all
+    # summer with 朝日奈桑 (7 B).
     page, pinned, scores = balance_pages(
         ctxs, code, char2idx, chars,
-        build_code_page(chars, code, char2idx, verbose=verbose))
+        build_code_page(chars, code, char2idx, FORCE_PIN, verbose=verbose),
+        seeds=FORCE_PIN)
     mb, dict_folds, dict_late = macro_bodies(code, char2idx, gloss, page, verbose)
     if verbose:
         print('page (%d codes): %s' % (len(page), ''.join(sorted(page))))
