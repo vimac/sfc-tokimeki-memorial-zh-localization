@@ -222,19 +222,19 @@ NAME_SLOTS = 3
 # leaves `$0A` behind itself and every later offset still lands.  詩織/紐緒/鏡/美樹原/
 # 優美/館林 differ from the simplified forms and さん/ちゃん are kana with no Chinese
 # reading at all, so those records cannot be fixed by a font swap.  さん/ちゃん/くん are
-# rendered 桑/酱/君 (the user's standing ruling, 2026-09-20), which is *shorter* than the
-# kana: this ROM has no small-kana code at all (the only half-width thing it holds is
-# the $0153-$01C4 pair-cell band), so the suffix simply costs one cell instead of two.
+# rendered 同学/酱/君 (2026-09-20 ruling said 桑; user playtested and reverted to 同学 on
+# 2026-09-21).  酱/君 cost one cell; 同学 costs the same two cells as the kana -- the
+# records below are all *starts only*, so equal length means the table needs no offsets.
 # The names themselves follow `reference/`: 紐緒=Himou->纽绪, 鏡=Kagami->镜,
 # 美樹原=Mikihara->美树原, 優美=Yumi-chan->优美, as the Chinese fan translations have
 # them.
 NAME_POOL_TABLE = (
-    (0x21A2D9, '詩織', '诗织'),          (0x21A2DE, '如月さん', '如月桑'),
-    (0x21A2E7, '紐緒さん', '纽绪桑'),    (0x21A2F0, '片桐さん', '片桐桑'),
-    (0x21A2F9, '虹野さん', '虹野桑'),    (0x21A302, '古式さん', '古式桑'),
-    (0x21A30B, '清川さん', '清川桑'),    (0x21A314, '鏡さん', '镜桑'),
-    (0x21A31B, '朝日奈さん', '朝日奈桑'), (0x21A326, '美樹原さん', '美树原桑'),
-    (0x21A331, '優美ちゃん', '优美酱'),  (0x21A33C, '館林さん', '馆林桑'),
+    (0x21A2D9, '詩織', '诗织'),          (0x21A2DE, '如月さん', '如月同学'),
+    (0x21A2E7, '紐緒さん', '纽绪同学'),    (0x21A2F0, '片桐さん', '片桐同学'),
+    (0x21A2F9, '虹野さん', '虹野同学'),    (0x21A302, '古式さん', '古式同学'),
+    (0x21A30B, '清川さん', '清川同学'),    (0x21A314, '鏡さん', '镜同学'),
+    (0x21A31B, '朝日奈さん', '朝日奈同学'), (0x21A326, '美樹原さん', '美树原同学'),
+    (0x21A331, '優美ちゃん', '优美酱'),  (0x21A33C, '館林さん', '馆林同学'),
     (0x21A345, '伊集院', '伊集院'),      (0x21A34C, '良雄', '良雄'),
     (0x21A351, '外井', '外井'),
 )
@@ -405,17 +405,17 @@ UI_TEXT_ROWS = (
     # Chinese reading, so these are re-worded rather than re-pointed; the Chinese forms
     # follow `reference/`'s romanisations the same way the heroine pool does.
     (0x1F970, 6, 'シナモン博士', '肉桂博士', 'R'),
-    (0x1F97D, 6, 'ツヨシさん', '阿强桑', 'R'),
+    (0x1F97D, 6, 'ツヨシさん', '阿强同学', 'R'),
     (0x1F98A, 6, 'Ｕジロー', '小次郎', 'R'),
     (0x1F997, 6, 'なかぢー', '阿中同学', 'R'),
     (0x1F9A4, 6, 'ヨッチ', '小耀同学', 'R'),
     (0x1F9B1, 6, '長作', '长作同学', 'R'),
     (0x1F9BE, 6, 'しゅうちゃん', '小秀酱', 'R'),
-    (0x1F9CB, 6, '慎さん', '慎桑', 'R'),
+    (0x1F9CB, 6, '慎さん', '慎同学', 'R'),
     (0x1F9D8, 6, 'がみちゃん', '阿神酱', 'R'),
     (0x1F9E5, 6, '寅次郎', '阿寅同学', 'R'),
     (0x1F9F2, 6, 'ダーリン', '亲爱的', 'R'),
-    (0x1F9FF, 6, 'げんさん', '阿元桑', 'R'),
+    (0x1F9FF, 6, 'げんさん', '阿元同学', 'R'),
     (0x1FA0C, 6, 'えとちゃん', '小江酱', 'R'),
     (0x1FA19, 6, 'テロリン', '小特同学', 'R'),
     (0x1FA26, 6, 'のりーん', '小诺同学', 'R'),
