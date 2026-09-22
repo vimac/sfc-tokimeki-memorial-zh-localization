@@ -10,7 +10,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `cc638abda8adfb29fcb478a4f669551c` | **验收盘**（4 MB LoROM，日版 Rev 1 基线，批次T 第二趟重建，取代第一趟那颗 `8e1d7370…`）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
+| `rom_prologue_zh.sfc` | `854987f0c2d4e32f56ea469061349f22` | **验收盘**（4 MB LoROM，日版 Rev 1 基线，批次T 第三趟（下）重建，取代第三趟（上）那颗 `3f2b0739…`）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 根目录只留上面两颗 `.sfc`；上游命名的原版转储与 `.srm` 在 `~/retro/roms/`，全量备份在 `~/retro/tokimeki.backup.2609200007.tar.gz`（两轮清理删掉的废弃脚本/中间盘只从 git 历史找回）。所有工具一律按 `rom_original_japanese.sfc` 读母盘。
@@ -364,6 +364,22 @@ python3 tools/build_prologue.py --patch
   `0 unclaimed slot(s) changed`，`in-place glyphs OK`，`VERDICT: all checks passed`，
   name_tables PASS，charledger ingest 2151 字 / report `new 2`。
   **新验收盘 `3f2b0739a181fc6d785104a89c42f077`**。母盘复述 `cd36eb8982de4bf8369deb9f2f23e590` 不变。
+* **批次T 第三趟（下）：节假日闲聊池＋社团/新闻去处池整行重编（2026-09-22）**——
+  `UI_LINE_ROWS` 49→85 行：+12 条节假日闲聊（0x1971F–0x197B5，今天元旦/今天是黄金周/
+  儿童节⟦EAC7⟧…）、+3 条社团提示（0x19894–0x198A3，⟦E9F4⟧日/⟦E9F4⟧比赛/请选择要进的社团）、
+  +21 条新闻/去处池（0x198B6–0x19A3B，中央公园介绍/体育场⟦ED73⟧/卡拉ＯＫ厅/本栏目从下期起…
+  敬请期待/…水上滑梯/嘎尔吉展开幕 等）。播报池 17 行 span 一律吞进行尾 «A0»，
+  上一趟记的「$0A 吞句号」观感欠账就此了结（帧 `c2_day` 实测「今天和诗织。」句号在位），
+  9 条 R 逐字节行退役（建国記念/緑/ゴ/ルデ/ウィ/ク/スタジアム/彫刻展開催/中央公園紹介，
+  黄金周碎格行随之全灭）。词典补 `ed72 专题 / ecda 儿童 / ed15 感谢`，phrase bodies 1008/1012。
+  带操作数的两行仍被 `ui_line_walk` 拒收、留在原地：安田句 0x1974F（前缀 `12 00 00`）与
+  0x19A4D（span 内嵌 `$00` 操作数），待机制扩展。已知欠账：两条预算紧的行用「今日」非「今天」
+  （校对期统一）。复验：142/142 块 0 over / 0 broken，`bank lines: 85/85`，
+  `font: 2238/2238（1153 就地）`，`0 unclaimed slot(s) changed`，`VERDICT: all checks passed`，
+  name_tables PASS，charledger ingest 2151 字 / `new 2`。新鲜 walk（c2）实证 `RESULT c2 woke`
+  （$D24=D1FB $D26=BC，与 #36 修复态逐字节一致），`c2_a1` 弹「高杰 「平日可没发约会啊。」」箭头正常。
+  **新验收盘 `854987f0c2d4e32f56ea469061349f22`**，已装进模拟器槽位。
+  母盘复述 `cd36eb8982de4bf8369deb9f2f23e590` 不变。
 * **系统提示/旁白池（block 0）box 0–724（1,617 段）全译完工**（前十六批）：新游戏提示菜单
   （「从序章开始」「跳过序章」）、约会被放鸽子、新创刊杂志、光辉中央公园、生物节律专栏、
   美术馆/水族馆/体育场/植物园/保龄球/天文馆、唱卡拉 OK 与画展的反应句、「袖龙」那条情报，

@@ -1003,17 +1003,8 @@ UI_TEXT_ROWS = (
     # six of them spell one label across that seam.  (The date prompts and the whole
     # mouse/pad settings screen moved to UI_LINE_ROWS: their SB seams garble.)
     (0X19553,  4, '設定終了', '设置结束', 'R'),
-    # A label whose cells alternate glyph codes with $40-$9F code-page bytes can only be
-    # translated cell by cell: the single-byte cells keep whatever the global page says.
-    # What must never survive is a kana record, so the trailing cell of
-    # ゴールデンウィーク is blanked rather than kept.
-    # (The file-menu runs all moved to UI_LINE_ROWS once the whole-line mechanism landed.)
-    (0X19737,  4, '建国記念', '建国纪念', 'R'),
-    (0X19760,  1, '緑', '绿', 'R'),
-    (0X1976A,  1, 'ゴ', '黄', 'R'),
-    (0X1976D,  2, 'ルデ', '金', 'R'),
-    (0X19772,  2, 'ウィ', '周', 'R'),
-    (0X19777,  1, 'ク', ' ', 'R'),
+    # (The holiday chatter pool's cell-by-cell rows -- 建国記念/緑 and the five
+    # ゴールデンウィーク fragments -- retired to UI_LINE_ROWS whole lines.)
 
     # The album panel's own title, the two sound-output help strings and the prologue
     # save slots -- all six reuse glyphs the earlier batches already bought, so this costs
@@ -1038,8 +1029,6 @@ UI_TEXT_ROWS = (
     (0X184F0,  5, 'オプション', '选项', 'R'),
     (0X18531,  4, '効果音', '效果音', 'R'),
     (0X18569,  4, '背景番号', '背景编号', 'R'),
-    (0X198F4,  5, 'スタジアム', '体育场', 'R'),
-    (0X19A22,  5, '彫刻展開催', '雕塑展', 'R'),
     (0X1C970,  5, '藤崎 詩織', '藤崎 诗织', 'R'),
     (0X1CB1B,  5, '如月 未緒', '如月 未绪', 'R'),
     (0X1D40A,  6, 'ナレーター', ' 旁白', 'R'),
@@ -1067,7 +1056,6 @@ UI_TEXT_ROWS = (
     (0X184AE,  3, '文化祭', '文化节', 'R'),
     (0X1853E,  4, 'ステレオ', '立体声 ', 'R'),
     (0X1855E,  3, '奥技', '绝技 ', 'R'),
-    (0X198DA,  6, '中央公園紹介', '中央公园介绍', 'R'),
     (0X19A4D,  3, '遊園地', '游乐园', 'R'),
     (0X19A68,  2, '休館', '休馆', 'R'),
     (0X19AF4,  4, '矢沢米吉', '矢泽米吉', 'R'),
@@ -1410,29 +1398,77 @@ UI_LINE_ROWS = (
     (0X196E3, 16, '２．記録されていません', '进度２暂无存档'),
     (0X196F5, 19, '⟦EC16⟧１はＬＯＡＤできません', '无法读取进度１'),
     (0X1970A, 19, '⟦EC16⟧２はＬＯＡＤできません', '无法读取进度２'),
-    # The schedule panel's announcement pool -- the line the user read as
-    # 「么嗯上、诗织约会。」: the SB bytes 今日は、 now spell 么嗯上 through the
-    # Chinese page, so every entry here needs whole-line re-encoding.  The budget is
-    # 2 B per cell, so the date lines read as headlines; ⟦EB3F⟧ (约会), ⟦EAC7⟧ (补休),
-    # ⟦ED0F⟧ (体育) and the «BD»/«B7» name macros are kept as calls because their
-    # bodies are already Chinese and the span cannot hold them inline.
-    (0X197C1,  8, '今日は⟦ED0F⟧の日だ', '今天⟦ED0F⟧日'),
-    (0X197CB, 10, '今日は文化の日だ', '今天文化日'),
-    (0X197D7, 11, '今日は文化の日⟦EAC7⟧', '文化日⟦EAC7⟧'),
-    (0X197E4, 12, '今日は勤労⟦ED15⟧の日だ', '勤劳感谢日'),
-    (0X197F2, 13, '今日は勤労⟦ED15⟧の日⟦EAC7⟧', '勤劳感谢⟦EAC7⟧'),
-    (0X19801, 13, '今日は天皇誕生日だ', '天皇诞生日'),
-    (0X19810, 10, '今日は、詩織⟦EB3F⟧', '今天和诗织'),
-    (0X1981C, 10, '今日は、⟦ECF5⟧さん⟦EB3F⟧', '今天和⟦ECF5⟧⟦EB3F⟧'),
-    (0X19828, 10, '今日は、⟦ED23⟧さん⟦EB3F⟧', '今天和⟦ED23⟧⟦EB3F⟧'),
-    (0X19834, 10, '今日は、⟦ED2D⟧さん⟦EB3F⟧', '今天和⟦ED2D⟧⟦EB3F⟧'),
-    (0X19840, 12, '今日は、虹野さん⟦EB3F⟧', '今天和虹野⟦EB3F⟧'),
-    (0X1984E, 12, '今日は、古式さん⟦EB3F⟧', '今天和古式⟦EB3F⟧'),
-    (0X1985C, 12, '今日は、清川さん⟦EB3F⟧', '今天和清川⟦EB3F⟧'),
-    (0X1986A, 10, '今日は、鏡さん⟦EB3F⟧', '今天和镜⟦EB3F⟧'),
-    (0X19876,  7, '今日は、«BD»⟦EB3F⟧', '今日«BD»⟦EB3F⟧'),
-    (0X1987F, 10, '今日は、⟦EC98⟧さん⟦EB3F⟧', '今天和⟦EC98⟧⟦EB3F⟧'),
-    (0X1988B,  7, '今日は、«B7»⟦EB3F⟧', '今日«B7»⟦EB3F⟧'),
+    # The schedule panel's holiday chatter + announcement pool -- the lines the user
+    # read as 「么嗯上、诗织约会。」: the SB bytes 今日は、 now spell 么嗯上 through
+    # the Chinese page, so every entry needs whole-line re-encoding.  Spans here
+    # swallow the trailing «A0» (it is a token, and keeping it inside buys the 。
+    # even when the padding lands a $0A first); lines whose JP ends on $0A keep
+    # that byte outside the span -- $0A inside a span is what froze the pool walk
+    # (bug #36), and the padding already terminates.  ⟦EB3F⟧ (约会), ⟦EAC7⟧ (补休),
+    # ⟦ED0F⟧ (体育), ⟦ECDA⟧ (儿童), ⟦ED72⟧ (专题)... stay as calls: their bodies
+    # are Chinese and the spans cannot hold them inline.  The 安田 line 0x1974F is
+    # NOT here -- its `12 00 00` speaker prefix is operand bytes the walk rejects.
+    (0X1971F,  9, '今日は元旦だ«A0»', '今天元旦«A0»'),
+    (0X19729, 10, '今日は成人の日だ«A0»', '成人节«A0»'),
+    (0X19734, 14, '今日は建国記念日だ«A0»', '建国纪念日«A0»'),
+    (0X19743, 11, '今日は春分の日だ«A0»', '今天春分日«A0»'),
+    (0X1975D,  9, '今日は緑の日だ«A0»', '绿化日«A0»'),
+    (0X19767, 20, '今日はゴールデンウィークだ«A0»', '今天是黄金周«A0»'),
+    (0X1977C, 10, '今日は⟦ECDA⟧の日⟦EAC7⟧«A0»', '儿童节⟦EAC7⟧«A0»'),
+    (0X19787,  9, '今日は海の日だ«A0»', '海洋日«A0»'),
+    (0X19791, 10, '今日は海の日⟦EAC7⟧«A0»', '海洋日⟦EAC7⟧«A0»'),
+    (0X1979C, 11, '今日は敬老の日だ«A0»', '今天敬老日«A0»'),
+    (0X197A8, 12, '今日は敬老の日⟦EAC7⟧«A0»', '敬老日⟦EAC7⟧«A0»'),
+    (0X197B5, 11, '今日は秋分の日だ«A0»', '今天秋分日«A0»'),
+    (0X197C1,  9, '今日は⟦ED0F⟧の日だ«A0»', '今天⟦ED0F⟧日«A0»'),
+    (0X197CB, 11, '今日は文化の日だ«A0»', '今天文化日«A0»'),
+    (0X197D7, 12, '今日は文化の日⟦EAC7⟧«A0»', '文化日⟦EAC7⟧«A0»'),
+    (0X197E4, 13, '今日は勤労⟦ED15⟧の日だ«A0»', '勤劳感谢日«A0»'),
+    (0X197F2, 14, '今日は勤労⟦ED15⟧の日⟦EAC7⟧«A0»', '勤劳感谢⟦EAC7⟧«A0»'),
+    (0X19801, 14, '今日は天皇誕生日だ«A0»', '天皇诞生日«A0»'),
+    (0X19810, 11, '今日は、詩織⟦EB3F⟧«A0»', '今天和诗织«A0»'),
+    (0X1981C, 11, '今日は、⟦ECF5⟧さん⟦EB3F⟧«A0»', '今天和⟦ECF5⟧⟦EB3F⟧«A0»'),
+    (0X19828, 11, '今日は、⟦ED23⟧さん⟦EB3F⟧«A0»', '今天和⟦ED23⟧⟦EB3F⟧«A0»'),
+    (0X19834, 11, '今日は、⟦ED2D⟧さん⟦EB3F⟧«A0»', '今天和⟦ED2D⟧⟦EB3F⟧«A0»'),
+    (0X19840, 13, '今日は、虹野さん⟦EB3F⟧«A0»', '今天和虹野⟦EB3F⟧«A0»'),
+    (0X1984E, 13, '今日は、古式さん⟦EB3F⟧«A0»', '今天和古式⟦EB3F⟧«A0»'),
+    (0X1985C, 13, '今日は、清川さん⟦EB3F⟧«A0»', '今天和清川⟦EB3F⟧«A0»'),
+    (0X1986A, 11, '今日は、鏡さん⟦EB3F⟧«A0»', '今天和镜⟦EB3F⟧«A0»'),
+    (0X19876,  8, '今日は、«BD»⟦EB3F⟧«A0»', '今日«BD»⟦EB3F⟧«A0»'),
+    (0X1987F, 11, '今日は、⟦EC98⟧さん⟦EB3F⟧«A0»', '今天和⟦EC98⟧⟦EB3F⟧«A0»'),
+    (0X1988B,  8, '今日は、«B7»⟦EB3F⟧«A0»', '今日«B7»⟦EB3F⟧«A0»'),
+    (0X19894,  5, '⟦E9F4⟧日だ«A0»', '⟦E9F4⟧日«A0»'),
+    (0X1989A,  8, '⟦E9F4⟧試合だ«A0»', '⟦E9F4⟧比赛«A0»'),
+    (0X198A3, 18, '入部する⟦EC8F⟧を⟦ED4F⟧してください«A0»', '请选择要进的社团«A0»'),
+    # The magazine spot-news pool: headline lines end on the rom's own $0A, which
+    # stays outside the span; the corner notices wrap with ⟦0B⟧ and end in «A0».
+    (0X198B6, 35, '次号から、このコーナーで⟦0B⟧最新スポットを教えます«A0»',
+     '从下期起，本栏目⟦0B⟧将介绍最新好去处«A0»'),
+    (0X198DA, 12, '中央公園紹介', '中央公园介绍'),
+    (0X198E8,  4, '⟦EC89⟧⟦ED73⟧', '⟦EC89⟧⟦ED73⟧'),
+    (0X198EE,  4, '⟦EC84⟧⟦ED72⟧', '⟦EC84⟧⟦ED72⟧'),
+    (0X198F4, 12, 'スタジアム⟦ED73⟧', '体育场⟦ED73⟧'),
+    (0X19902,  4, '⟦EC86⟧⟦ED72⟧', '⟦EC86⟧⟦ED72⟧'),
+    (0X19908,  4, '⟦EB3E⟧⟦ED72⟧', '⟦EB3E⟧⟦ED72⟧'),
+    (0X1990E,  4, '⟦EA05⟧⟦ED72⟧', '⟦EA05⟧⟦ED72⟧'),
+    (0X19914, 15, 'カラオケＢＯＸ⟦ED73⟧', '卡拉ＯＫ厅⟦ED73⟧'),
+    (0X19925, 29, '今月号は、紹介できる⟦0B⟧スポットがありません«A0»',
+     '本期没有⟦0B⟧可以介绍的去处«A0»'),
+    (0X19943, 25, '本誌は、今号をもって⟦0B⟧休刊となります«A0»',
+     '本刊至本期为止⟦0B⟧正式休刊«A0»'),
+    (0X1995D, 53, 'このコーナーでは、次号より⟦0B⟧盛沢山のイベント⟦ED0B⟧を⟦0B⟧提供していきます。おたのしみに«A0»',
+     '本栏目从下期起⟦0B⟧将为大家提供⟦0B⟧丰富多彩的⟦ED0B⟧，敬请期待«A0»'),
+    (0X19993, 12, '⟦ED71⟧⟦E81F⟧⟦0B⟧⟦ED71⟧４⟦E86F⟧«A0»', '⟦ED71⟧⟦E81F⟧⟦0B⟧⟦ED71⟧４⟦E86F⟧«A0»'),
+    (0X199A0, 15, '次号に期待してくれ！', '敬请期待下一期'),
+    (0X199B1, 15, '動物園に⟦EC81⟧がやって来る', '⟦EC81⟧来到动物园'),
+    (0X199C2, 18, '⟦E976⟧⟦0B⟧⟦EC84⟧でイルカの⟦EC79⟧開催', '⟦E976⟧⟦0B⟧⟦EC84⟧海豚⟦EC79⟧开演'),
+    (0X199D6, 34, '⟦ED71⟧⟦E81F⟧⟦0B⟧⟦ED71⟧３⟦E86F⟧。⟦0B⟧⟦EC83⟧にウォータースライダー⟦ED73⟧',
+     '⟦ED71⟧⟦E81F⟧⟦0B⟧⟦ED71⟧３⟦E86F⟧。⟦0B⟧⟦EC83⟧新增水上滑梯⟦ED73⟧'),
+    (0X199FA, 20, '⟦EA02⟧にメダルコーナー⟦0B⟧登場', '⟦EA02⟧新增⟦0B⟧奖牌兑换区'),
+    (0X19A10, 28, '⟦E976⟧⟦0B⟧遊園地に⟦EBA1⟧⟦ED73⟧⟦0B⟧⟦EC89⟧で彫刻展開催',
+     '⟦E976⟧⟦0B⟧游乐园过山车⟦ED73⟧⟦0B⟧⟦EC89⟧开雕塑展'),
+    (0X19A2E, 12, '⟦ED71⟧⟦E81F⟧⟦0B⟧⟦ED71⟧２⟦E86F⟧«A0»', '⟦ED71⟧⟦E81F⟧⟦0B⟧⟦ED71⟧２⟦E86F⟧«A0»'),
+    (0X19A3B, 16, '⟦EC89⟧でガーギー展が開催', '⟦EC89⟧嘎尔吉展开幕'),
 )
 PRESET_NAMES = (0x1F890, 0x1F970)     # the pool itself: 32 x 7-byte preset names
 KANA_REMAP_LIST = 0x54E4             # $80:D4E4, zero-terminated source indices
