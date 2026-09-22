@@ -401,7 +401,7 @@ UI_TEXT_ROWS = (
     (0x1F254, 3, 'あだ名', '昵称', 'R'),
     (0x1F261, 3, '誕生日', '生日', 'R'),
     (0x1F277, 3, '血液型', '血型', 'R'),
-    (0x1F284, 6, 'これでいい？', '这样可以吗？', 'R'),
+    # (これでいい？ moved to UI_LINE_ROWS: its answer line ⟦0B⟧/いいえ is one record.)
     (0x1F29F, 2, '名前', '姓名', 'R'),
     (0x1F2A5, 2, '藤崎', '藤崎', 'R'),
     (0x1F2AB, 2, '詩織', '诗织', 'R'),
@@ -1009,16 +1009,9 @@ UI_TEXT_ROWS = (
     # (The holiday chatter pool's cell-by-cell rows -- 建国記念/緑 and the five
     # ゴールデンウィーク fragments -- retired to UI_LINE_ROWS whole lines.)
 
-    # The album panel's own title, the two sound-output help strings and the prologue
-    # save slots -- all six reuse glyphs the earlier batches already bought, so this costs
-    # no new characters at all.
-    (0X19B56,  4, 'アルバム', '相册', 'R'),
-    (0X19B88,  3, 'ステレ', '立体声', 'R'),
-    (0X19B9D,  4, 'モノラル', '单声道', 'R'),
-    (0X19BAF,  5, '１．プロロ', '１．从序章', 'R'),
-    (0X19BBA,  1, 'グ', '玩', 'R'),
-    (0X19BC4,  5, '２．プロロ', '２．从序章', 'R'),
-    (0X19BCF,  1, 'グ', '玩', 'R'),
+    # (The album panel's title, the sound-output help strings and the prologue save
+    # slots moved to UI_LINE_ROWS: the R rows could not reach their SB bytes, which
+    # left める/オ live on screen.)
 
     # The sound-test menu reached off the title screen, the theatre plays'
     # role and credit headings, and two heroine names that were still spelled with
@@ -1059,7 +1052,7 @@ UI_TEXT_ROWS = (
     (0X184AE,  3, '文化祭', '文化节', 'R'),
     (0X1853E,  4, 'ステレオ', '立体声 ', 'R'),
     (0X1855E,  3, '奥技', '绝技 ', 'R'),
-    (0X19A4D,  3, '遊園地', '游乐园', 'R'),
+    # (0x19A4D 遊園地 moved to UI_LINE_ROWS: the park line is one SB-mixed entry.)
     (0X19A68,  2, '休館', '休馆', 'R'),
     (0X19AF4,  4, '矢沢米吉', '矢泽米吉', 'R'),
     # The culture-festival literature display: a song card, four essays by
@@ -1483,6 +1476,38 @@ UI_TEXT_ROWS = (
 (0X1C6B9,  7, '８：おまけ １', '８：附加　１', 'R'),
 (0X1C6C8,  7, '８：おまけ ２', '８：附加　２', 'R'),
 (0X1C6D7,  8, '８：奥技獲得デモ', '８：奥义获得演示', 'R'),
+    # The band-final sweep: every maximal glyph run the enumeration left outside
+    # registered spans and the keyboard band (task #17's 0x1F2D4-0x1F88D stays
+    # untouched, and 0x1FB50 turned out to be an address-vector table, not text).
+    # Almost all are same-form bookkeeping -- the affinity grid's ●×▲―, the
+    # elision rows ‥, １９９/ＡＢ型, 早乙女, the calendar columns' 月 header --
+    # registered so the zero-Japanese audit can call the band clean; only 野球
+    # actually re-reads.  The 月 columns carry one KEEP + blank per weekday cell.
+    (0X19B3F,  2, '野球', '棒球', 'R'),
+    (0X19268,  8, '●×▲―×●▲●', '●×▲―×●▲●', 'R'),
+    (0X19279,  8, '××▲―●▲●×', '××▲―●▲●×', 'R'),
+    (0X1928A,  8, '▲▲▲―●●×●', '▲▲▲―●●×●', 'R'),
+    (0X1929B,  8, '▲×●―×●×●', '▲×●―×●×●', 'R'),
+    (0X192AC,  8, '▲×●―▲▲××', '▲×●―▲▲××', 'R'),
+    (0X192BD,  8, '●●●―×▲▲×', '●●●―×▲▲×', 'R'),
+    (0X192CE,  8, '▲××―●×▲×', '▲××―●×▲×', 'R'),
+    (0X192DF,  8, '▲▲×―●××▲', '▲▲×―●××▲', 'R'),
+    (0X192F0,  8, '●▲●―×▲●▲', '●▲●―×▲●▲', 'R'),
+    (0X19301,  8, '●×▲―▲×●●', '●×▲―▲×●●', 'R'),
+    (0X19312,  8, '●●●―▲▲××', '●●●―▲▲××', 'R'),
+    (0X19323,  8, '●▲×―●▲×●', '●▲×―●▲×●', 'R'),
+    (0X190CB,  4, '‥‥‥‥', '‥‥‥‥', 'R'),
+    (0X190D4,  5, '‥‥‥‥‥', '‥‥‥‥‥', 'R'),
+    (0X18342,  3, '‥‥‥', '‥‥‥', 'R'),
+    (0X190DF,  3, '‥‥‥', '‥‥‥', 'R'),
+    (0X19B49,  4, '−−−−', '−−−−', 'R'),
+    (0X180F4,  3, '早乙女', '早乙女', 'R'),
+    (0X183E8,  3, '１９９', '１９９', 'R'),
+    (0X18780,  3, '１９９', '１９９', 'R'),
+    (0X19187,  3, 'ＡＢ型', 'ＡＢ型', 'R'),
+    (0X1F1B0,  3, 'ＡＢ型', 'ＡＢ型', 'R'),
+    (0X1F1CF, 17, (K + '月 ') * 5 + K + '月', (K + '月 ') * 5 + K + '月', 'R'),
+    (0X1F1F4, 17, (K + '月 ') * 5 + K + '月', (K + '月 ') * 5 + K + '月', 'R'),
 )
 
 # A label whose bytes alternate glyph codes with $40-$9F code-page bytes and
@@ -1630,6 +1655,30 @@ UI_LINE_ROWS = (
 (0X19B17,  8, '３Ｘ３⟦EB5C⟧', '３Ｘ３⟦EB5C⟧'),
 (0X19B21,  8, '科学忍者', '科学忍者'),
 (0X19B2F, 14, 'ジュウ＆バラズ', '枪与玫瑰'),
+    # The save-album prompt, the sound-output help lines and the prologue save
+    # slots -- retired from R rows, which could not reach the SB bytes mid-line
+    # (出力/から hid there, leaving 慨/这慢/める garble).  The «0000» pins are the
+    # cursor-cell placeholders the script interleaves; ⟦E802⟧ is the 21-place
+    # date-spot splice and ⟦EB47⟧ its 碰头 body.
+    (0X19B53, 23, 'どのアルバムにセーブしますか？', '保存到哪个相册？'),
+    (0X19B6C, 14, 'サウンド出力設定', '声音输出设置'),
+    (0X19B7C, 19, 'サウンド出力«0000»ステレオ', '声音输出«0000»立体声'),
+    (0X19B91, 20, 'サウンド出力«0000»モノラル', '声音输出«0000»单声道'),
+    (0X19BA7,  6, '⟦E802⟧で、⟦EB47⟧', '在⟦E802⟧⟦EB47⟧'),
+    (0X19BAF, 19, '１．プロローグから始める', '１．从序章开始'),
+    (0X19BC4, 19, '２．プロローグから始める', '２．从序章开始'),
+    # The two operand-prefixed pool entries the walk could not reach before the
+    # pin mechanism: 0x1974F opens with «12 0000» (speaker 〔姓〕 + blank splice),
+    # and the park line keeps its «0000»/⟦0B⟧ mid-line.  ⟦E9E1⟧ has no translated
+    # body, so the call is dropped and the sentence reads around it.
+    (0X1974F, 13, '〔姓〕«0000»「今日は何を⟦EBBE⟧な«A0»', '〔姓〕«0000»去哪玩？«A0»'),
+    (0X19A4D, 25, '遊園地に体感マシーン⟦0B⟧«0000»⟦E9E1⟧が⟦ED73⟧',
+     '游乐园体感游艺机⟦0B⟧«0000»已⟦ED73⟧'),
+    # The name-entry confirmation.  Three half-width supplement cells (0x158-0x15A,
+    # no character of either language) ride through as KEEP; the row is loose
+    # because a $06 operand precedes it.
+    (0X1F284, 25, 'これでいい？⟦0B⟧' + K * 3 + 'いいえ',
+     '就这样好吗？⟦0B⟧' + K * 3 + '不要', True),
 )
 PRESET_NAMES = (0x1F890, 0x1F970)     # the pool itself: 32 x 7-byte preset names
 KANA_REMAP_LIST = 0x54E4             # $80:D4E4, zero-terminated source indices
@@ -2642,16 +2691,26 @@ def jp_sb_page(rom):
             for i in range(96)}
 
 
-def ui_line_walk(data, addr, n):
+def ui_line_walk(data, addr, n, raw=()):
     """Tokenise a line span: ('g',idx) ('b',code) ('p',code) ('s',hi,lo) ('c',0x0B).
 
     The contract (see UI_LINE_ROWS) is that the only control byte inside the span
     is $0B -- the zero-operand newline (docs/research/control-codes.md) -- and the
     span ends on a token boundary; either proves the row names a real line pool
     entry rather than a slice of the drawing script.
+
+    `raw` is an order-preserving map of relative offset -> byte length for operand
+    runs the script interleaves with its text (placement opcodes like $3B/$08/$12,
+    name markers $12/$13, the blank cell $00 00, the row's own $0A/$A0 terminator).
+    Those bytes are re-emitted verbatim, so the only freedom inside them is their
+    position -- which is exactly what keeps a mid-script line re-encode safe.
     """
+    raw = dict(raw)
     toks, i, end = [], addr, addr + n
     while i < end:
+        if i - addr in raw:
+            k = raw[i - addr]
+            toks.append(('r', bytes(data[i:i + k]))); i += k; continue
         b = data[i]
         if b >= 0xF0:
             assert i + 1 < end, '%#x: glyph cell runs off the span end' % i
@@ -2665,25 +2724,101 @@ def ui_line_walk(data, addr, n):
             toks.append(('b', b)); i += 1
         elif b == 0x0B:
             toks.append(('c', b)); i += 1
+        elif b in MARK:
+            toks.append(('k', b)); i += 1
         else:
             raise AssertionError('%#x: control byte $%02X inside the span' % (i, b))
     return toks
+
+
+def raw_ok(bs):
+    """Operand bytes a row may pin: controls only, and $0A/$0B/$0C are one byte each."""
+    return all(b < 0x40 and (b != 0x0A or len(bs) == 1) for b in bs)
 
 
 def ui_line_text(toks, sbjp):
     out = []
     for t in toks:
         if t[0] == 'g':
-            out.append(T.idx_to_char(t[1]) or '?')
+            out.append(T.idx_to_char(t[1]) or UI_KEEP)
         elif t[0] == 'b':
             out.append(sbjp[t[1]] or '??')
         elif t[0] == 'p':
             out.append('«%02X»' % t[1])
         elif t[0] == 'c':
             out.append('⟦0B⟧')
+        elif t[0] == 'k':
+            out.append(MARK[t[1]])
+        elif t[0] == 'r':
+            out.append('«%s»' % t[1].hex().upper())
         else:
             out.append('⟦%02X%02X⟧' % (t[1], t[2]))
     return ''.join(out)
+
+
+def jp_raw_runs(jp, data, addr):
+    """Operand runs a row pins, walked over the ROM bytes: (span offset, length).
+
+    The row author writes the interleaved script bytes -- «08 40 06» placement
+    operands, «0000» blank cells, the row's own terminator -- exactly where
+    ui_line_text renders them, but the *widths* cannot be read off the text:
+    Japanese pool lines mix 1-byte SB codes with 2-byte glyph cells, so each
+    plain character is measured against the byte at its offset (1 if $40-$9F,
+    else 2).  Tokens cost their own byte count, ⟦0B⟧ and 〔姓〕 cost one.
+    """
+    runs, pos, i = [], 0, 0
+    while i < len(jp):
+        m = LINE_TOKEN.match(jp, i)
+        if m:
+            tok = m.group(1)
+            bs = bytes.fromhex(tok[1:-1])
+            if tok[0] == '«' and raw_ok(bs):
+                runs.append((pos, len(bs)))
+            pos += len(bs)
+            i += len(tok)
+        elif jp.startswith(LINE_NL, i):
+            pos += 1
+            i += len(LINE_NL)
+        elif jp[i:i + 3] in MARK.values():
+            pos += 1
+            i += 3
+        else:
+            b = data[addr + pos]
+            assert b >= 0x40, '%#x+%d: unpinned control byte $%02X under %r' \
+                % (addr, pos, b, jp[i])
+            pos += 1 if b <= 0x9F else 2
+            i += 1
+    return runs
+
+
+def line_raw_runs(line):
+    """The same walk over a Chinese line: every plain character is a 2-byte cell."""
+    runs, pos, i = [], 0, 0
+    while i < len(line):
+        m = LINE_TOKEN.match(line, i)
+        if m:
+            tok = m.group(1)
+            bs = bytes.fromhex(tok[1:-1])
+            if tok[0] == '«' and raw_ok(bs):
+                runs.append((pos, len(bs)))
+            pos += len(bs)
+            i += len(tok)
+        elif line.startswith(LINE_NL, i):
+            pos += 1
+            i += len(LINE_NL)
+        elif line[i:i + 3] in MARK.values():
+            pos += 1
+            i += 3
+        else:
+            pos += 2
+            i += 1
+    return runs
+
+
+def line_keeps(toks):
+    """The raw cell bytes of the glyph tokens no Japanese page names (UI_KEEP)."""
+    return [k2(t[1]) for t in toks
+            if t[0] == 'g' and T.idx_to_char(t[1]) is None]
 
 
 LINE_NL = '⟦0B⟧'          # in-line newline, kept at its Japanese offset
@@ -2691,23 +2826,42 @@ LINE_NL = '⟦0B⟧'          # in-line newline, kept at its Japanese offset
 # sub-text bytes, «BD» the one phrase byte -- both are dictionary calls whose bodies
 # earlier batches already translated, so re-emitting the call is how a 7-byte span
 # says 今日朝日奈同学约会。
-LINE_TOKEN = re.compile(r'(⟦[0-9A-Fa-f]{4}⟧|«[0-9A-Fa-f]{2}»)')
+LINE_TOKEN = re.compile(r'(⟦[0-9A-Fa-f]{4}⟧|«(?:[0-9A-Fa-f]{2})+»)')
 
 
-def line_bytes(char2idx, line):
-    """Chinese line text (⟦0B newlines and macro calls included) -> the span bytes."""
-    segs = []
-    for seg in line.split(LINE_NL):
-        out = []
+def line_bytes(char2idx, line, keeps=()):
+    """Chinese line text (⟦0B newlines, macro calls, 〔姓〕 markers, pinned «08»
+    operands, \ue000 kept cells) -> the span bytes.  A «XX» with XX < $40 is a
+    pinned operand byte re-emitted verbatim; the row's $0A/$A0 terminator rides
+    along the same way.  Each \ue000 takes the next entry of `keeps` -- the raw
+    2-byte code of the unnamed supplement cell the Japanese line held there."""
+    body = b''
+    klist = list(keeps)
+    for si, seg in enumerate(line.split(LINE_NL)):
+        if si:
+            body += b'\x0b'
         for part in LINE_TOKEN.split(seg):
             if not part:
                 continue
             if part[0] in '⟦«':
-                out.append(bytes.fromhex(part[1:-1]))
+                body += bytes.fromhex(part[1:-1])
+            elif part in MARK.values():
+                body += bytes((MARK_B[part],))
             else:
-                out.append(b''.join(k2(char2idx[c]) for c in part))
-        segs.append(b''.join(out))
-    return b'\x0b'.join(segs)
+                j = 0
+                while j < len(part):
+                    mk = next((v for v in MARK.values()
+                               if part.startswith(v, j)), None)
+                    if mk:
+                        body += bytes((MARK_B[mk],)); j += len(mk)
+                    elif part[j] == UI_KEEP:
+                        assert klist, \
+                            '%s: more kept cells than the Japanese line has' % line
+                        body += klist.pop(0); j += 1
+                    else:
+                        body += k2(char2idx[part[j]]); j += 1
+    assert not klist, '%s: fewer kept cells than the Japanese line has' % line
+    return body
 
 
 def ui_line_bodies(char2idx, rom):
@@ -2736,17 +2890,28 @@ def ui_line_bodies(char2idx, rom):
             addr, seen[hit[0]][0], seen[hit[0]][1])
         for c in range(addr, addr + n):
             seen[c] = ('line', addr)
+        raw = jp_raw_runs(jp, rom.data, addr)
+        for off, ln in raw:
+            assert raw_ok(rom.data[addr + off:addr + off + ln]), \
+                '%#x+%d is not a pinnable operand run' % (addr, off)
         if not loose:                       # a splice line starts on control operands
             assert rom.data[addr - 1] in (0x2E, 0x0A), \
                 '%#x does not start right after a line delimiter' % addr
-        assert rom.data[addr + n] in (0x2E, 0x0A, 0xA0), \
+        assert rom.data[addr + n] in (0x2E, 0x0A, 0xA0, 0x3C, 0x3B, 0x44, 0x7D), \
             '%#x+%d is %#02X, not a delimiter' % (addr, n, rom.data[addr + n])
-        got = ui_line_text(ui_line_walk(rom.data, addr, n), sbjp)
+        toks = ui_line_walk(rom.data, addr, n, raw)
+        got = ui_line_text(toks, sbjp)
         assert got == jp, '%#x holds %r, not %r' % (addr, got, jp)
+        keeps = line_keeps(toks)
+        assert line.count(UI_KEEP) == len(keeps), \
+            '%s: %d kept cells, line has %d' % (line, len(keeps), line.count(UI_KEEP))
         text = LINE_TOKEN.sub('', line.replace(LINE_NL, ''))
+        for v in MARK.values():
+            text = text.replace(v, '')
+        text = text.replace(UI_KEEP, '')
         missing = [c for c in text if c not in char2idx]
         assert not missing, '%s: no glyph slot for %s' % (line, ''.join(missing))
-        body = line_bytes(char2idx, line)
+        body = line_bytes(char2idx, line, keeps)
         k = n - len(body)
         assert k >= 0, '%s needs %d B, the span has %d' % (line, len(body), n)
         if k:
@@ -2759,21 +2924,27 @@ def ui_line_bodies(char2idx, rom):
 def verify_ui_lines(char2idx, path):
     """Re-read the re-encoded lines from the written ROM and decode them back."""
     slot2ch = {i: c for c, i in char2idx.items()}
-    exp = ui_line_bodies(char2idx, T.Rom(SRC_ROM))
+    src = T.Rom(SRC_ROM)
+    exp = ui_line_bodies(char2idx, src)
     d = open(path, 'rb').read()
     ok, good_rows, rows = True, 0, []
     for (addr, n, jp, line), (a2, b2) in zip((r[:4] for r in UI_LINE_ROWS), exp):
         assert a2 == addr
         good = bytes(d[addr:addr + n]) == b2
-        body = line_bytes(char2idx, line)
+        toks = ui_line_walk(src.data, addr, n, jp_raw_runs(jp, src.data, addr))
+        body = line_bytes(char2idx, line, line_keeps(toks))
         got = ''
-        for t in ui_line_walk(d, addr, len(body)):
+        for t in ui_line_walk(d, addr, len(body), line_raw_runs(line)):
             if t[0] == 'g':
-                got += slot2ch.get(t[1]) or '?'
+                got += slot2ch.get(t[1]) or UI_KEEP
             elif t[0] == 'c':
                 got += LINE_NL
             elif t[0] == 's':
                 got += '⟦%02X%02X⟧' % (t[1], t[2])
+            elif t[0] == 'k':
+                got += MARK[t[1]]
+            elif t[0] == 'r':
+                got += '«%s»' % t[1].hex().upper()
             elif t[0] == 'p':
                 got += '«%02X»' % t[1]
             else:
