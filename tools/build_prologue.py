@@ -1014,11 +1014,6 @@ UI_TEXT_ROWS = (
     (0X1976D,  2, 'ルデ', '金', 'R'),
     (0X19772,  2, 'ウィ', '周', 'R'),
     (0X19777,  1, 'ク', ' ', 'R'),
-    (0X197E7,  2, '勤労', '勤劳', 'R'),
-    (0X197F5,  2, '勤労', '勤劳', 'R'),
-    (0X19804,  4, '天皇誕生', '天皇诞生', 'R'),
-    (0X19814,  2, '詩織', '诗织', 'R'),
-    (0X1986E,  1, '鏡', '镜', 'R'),
 
     # The album panel's own title, the two sound-output help strings and the prologue
     # save slots -- all six reuse glyphs the earlier batches already bought, so this costs
@@ -1415,6 +1410,29 @@ UI_LINE_ROWS = (
     (0X196E3, 16, '２．記録されていません', '进度２暂无存档'),
     (0X196F5, 19, '⟦EC16⟧１はＬＯＡＤできません', '无法读取进度１'),
     (0X1970A, 19, '⟦EC16⟧２はＬＯＡＤできません', '无法读取进度２'),
+    # The schedule panel's announcement pool -- the line the user read as
+    # 「么嗯上、诗织约会。」: the SB bytes 今日は、 now spell 么嗯上 through the
+    # Chinese page, so every entry here needs whole-line re-encoding.  The budget is
+    # 2 B per cell, so the date lines read as headlines; ⟦EB3F⟧ (约会), ⟦EAC7⟧ (补休),
+    # ⟦ED0F⟧ (体育) and the «BD»/«B7» name macros are kept as calls because their
+    # bodies are already Chinese and the span cannot hold them inline.
+    (0X197C1,  8, '今日は⟦ED0F⟧の日だ', '今天⟦ED0F⟧日'),
+    (0X197CB, 10, '今日は文化の日だ', '今天文化日'),
+    (0X197D7, 11, '今日は文化の日⟦EAC7⟧', '文化日⟦EAC7⟧'),
+    (0X197E4, 12, '今日は勤労⟦ED15⟧の日だ', '勤劳感谢日'),
+    (0X197F2, 13, '今日は勤労⟦ED15⟧の日⟦EAC7⟧', '勤劳感谢⟦EAC7⟧'),
+    (0X19801, 13, '今日は天皇誕生日だ', '天皇诞生日'),
+    (0X19810, 10, '今日は、詩織⟦EB3F⟧', '今天和诗织'),
+    (0X1981C, 10, '今日は、⟦ECF5⟧さん⟦EB3F⟧', '今天和⟦ECF5⟧⟦EB3F⟧'),
+    (0X19828, 10, '今日は、⟦ED23⟧さん⟦EB3F⟧', '今天和⟦ED23⟧⟦EB3F⟧'),
+    (0X19834, 10, '今日は、⟦ED2D⟧さん⟦EB3F⟧', '今天和⟦ED2D⟧⟦EB3F⟧'),
+    (0X19840, 12, '今日は、虹野さん⟦EB3F⟧', '今天和虹野⟦EB3F⟧'),
+    (0X1984E, 12, '今日は、古式さん⟦EB3F⟧', '今天和古式⟦EB3F⟧'),
+    (0X1985C, 12, '今日は、清川さん⟦EB3F⟧', '今天和清川⟦EB3F⟧'),
+    (0X1986A, 10, '今日は、鏡さん⟦EB3F⟧', '今天和镜⟦EB3F⟧'),
+    (0X19876,  7, '今日は、«BD»⟦EB3F⟧', '今日«BD»⟦EB3F⟧'),
+    (0X1987F, 10, '今日は、⟦EC98⟧さん⟦EB3F⟧', '今天和⟦EC98⟧⟦EB3F⟧'),
+    (0X1988B,  7, '今日は、«B7»⟦EB3F⟧', '今日«B7»⟦EB3F⟧'),
 )
 PRESET_NAMES = (0x1F890, 0x1F970)     # the pool itself: 32 x 7-byte preset names
 KANA_REMAP_LIST = 0x54E4             # $80:D4E4, zero-terminated source indices
@@ -2472,21 +2490,42 @@ def ui_line_text(toks, sbjp):
 
 
 LINE_NL = '⟦0B⟧'          # in-line newline, kept at its Japanese offset
+# A line may also *keep* a Japanese macro call by writing it: ⟦EB3F⟧ is the two
+# sub-text bytes, «BD» the one phrase byte -- both are dictionary calls whose bodies
+# earlier batches already translated, so re-emitting the call is how a 7-byte span
+# says 今日朝日奈同学约会。
+LINE_TOKEN = re.compile(r'(⟦[0-9A-Fa-f]{4}⟧|«[0-9A-Fa-f]{2}»)')
 
 
 def line_bytes(char2idx, line):
-    """Chinese line text (with optional ⟦0B⟧ splices) -> the span bytes."""
-    segs = line.split(LINE_NL)
-    return b'\x0b'.join(b''.join(k2(char2idx[c]) for c in seg) for seg in segs)
+    """Chinese line text (⟦0B newlines and macro calls included) -> the span bytes."""
+    segs = []
+    for seg in line.split(LINE_NL):
+        out = []
+        for part in LINE_TOKEN.split(seg):
+            if not part:
+                continue
+            if part[0] in '⟦«':
+                out.append(bytes.fromhex(part[1:-1]))
+            else:
+                out.append(b''.join(k2(char2idx[c]) for c in part))
+        segs.append(b''.join(out))
+    return b'\x0b'.join(segs)
 
 
 def ui_line_bodies(char2idx, rom):
     """(offset, bytes) re-encoding whole line-pool entries as pure glyph cells.
 
-    Each row replaces its span with 2-byte WenQuanYi cells and pads the rest with
-    $0A -- the engine stops at the first one, so the padding never draws and the
-    next line keeps the offset its pool already holds.  The delimiters outside the
-    span ($2E joins, $0A/A0 ends) are never touched.
+    Each row writes its span as 2-byte WenQuanYi cells and fills what the line
+    leaves unused with blank glyph cells ($F0 $00), keeping the $0A terminator at
+    the end of the span -- the shape every Japanese entry has before its $2E.
+    $0A padding is forbidden here: this whole region is one pool, and the pool
+    walk that builds the schedule's hit targets dies on a $0A the Japanese line
+    did not have -- a doubled terminator truncates the table and the cell's press
+    handler never dispatches (freeze bug #36).  Blanks draw nothing and are a
+    normal 2-byte token for both walks.  An odd leftover byte takes a $0B, which
+    the renderer never reaches because it stops at the $0A behind it.
+    The delimiters outside the span ($2E joins, $0A/A0 ends) are never touched.
     """
     out, seen = [], {}
     for a2, n2, _, _, _ in UI_TEXT_ROWS:
@@ -2507,12 +2546,16 @@ def ui_line_bodies(char2idx, rom):
             '%#x+%d is %#02X, not a delimiter' % (addr, n, rom.data[addr + n])
         got = ui_line_text(ui_line_walk(rom.data, addr, n), sbjp)
         assert got == jp, '%#x holds %r, not %r' % (addr, got, jp)
-        text = line.replace(LINE_NL, '')
+        text = LINE_TOKEN.sub('', line.replace(LINE_NL, ''))
         missing = [c for c in text if c not in char2idx]
         assert not missing, '%s: no glyph slot for %s' % (line, ''.join(missing))
         body = line_bytes(char2idx, line)
-        assert len(body) <= n, '%s needs %d B, the span has %d' % (line, len(body), n)
-        out.append((addr, body + b'\x0a' * (n - len(body))))
+        k = n - len(body)
+        assert k >= 0, '%s needs %d B, the span has %d' % (line, len(body), n)
+        if k:
+            body += (b'\xf0\x00' * ((k - 1) // 2)
+                     + (b'' if k % 2 else b'\x0b') + b'\x0a')
+        out.append((addr, body))
     return out
 
 
@@ -2525,16 +2568,19 @@ def verify_ui_lines(char2idx, path):
     for (addr, n, jp, line), (a2, b2) in zip((r[:4] for r in UI_LINE_ROWS), exp):
         assert a2 == addr
         good = bytes(d[addr:addr + n]) == b2
-        toks, got = [], ''
-        i = addr
-        while i < addr + n and (d[i] >= 0xF0 or d[i] == 0x0B):
-            if d[i] == 0x0B:
+        body = line_bytes(char2idx, line)
+        got = ''
+        for t in ui_line_walk(d, addr, len(body)):
+            if t[0] == 'g':
+                got += slot2ch.get(t[1]) or '?'
+            elif t[0] == 'c':
                 got += LINE_NL
-                i += 1
-                continue
-            idx = ((d[i] << 8) | d[i + 1]) & 0x0FFF
-            got += slot2ch.get(idx) or '?'
-            i += 2
+            elif t[0] == 's':
+                got += '⟦%02X%02X⟧' % (t[1], t[2])
+            elif t[0] == 'p':
+                got += '«%02X»' % t[1]
+            else:
+                got += '??'
         good &= got == line
         if not good:
             print('ui line %#x: BROKEN %r -> %r (%s)'

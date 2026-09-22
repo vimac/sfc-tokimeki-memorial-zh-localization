@@ -347,6 +347,23 @@ python3 tools/build_prologue.py --patch
   `VERDICT: all checks passed`，name_tables PASS，charledger `new 2`（嘟 等，本批新字）。
   **新验收盘 `cc638abda8adfb29fcb478a4f669551c`**，已装进模拟器槽位。
   母盘复述 `cd36eb8982de4bf8369deb9f2f23e590` 不变。
+* **批次T 第三趟（上）：修好约会进入死机（任务 #36）＋节假日播报池整行重编（2026-09-22）**——
+  根因：`ui_line_bodies` 用连续 `$0A` 填余量，而 bank-$83 池区（0x194F0–0x19720）的**池遍历**
+  按 token 走（≥$F0 吃 2 字节），裸 `$0A` 成串会把日程命中表（7E:A500+）建残，心形格按 A
+  永远等不到派发＝死机。日文每行只有一个收尾 `$0A`，所以从未出事；ZH 一度填到 13 个。
+  新填充法：正文＋`$F0 $00` 空白格对＋（余量为偶数时补一个 `$0B`）＋span 末尾单个 `$0A`，
+  恰好铺满则不填。变体盘新鲜 walk 实证 `v2 woke`（$D24=D1FB $D26=BC），**验收盘复走同一条
+  新鲜 walk 亦 `woke`**，帧 `c1_a1` 上心形 A 已弹出「高杰 「平日可没发约会啊。」」。
+  顺带吃掉播报池 garble：删 5 条 R 逐字节行，`UI_LINE_ROWS` 落 17 条节假日/约会播报行
+  （今天⟦ED0F⟧日 / 今天文化日 / 勤劳感谢日 / 天皇诞生日 / 今天和诗织…今日«B7»⟦EB3F⟧），
+  用户报的「么嗯上、诗织约会。」（＝54 87 7e 三个 SB 字节被新码表误读）实测渲染为
+  **「今天和诗织。」**（帧 `c1_day`）。`line_bytes` 现支持 ⟦4hex⟧/«2hex» 宏调用 token，
+  `verify_ui_lines` 回读同步认这两类。已知观感欠账（校对期处理）：k>0 的播报行以 $0A 收尾，
+  会吞掉池记录尾随的 «A0» 句号；两条预算紧的行用了「今日」而非「今天」。
+  复验：144/144 块 0 over / 0 broken，`bank lines: 49/49`，`font: 2234/2234（1152 就地）`，
+  `0 unclaimed slot(s) changed`，`in-place glyphs OK`，`VERDICT: all checks passed`，
+  name_tables PASS，charledger ingest 2151 字 / report `new 2`。
+  **新验收盘 `3f2b0739a181fc6d785104a89c42f077`**。母盘复述 `cd36eb8982de4bf8369deb9f2f23e590` 不变。
 * **系统提示/旁白池（block 0）box 0–724（1,617 段）全译完工**（前十六批）：新游戏提示菜单
   （「从序章开始」「跳过序章」）、约会被放鸽子、新创刊杂志、光辉中央公园、生物节律专栏、
   美术馆/水族馆/体育场/植物园/保龄球/天文馆、唱卡拉 OK 与画展的反应句、「袖龙」那条情报，
