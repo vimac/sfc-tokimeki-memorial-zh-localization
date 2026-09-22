@@ -10,7 +10,7 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `854987f0c2d4e32f56ea469061349f22` | **验收盘**（4 MB LoROM，日版 Rev 1 基线，批次T 第三趟（下）重建，取代第三趟（上）那颗 `3f2b0739…`）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
+| `rom_prologue_zh.sfc` | `c4696391abd917c11f9e033baa42a8ed` | **验收盘**（4 MB LoROM，日版 Rev 1 基线，批次T 第三趟（续）重建，取代第三趟（下）那颗 `854987f0…`）。按 §五 的新口径它**不是交付版本**——交付只有「全文翻译＋字库整带回填」之后的那一颗盘；这颗的作用是跑 §四 的 gate |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 只读母盘，任何工具都不得写入 |
 
 根目录只留上面两颗 `.sfc`；上游命名的原版转储与 `.srm` 在 `~/retro/roms/`，全量备份在 `~/retro/tokimeki.backup.2609200007.tar.gz`（两轮清理删掉的废弃脚本/中间盘只从 git 历史找回）。所有工具一律按 `rom_original_japanese.sfc` 读母盘。
@@ -379,6 +379,28 @@ python3 tools/build_prologue.py --patch
   name_tables PASS，charledger ingest 2151 字 / `new 2`。新鲜 walk（c2）实证 `RESULT c2 woke`
   （$D24=D1FB $D26=BC，与 #36 修复态逐字节一致），`c2_a1` 弹「高杰 「平日可没发约会啊。」」箭头正常。
   **新验收盘 `854987f0c2d4e32f56ea469061349f22`**，已装进模拟器槽位。
+  母盘复述 `cd36eb8982de4bf8369deb9f2f23e590` 不变。
+* **批次T 第三趟（续）：剧场/歌词/职员表/文化节选择器/映画片名五池收尾（2026-09-22）**——
+  `UI_TEXT_ROWS` +135 条逐格 R 行（剧场 play 池 19＝睡眠与话剧滚动字幕、歌词卡池 23、
+  职员表标签＋kana 昵称＋コナミ株式会社 45、文化祭节目单选择器 48），
+  `UI_LINE_ROWS` 85→101 行（映画馆片名池 16 条：猴王斗野牛/呼啸原/烈焰之拳/双峰镇/
+  虎面丸/阿西亚传/希望丘/翡翠之月/青春群像/ＫＮＭ交响乐团/可可/３Ｘ３全明星/科学忍者/
+  枪与玫瑰…，span 一律不含行尾 $0A）。词典：`ebc7 交響楽団` 体由「受打击」改「交响乐团」
+  （KNM 恶搞本体归位，剧情三行 728/743/752 反获 fold 省 6 B）；新增 `ecc3 バーン→烈焰`、
+  `eb5c 全スターズ→全明星`（本池首引）；`ece0 ＯＫ→行了` 保持不动——剧情几十行在折叠
+  「行了」，改体会把对话屏显成「不ＯＫ。」，故 ＫＯＫＯ 一行**意译「可可」**（校对期复核）。
+  涟漪：block 5 box 398（ちょっと、ショック）原借「受打击」巧合 fold，改体后失折，
+  重措辞「有点惨…。」。机制：audit 新增 `SELECTOR_TEXT_REGION (0x1C1D0,0x1C6E8)`、
+  `PLAY_TEXT_REGION` 尾扩到 0x1F000（第一次 --patch 被领土审计拦下，写窗声明补齐后过）。
+  复验：142/142 块 0 over / 0 broken，`bank lines: 101/101`，`name-entry ui: 1001/1001`，
+  `font: 2261/2261（1170 就地）`，`0 unclaimed slot(s) changed`，`in-place glyphs OK`，
+  `bank glyph slots: 0 collisions`，`VERDICT: all checks passed`，name_tables PASS，
+  render 5 390:406 `0 kana cells, 0 "?" cells`，charledger ingest 2162 字。
+  新鲜 walk（c3）`RESULT c3 woke`（$D24=D1FB $D26=BC，#36 不回归），`c3_a1` 弹
+  「高杰 「平日可没发约会啊。」」正常。已知欠账（校对期）：流淌★但是（0x1AC0E 盲译）、
+  金属勇树（メタルユーキ）、虎面丸（トラへもん）、选择器池与片名池画面不在 walk 路径内、
+  仅静态回读证明。
+  **新验收盘 `c4696391abd917c11f9e033baa42a8ed`**，已装进模拟器槽位。
   母盘复述 `cd36eb8982de4bf8369deb9f2f23e590` 不变。
 * **系统提示/旁白池（block 0）box 0–724（1,617 段）全译完工**（前十六批）：新游戏提示菜单
   （「从序章开始」「跳过序章」）、约会被放鸽子、新创刊杂志、光辉中央公园、生物节律专栏、
