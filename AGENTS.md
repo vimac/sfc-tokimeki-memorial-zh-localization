@@ -27,7 +27,9 @@
 ## 二、目录归属
 
 ```
-tools/         42 个脚本：验收链路 + 再推导仪表（见 §三），外加字符台账 charledger.py 与宏体词典侦察 phrasedict.py
+tools/         43 个脚本：验收链路 + 再推导仪表（见 §三），外加字符台账 charledger.py、
+               宏体词典侦察 phrasedict.py 与池子一致性筛子 poolsync.py（找「为省字节删掉句子
+               成分」的孤本速记，同 (runs, span) 有主流译法＝改它必然装得下，每批复跑一次）
 AGENTS.md      本文件：规则
 docs/RELEASE_zh.md        权威状态（md5 / gate / 容量 / 剩余工作）
 docs/research/   逆向证据（*.md 是结论，附地址与偏移）与构建输入/输出
