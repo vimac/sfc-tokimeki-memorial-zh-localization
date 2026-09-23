@@ -2144,6 +2144,13 @@ MARK = {0x12: '〔姓〕', 0x13: '〔名〕'}
 # dispatcher then eats 3 bytes (docs/research/control-widths.md).  Encoding a
 # lone $09 would silently swallow the two bytes after it.
 MARK_B = {v: k for k, v in MARK.items()}
+# Operand-eating control codes (docs/research/control-codes.md, read off the
+# dispatcher's handler table).  A walker that treats $09 as 1 byte swallows the
+# tile-cursor operand into the next text run -- the block 47 `09 1a 44` -> `09 1a
+# 2e` mangle that froze date entry.  Everything not listed is width 1.
+CTRL_WIDTH = {0x00: 2, 0x01: 2, 0x02: 2, 0x03: 4, 0x04: 2, 0x07: 2, 0x08: 2,
+              0x09: 3, 0x0F: 5, 0x28: 2,
+              **{c: 2 for c in range(0x30, 0x38)}}
 LINE_CTRL = (0x14, 0x0C, 0x0A)
 # The record draws columns 0..13 of its 16-dot cell and WenQuanYi's 13px strike inks 13
 # columns, so dx=2 -- which the old bbox calibration scored best, because a cropped glyph
@@ -2392,9 +2399,23 @@ class Codec:
                 mk = MARK.get(b)
                 if mk:
                     atoms.append({'k': 'n', 'ch': mk, 'raw': bytes([b]), 'ctrl': []})
+                    i += 1
                 else:
-                    atoms.append({'k': 'c', 'ch': '', 'raw': bytes([b]), 'ctrl': [b]})
-                i += 1
+                    w = CTRL_WIDTH.get(b, 1)
+                    ops = d[i + 1:i + w]
+                    if (len(ops) == w - 1 and all(x < 0xF0 for x in ops)
+                            and i + w <= end - 1):
+                        # a pure operand run: inert bytes the dispatcher eats.
+                        # $F0-$FF operands stay visible (runtime_glyphs reads the
+                        # kept $0F bodies' kanji through this walk), and the last
+                        # byte of the range is the block's own terminator, which
+                        # group() must still find (block 141's `30 a0`).
+                        atoms.append({'k': 'c', 'ch': '', 'raw': bytes(d[i:i + w]),
+                                      'ctrl': list(d[i:i + w])})
+                        i += w
+                    else:
+                        atoms.append({'k': 'c', 'ch': '', 'raw': bytes([b]), 'ctrl': [b]})
+                        i += 1
             elif b < 0xA0:
                 atoms.append({'k': 'g', 'ch': T.idx_to_char(self.sb[b]) or '',
                               'raw': bytes([b]), 'ctrl': []})
@@ -2950,8 +2971,13 @@ def line_items(code, seg, line, char2idx, repaged=frozenset()):
 def encode_all(code, segs, zh, char2idx, page, dict_folds=()):
     """(Encoder, [bytes per segment], [items per segment]) for one code page."""
     lines, folds = [], {}
-    for seg, line in zip(segs, zh):
-        it, f = line_items(code, seg, line, char2idx, frozenset(page.values()))
+    for k, (seg, line) in enumerate(zip(segs, zh)):
+        try:
+            it, f = line_items(code, seg, line, char2idx,
+                               frozenset(page.values()))
+        except SystemExit as e:
+            raise SystemExit('%s  [seg %d: %s]' % (
+                e, k, b''.join(a['raw'] for a in seg).hex(' ')))
         lines.append(it)
         folds.update(f)
     folds.update(dict_folds)
@@ -3038,7 +3064,12 @@ def macro_bodies(code, char2idx, gloss=(), page=(), verbose=True):
             out.append(((lo, body + b'\x0a'), hi - lo, key, jp, gloss[key]))
             raw = (bytes([int(key, 16)]) if len(key) == 2
                    else bytes((int(key[:2], 16), int(key[2:], 16))))
-            folds[tuple(items)] = raw
+            prev = folds.get(tuple(items))
+            # Two entries may carry the same chinese body (e3 and eccf both say
+            # 自己): every call draws the same text, so the fold must be the
+            # cheaper call bytes, not whichever key sorts last.
+            if prev is None or len(raw) < len(prev):
+                folds[tuple(items)] = raw
     if verbose:
         span = [t for t in late if 'span' in t[1]]
         print('phrase bodies: %d of %d dictionary entries rewritten in place, '
@@ -3638,18 +3669,44 @@ def patch(rom, code, written, char2idx, need, page, edits=(), inplace=(),
           bodies=()):
     """written = [(block, file offset, bytes, cap)] for every translated block."""
     out = bytearray(rom.data)
+    # TK_SKIP_ADDR="lo-hi,lo-hi" (hex ok) suppresses overlay/pool/dictionary writes
+    # by file address, for the same skip-write bisection as TK_SKIP_BLOCKS.
+    rngs = [(int(a, 0), int(b, 0)) for a, b in
+            (r.split('-') for r in os.environ.get('TK_SKIP_ADDR', '').split(',') if r.strip())]
+    skipped = [0]
+    def _skip(addr):
+        if any(lo <= addr < hi for lo, hi in rngs):
+            skipped[0] += 1
+            return True
+        return False
     for blk, s, body, cap in written:
+        if any(lo < s + cap and s < hi for lo, hi in rngs):
+            # byte-precise: keep the Chinese but restore JP under the suppressed
+            # addresses, so a 3-byte operand run can be bisected inside a block
+            mb = bytearray(body)
+            for lo, hi in rngs:
+                for a in range(max(lo, s), min(hi, s + cap)):
+                    mb[a - s] = rom.data[a]
+                    skipped[0] += 1
+            body = bytes(mb)
         assert len(body) <= cap, 'stream %d bytes does not fit %d' % (len(body), cap)
         out[s:s + len(body)] = body
         for i in range(s + len(body), s + cap):
             out[i] = 0xFF
     for addr, b in edits:
+        if _skip(addr):
+            continue
         out[addr:addr + len(b)] = b
     for (addr, b), cap, key, jp, zh in bodies:
         assert len(b) <= cap, 'dictionary %s: %d bytes in a %d byte span' % (
             key, len(b), cap)
+        if os.environ.get('TK_SKIP_BODIES') or _skip(addr):
+            continue
         out[addr:addr + len(b)] = b
     nrec = 0
+    if rngs or os.environ.get('TK_SKIP_BODIES'):
+        print('SKIP-ADDR: %d write(s) suppressed by %s' % (
+            skipped[0], os.environ.get('TK_SKIP_ADDR') or 'TK_SKIP_BODIES'))
     for ch, rec in wqy_records(char2idx, need).items():
         o = T.glyph_offset(char2idx[ch])
         out[o:o + 28] = rec
@@ -3768,9 +3825,17 @@ def decode_stream(d, start, end, code, slot2ch):
         if b < 0x40:
             if b in MARK:
                 text.append(MARK[b])
+                i += 1
             else:
-                ctrls.append(b)
-            i += 1
+                w = CTRL_WIDTH.get(b, 1)
+                ops = d[i + 1:i + w]
+                if (len(ops) == w - 1 and all(x < 0xF0 for x in ops)
+                        and i + w <= end - 1):
+                    ctrls += list(d[i:i + w])
+                    i += w
+                else:
+                    ctrls.append(b)
+                    i += 1
         elif b < 0xA0:
             idx = code.sb[b]
             text.append(slot2ch.get(idx) or T.idx_to_char(idx) or '?')
@@ -4302,6 +4367,16 @@ def main():
         return
     written = [(ctx['blk'], ctx['lo'], ctx['body'], ctx['hi'] - ctx['lo'])
                for ctx in ctxs]
+    # Regression bisection (AGENTS #4): keep every registration, code page, font
+    # and dictionary byte-identical, but suppress chosen writes so the shipped
+    # ROM can be probed with one variable changed at a time.
+    sk = os.environ.get('TK_SKIP_BLOCKS', '')
+    if sk:
+        want = ({c['blk'] for c in ctxs} if sk == 'all'
+                else {int(x) for x in sk.split(',') if x.strip()})
+        kept = [w for w in written if w[0] not in want]
+        print('SKIP-WRITE blocks: %d of %d suppressed' % (len(written) - len(kept), len(written)))
+        written = kept
     patch(rom, code, written, pl['char2idx'], pl['need'], pl['page'], edits,
           pl['inplace'], pl['bodies'])
     ok = bank_ok
