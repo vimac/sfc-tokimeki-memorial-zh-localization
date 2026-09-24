@@ -32,54 +32,54 @@
 这一段的原始字节：`a7 b4 29 ff 00 c9 f0 00 10 67 c9 e8 00 10 44 c9 a0 00 10 25 c9 40 00 30 65 38 e9 40 00 0a`
 
 ```
-80CA6D: A7 B4          LDA [$B4]        ; $B4/$B5/$B6 = 24-bit text cursor (bank at $B6)
-80CA6F: 29 FF 00       AND #$00FF       ; current byte
+80CA6D: A7 B4          LDA [$B4]        ; $B4/$B5/$B6 = 24 位文本游标（bank 在 $B6）
+80CA6F: 29 FF 00       AND #$00FF       ; 当前字节
 80CA72: C9 F0 00       CMP #$00F0
-80CA75: 10 67          BPL $CADE        ; $F0..$FF -> 2-byte glyph code
+80CA75: 10 67          BPL $CADE        ; $F0..$FF -> 2 字节字模码
 80CA77: C9 E8 00       CMP #$00E8
-80CA7A: 10 44          BPL $CAC0        ; $E8..$EF -> 2-byte sub-table pointer
+80CA7A: 10 44          BPL $CAC0        ; $E8..$EF -> 2 字节指针，指向次级文本 bank
 80CA7C: C9 A0 00       CMP #$00A0
-80CA7F: 10 25          BPL $CAA6        ; $A0..$E7 -> phrase macro (1 byte)
+80CA7F: 10 25          BPL $CAA6        ; $A0..$E7 -> phrase 宏（1 字节）
 80CA81: C9 40 00       CMP #$0040
-80CA84: 30 65          BMI $CAEB        ; $00..$3F -> control codes
-80CA86: 38             SEC              ; $40..$9F -> single-byte glyph shortcut
+80CA84: 30 65          BMI $CAEB        ; $00..$3F -> 控制码
+80CA86: 38             SEC              ; $40..$9F -> 单字节字模捷径
 80CA87: E9 40 00       SBC #$0040
 80CA8A: 0A             ASL
 80CA8B: AA             TAX
-80CA8C: BF 00 80 83    LDA $838000,X    ; table, 2 bytes per entry
-80CA90: EB             XBA              ; entry is stored as a 2-byte TEXT CODE (big-endian)
-80CA91: 29 FF 0F       AND #$0FFF       ; -> glyph index
-80CA94: 22 3D D2 80    JSL $80D23D      ; draw glyph(index)
-80CA98: 80 08          BRA $CAA2        ; advance cursor 1
-80CA9A: E6 B4          INC $B4          ; (3 INCs; not reached by the paths above)
+80CA8C: BF 00 80 83    LDA $838000,X    ; 表，每项 2 字节
+80CA90: EB             XBA              ; 表项存的本身就是一个 2 字节文本码（大端）
+80CA91: 29 FF 0F       AND #$0FFF       ; -> 字模索引
+80CA94: 22 3D D2 80    JSL $80D23D      ; 画字模(index)
+80CA98: 80 08          BRA $CAA2        ; 游标前进 1
+80CA9A: E6 B4          INC $B4          ; 连着 3 个 INC，上面几条路径都走不到这里
 80CA9C: E6 B4          INC $B4
 80CA9E: E6 B4          INC $B4
-80CAA0: E6 B4          INC $B4          ; advance 2 (used by the 2-byte path)
-80CAA2: E6 B4          INC $B4          ; advance 1 (used by the 1-byte path)
+80CAA0: E6 B4          INC $B4          ; 前进 2（2 字节路径用）
+80CAA2: E6 B4          INC $B4          ; 前进 1（1 字节路径用）
 80CAA4: 80 C7          BRA $CA6D
 
-; ---- phrase macro: replace the text cursor with a pointer into bank $B9 (call semantics) ----
-80CAA6: E6 B4          INC $B4          ; step over the macro byte
-80CAA8: D4 B6          PSHD $B6         ; push return cursor (bank)   [see note]
-80CAAA: D4 B4          PSHD $B4         ; push return cursor (address)
+; ---- phrase 宏：把文本游标换成指向 bank $B9 的指针（调用语义） ----
+80CAA6: E6 B4          INC $B4          ; 跨过那个宏字节
+80CAA8: D4 B6          PSHD $B6         ; 压栈返回游标（bank）   [见下方说明]
+80CAAA: D4 B4          PSHD $B4         ; 压栈返回游标（地址）
 80CAAC: 38             SEC
 80CAAD: E9 A0 00       SBC #$00A0
 80CAB0: 0A             ASL
 80CAB1: AA             TAX
-80CAB2: BF A5 CA B9    LDA $B9CAA5,X    ; phrase pointer table
+80CAB2: BF A5 CA B9    LDA $B9CAA5,X    ; phrase 指针表
 80CAB6: 85 B4          STA $B4
 80CAB8: A9 B9 00       LDA #$00B9
 80CABB: 85 B6          STA $B6
 80CABD: 4C 6D CA       JMP $CA6D
 
-; ---- $E8..$EF: 2-byte code -> pointer into bank $C3 ----
+; ---- $E8..$EF：2 字节码 -> 指向 bank $C3 的指针 ----
 80CAC0: A7 B4          LDA [$B4]
 80CAC2: E6 B4          INC $B4
-80CAC4: E6 B4          INC $B4          ; consume 2 text bytes
+80CAC4: E6 B4          INC $B4          ; 吃掉 2 个文本字节
 80CAC6: D4 B6          PSHD $B6
 80CAC8: D4 B4          PSHD $B4
-80CACA: EB             XBA              ; big-endian 16-bit value of the 2 bytes
-80CACB: 29 FF 07       AND #$07FF       ; 2048-entry index
+80CACA: EB             XBA              ; 这 2 字节的大端 16 位值
+80CACB: 29 FF 07       AND #$07FF       ; 2048 项索引
 80CACE: 0A             ASL
 80CACF: AA             TAX
 80CAD0: BF A8 96 C3    LDA $C396A8,X
@@ -88,13 +88,13 @@
 80CAD9: 85 B6          STA $B6
 80CADB: 4C 6D CA       JMP $CA6D
 
-; ---- $F0..$FF: THE 2-BYTE KANJI PATH (pure arithmetic, no table) ----
+; ---- $F0..$FF：双字节字模路径（纯算术，不查表） ----
 80CADE: A7 B4          LDA [$B4]
-80CAE0: EB             XBA              ; A = (b0<<8)|b1   (big-endian of the 2 text bytes)
+80CAE0: EB             XBA              ; A = (b0<<8)|b1   （2 个文本字节的大端）
 80CAE1: 38             SEC
 80CAE2: E9 00 F0       SBC #$F000       ; index = BE16 - 0xF000
-80CAE5: 22 3D D2 80    JSL $80D23D      ; draw glyph(index)
-80CAE9: 80 B5          BRA $CAA0        ; advance 2
+80CAE5: 22 3D D2 80    JSL $80D23D      ; 画字模(index)
+80CAE9: 80 B5          BRA $CAA0        ; 前进 2
 ```
 
 关于 `D4 zp`（2 字节）：它不是标准的 65816 助记符。唯一讲得通的读法是「把直接页 `zp` 那个 16 位字压栈」，
@@ -153,13 +153,13 @@
 * 码 `$00`–`$29`，42 项 × 2 字节小端（例如 `$00→$CB69`、`$0A→$CC2B`、`$14→$CE7D`）。
 * `$0A` 的处理程序同时证明了两件事：宏的调用/返回机制，以及 `PSHD` 那种读法：
 ```
-80CC2B: 68             PLA              ; pop saved cursor address ($B4)
-80CC2C: D0 01          BNE $CC2F        ; zero => sentinel => RTL (whole text routine exits)
+80CC2B: 68             PLA              ; 弹栈取回保存的游标地址（$B4）
+80CC2C: D0 01          BNE $CC2F        ; 为零 => 哨兵 => RTL（整个文本例程就此退出）
 80CC2E: 6B             RTL
 80CC2F: 85 B4          STA $B4
-80CC31: 68             PLA              ; pop saved cursor bank ($B6)
+80CC31: 68             PLA              ; 弹栈取回保存的游标 bank（$B6）
 80CC32: 85 B6          STA $B6
-80CC34: 4C 6D CA       JMP $CA6D        ; resume the caller's stream
+80CC34: 4C 6D CA       JMP $CA6D        ; 回到调用方的文本流
 ```
   弹出的次序正好和 `PSHD $B6 : PSHD $B4` 构成 LIFO。`$00`（`$CB69`）是 `LDA #$0000 : JSL $D23D :`
   `JMP $CAA0`，也就是画那颗空白字模（空格）。
@@ -176,22 +176,22 @@
 ## 4. 字模索引 → 字模记录地址——`$80:D490`（file `0x5490`）
 
 ```
-80D490: A2 FD 00       LDX #$00FD       ; bank = $FD + page
-80D493: A8             TAY              ; Y = index
+80D490: A2 FD 00       LDX #$00FD       ; bank = $FD + 页号
+80D493: A8             TAY              ; Y = 索引
 80D494: 38             SEC
-80D495: E9 92 04       SBC #$0492       ; while (index >= 0x492) index -= 0x492, bank++
+80D495: E9 92 04       SBC #$0492       ; index >= 0x492 就 index -= 0x492、bank 加 1
 80D498: 90 10          BCC $D4AA
 80D49A: E8             INX
 80D49B: A8             TAY
-80D49C: E9 92 04       SBC #$0492       ; (no SEC: carry from the previous subtraction)
+80D49C: E9 92 04       SBC #$0492       ; （没有 SEC：进位来自上一次减法）
 80D49F: 90 09          BCC $D4AA
 80D4A1: E8             INX
 80D4A2: A8             TAY
 80D4A3: E9 92 04       SBC #$0492
 80D4A6: 90 02          BCC $D4AA
-80D4A8: E8             INX              ; 4th page -> bank $100 (invalid); unreachable for legal indices
+80D4A8: E8             INX              ; 第 4 页 -> bank $100（非法）；合法索引到不了这里
 80D4A9: A8             TAY
-80D4AA: 86 02          STX $02          ; pointer bank
+80D4AA: 86 02          STX $02          ; 指针 bank
 80D4AC: 98             TYA
 80D4AD: 0A             ASL
 80D4AE: 0A             ASL
@@ -201,8 +201,8 @@
 80D4B3: 0A             ASL
 80D4B4: 38             SEC
 80D4B5: E5 00          SBC $00          ; y*32 - y*4  ==  y*28
-80D4B7: 09 00 80       ORA #$8000       ; window base
-80D4BA: 85 00          STA $00          ; pointer address
+80D4B7: 09 00 80       ORA #$8000       ; 窗口基址
+80D4BA: 85 00          STA $00          ; 指针地址
 80D4BC: 60             RTS
 ```
 
@@ -235,91 +235,91 @@ file   = (bank-$80)*0x8000 + (addr & 0x7FFF)
 ```
 80D23D: DA             PHX
 80D23E: 5A             PHY
-80D23F: D4 00          PSHD $00         ; save direct-page scratch ($00,$02,$04,$06)
+80D23F: D4 00          PSHD $00         ; 保存直接页暂存值（$00,$02,$04,$06）
 80D241: D4 02          PSHD $02
 80D243: D4 04          PSHD $04
 80D245: D4 06          PSHD $06
-80D247: 85 00          STA $00          ; A = glyph index
-80D249: AD 2C 0A       LDA $0A2C        ; font style flags
-80D24C: 89 10 00       BIT #$0010       ; bit4 = kana-variant ("handwritten") style
+80D247: 85 00          STA $00          ; A = 字模索引
+80D249: AD 2C 0A       LDA $0A2C        ; 字体风格标志
+80D24C: 89 10 00       BIT #$0010       ; bit4 = 假名变体（「手写」）风格
 80D24F: F0 03          BEQ $D254
-80D251: 20 BD D4       JSR  $D4BD       ; -> index remap (see §6)
+80D251: 20 BD D4       JSR  $D4BD       ; -> 索引重映射（见 §6）
 80D254: A5 00          LDA $00
-80D256: 20 90 D4       JSR  $D490       ; index -> 24-bit pointer at $00/$01/$02
+80D256: 20 90 D4       JSR  $D490       ; 索引 -> 在 $00/$01/$02 处搭出 24 位指针
 80D259: 8B             PHB
 80D25A: F4 7E 7E       PEA #$7E7E
-80D25D: AB             PLB              ; DB = $7E (WRAM scratch follows)
+80D25D: AB             PLB              ; DB = $7E（下面用的是 WRAM 暂存区）
 80D25E: AB             PLB
-80D25F: 9C 00 C1       STZ  $C100       ; row 0 of the 16-row cell = blank
+80D25F: 9C 00 C1       STZ  $C100       ; 16 行那格的第 0 行 = 空白
 80D262: A0 00 00       LDY  #$0000
-80D265: B7 00          LDA  [$00],Y     ; read glyph word
-80D267: 99 02 C1       STA  $C102,Y     ; -> row 1..14
+80D265: B7 00          LDA  [$00],Y     ; 读字模行字
+80D267: 99 02 C1       STA  $C102,Y     ; -> 第 1..14 行
 80D26A: C8             INY
 80D26B: C8             INY
-80D26C: C0 1C 00       CPY  #$001C      ; *** exactly 28 bytes = 14 words ***
+80D26C: C0 1C 00       CPY  #$001C      ; *** 正好 28 字节 = 14 个字 ***
 80D26F: D0 F4          BNE  $D265
-80D271: 9C 1E C1       STZ  $C11E       ; row 15 = blank
+80D271: 9C 1E C1       STZ  $C11E       ; 第 15 行 = 空白
 80D274: AD 2C 0A       LDA  $0A2C
-80D277: 89 20 00       BIT  #$0020      ; bit5 = bold -> thicken each row: w |= (w<<1)
+80D277: 89 20 00       BIT  #$0020      ; bit5 = 粗体 -> 每行加粗：w |= (w<<1)
 80D27A: F0 18          BEQ  $D294
 80D27C: A9 10 00       LDA  #$0010
-...  80D284: LDA $C100,Y / ASL / ORA $C100,Y / STA $C100,Y  (16 words)
+...  80D284: LDA $C100,Y / ASL / ORA $C100,Y / STA $C100,Y  （16 个字）
 80D294: AD 2C 0A       LDA  $0A2C
-80D297: 89 02 00       BIT  #$0002      ; bit1 = outline/shadow variant: JSL $80D5F2 + row merge
+80D297: 89 02 00       BIT  #$0002      ; bit1 = 描边/阴影变体：JSL $80D5F2 + 行合并
 ...
 80D2F0: AD 2C 0A       LDA  $0A2C
-80D2F3: 89 01 00       BIT  #$0001      ; bit0 = 1-plane variant (no plane-1 derivation)
+80D2F3: 89 01 00       BIT  #$0001      ; bit0 = 单 plane 变体（不推导 plane 1）
 80D2F6: F0 2C          BEQ  $D324
-...  80D303: 16 rows: $C100,Y -> $C000,X ; $C002,X = 0 ; XBA on $C001,X ; X += 4
-80D324: 64 06          STZ  $06         ; normal path: 1bpp -> 2bpp (4bpp planes 0/1)
-80D326: A9 10 00       LDA  #$0010      ; 16 rows
+...  80D303: 16 rows: $C100,Y -> $C000,X ; $C002,X = 0 ; 对 $C001,X 做 XBA ; X += 4
+80D324: 64 06          STZ  $06         ; 常规路径：1bpp -> 2bpp（4bpp 的 plane 0/1）
+80D326: A9 10 00       LDA  #$0010      ; 16 行
 80D329: 85 04          STA  $04
 80D32B: A0 00 00       LDY  #$0000
 80D32E: A2 00 00       LDX  #$0000
-80D331: B9 00 C1       LDA  $C100,Y     ; row word
-80D334: 9D 00 C0       STA  $C000,X     ; plane 0, 2 bytes (left 8 px, right 8 px)
-80D337: 4A             LSR              ; build plane 1 = word | (word >> 1)
+80D331: B9 00 C1       LDA  $C100,Y     ; 行字
+80D334: 9D 00 C0       STA  $C000,X     ; plane 0，2 字节（左 8 px、右 8 px）
+80D337: 4A             LSR              ; 造出 plane 1 = word | (word >> 1)
 80D338: 48             PHA
 80D339: 05 06          ORA  $06
 80D33B: 9D 02 C0       STA  $C002,X     ; plane 1
 80D33E: 68             PLA
-80D33F: 85 06          STA  $06         ; carry bit for the next row
+80D33F: 85 06          STA  $06         ; 给下一行留的进位位
 80D341: BD 01 C0       LDA  $C001,X
-80D344: EB             XBA              ; byte-swap -> SFC tile order (MSB = leftmost pixel)
+80D344: EB             XBA              ; 交换字节 -> SFC tile 顺序（MSB = 最左像素）
 80D345: 9D 01 C0       STA  $C001,X
 80D348: C8  C8         INY : INY
 80D34A: 8A  18 69 04 00 AA   TXA : CLC : ADC #$0004 : TAX
 80D350: C6 04          DEC  $04
 80D352: D0 DD          BNE  $D331
-80D354: AD 22 0A       LDA  $0A22       ; tile counter -> VRAM byte offset (*64)
-80D357: 0A 0A 0A       ASL ASL ASL      ; 6 ASLs in total -> tile counter * 64
+80D354: AD 22 0A       LDA  $0A22       ; tile 计数器 -> VRAM 字节偏移（*64）
+80D357: 0A 0A 0A       ASL ASL ASL      ; 一共 6 个 ASL -> tile 计数器 * 64
 80D35D: AA             TAX
-80D35E: A0 02 C0       LDY  #$C002      ; 4 x 16 bytes -> the 2x2 block of 8x8 tiles
-80D361: 20 59 D4       JSR  $D459       ; (16 bytes each -> $C200,X, X += $10)
+80D35E: A0 02 C0       LDY  #$C002      ; 4 x 16 字节 -> 8x8 tile 的 2x2 块
+80D361: 20 59 D4       JSR  $D459       ; （每次 16 字节 -> $C200,X，X += $10）
 80D364: A0 00 C0       LDY  #$C000
 80D367: 20 59 D4       JSR  $D459
 80D36A: A0 22 C0       LDY  #$C022
 80D36D: 20 59 D4       JSR  $D459
 80D370: A0 20 C0       LDY  #$C020
 80D373: 20 59 D4       JSR  $D459
-80D376: AD 26 0A       LDA  $0A26       ; BG-map cell cursor
-...  -> X = (cursor & $3FF)*8, Y = high byte
-80D387: E2 20          SEP  #$20        ; 8-bit accumulator (bit5 = M)
+80D376: AD 26 0A       LDA  $0A26       ; BG 图格子游标
+...  -> X = (游标 & $3FF)*8，Y = 高字节
+80D387: E2 20          SEP  #$20        ; 8 位累加器（bit5 = M）
 80D389: A9 01          LDA  #$01
-80D38B: 99 00 B2       STA  $B200,Y     ; "cell used" bookkeeping
+80D38B: 99 00 B2       STA  $B200,Y     ; 「格子已用」记账
 80D38E: 99 01 B2       STA  $B201,Y
 80D391: C2 20          REP  #$20
-80D393: AD 22 0A       LDA  $0A22       ; first tile number of this glyph
+80D393: AD 22 0A       LDA  $0A22       ; 这个字模的第一个 tile 号
 80D397: 6D 24 0A       ADC  $0A24
 80D39F: 6D 2A 0A       ADC  $0A2A
-80D3A7: 9D 00 A0       STA  $A000,X     ; BG map: 2x2 tiles of 8x8 = one 16x16 cell
-80D3AB: 9D 02 A0       STA  $A002,X     ; (tile number incremented between each store, `1A` = INC A)
+80D3A7: 9D 00 A0       STA  $A000,X     ; BG 图：8x8 tile 取 2x2 = 一个 16x16 格子
+80D3AB: 9D 02 A0       STA  $A002,X     ; （每次存储之间 tile 号加一，`1A` = INC A）
 80D3AF: 9D 40 A0       STA  $A040,X
 80D3B3: 9D 42 A0       STA  $A042,X
 80D3B6: EE 26 0A       INC  $0A26
 80D3B9: EE 26 0A       INC  $0A26
 80D3CB: AD 22 0A       LDA  $0A22
-80D3D3: EE 22 0A       INC  $0A22       ; next tile index
+80D3D3: EE 22 0A       INC  $0A22       ; 下一个 tile 索引
 ```
 
 ### 记录格式（已证实）
@@ -339,22 +339,22 @@ file   = (bank-$80)*0x8000 + (addr & 0x7FFF)
 ## 6. 可选的运行时重定向——`$80:D4BD`（file `0x54BD`）
 
 ```
-80D4BD: A5 00          LDA  $00          ; glyph index
+80D4BD: A5 00          LDA  $00          ; 字模索引
 80D4BF: C9 FD 00       CMP  #$00FD
-80D4C2: 10 1F          BPL  $D4E3        ; index >= $FD -> unchanged
+80D4C2: 10 1F          BPL  $D4E3        ; 索引 >= $FD -> 保持不变
 80D4C4: C9 AB 00       CMP  #$00AB
-80D4C7: 30 1A          BMI  $D4E3        ; index <  $AB -> unchanged
+80D4C7: 30 1A          BMI  $D4E3        ; 索引 <  $AB -> 保持不变
 80D4C9: A2 00 00       LDX  #$0000
-80D4CC: BF E4 D4 80    LDA  $80D4E4,X    ; 76-entry list (§3.5)
+80D4CC: BF E4 D4 80    LDA  $80D4E4,X    ; 76 项列表（§3.5）
 80D4D0: 29 FF 00       AND  #$00FF
-80D4D3: F0 0E          BEQ  $D4E3        ; $00 terminator
+80D4D3: F0 0E          BEQ  $D4E3        ; $00 是终止符
 80D4D5: C5 00          CMP  $00
 80D4D7: F0 03          BEQ  $D4DC
 80D4D9: E8             INX
 80D4DA: 80 F0          BRA  $D4CC
 80D4DC: 8A             TXA
 80D4DD: 18             CLC
-80D4DE: 69 5A 0D       ADC  #$0D5A       ; new index = $0D5A + position
+80D4DE: 69 5A 0D       ADC  #$0D5A       ; 新索引 = $0D5A + 位置
 80D4E1: 85 00          STA  $00
 80D4E3: 60             RTS
 ```
@@ -442,7 +442,7 @@ file offset           : (0xFD-0x80)*0x8000 + 0x6510 = $3EE510
 ```
 index = $F546 - $F000 = $0546 ;  $0546 >= $0492 -> page 1, y = $0546-$0492 = $00B4 (180)
 bank $FE, addr = $8000 + 180*28 = $8000 + 5040 = $93B0
-file  = 0x3F0000 + $13B0 = $3F13B0        -> renders as 行 ✓
+file  = 0x3F0000 + $13B0 = $3F13B0        -> 画出来是 行 ✓
 ```
 （单字节表里的 `$58` 也指向索引 `$0546`，也就是文本字节 `$58` = 行）。
 
@@ -450,7 +450,7 @@ file  = 0x3F0000 + $13B0 = $3F13B0        -> renders as 行 ✓
 ```
 index = $FAF2 - $F000 = $0AF2 ;  $0AF2 >= 2*$0492 -> page 2, y = $0AF2 - $0924 = $01CE (462)
 bank $FF, addr = $8000 + 462*28 = $8000 + 12936 = $B288
-file  = 0x3F8000 + $3288 = $3FB288        -> renders as 美 ✓   (JIS 40-94)
+file  = 0x3F8000 + $3288 = $3FB288        -> 画出来是 美 ✓   (JIS 40-94)
 ```
 上下文：`… FC 6F FA F2 …` = 「優美」；`0x1CCBA7` 处紧挨在它前面的是 `FB 69` = 聞（索引 `$0B69`，file `$3FBF8C`）。
 
