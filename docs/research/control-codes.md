@@ -95,4 +95,4 @@ reading, but the *bytes after* a `$01` are partly distance-table, not text.
    done with **every atom offset preserved** (block-144-style fixed spans), or by recomputing
    the distance bytes as well. Preserving spans is the safe default.
 3. `tools/block_boxes.py` implements the widths and splits a block into its TERM-delimited
-   segments; `docs/research/block8_boxes.json` + `block8_jp.txt` are its block-8 output.
+   segments (per-block dumps are derived data, regenerate on demand -- see AGENTS §二).

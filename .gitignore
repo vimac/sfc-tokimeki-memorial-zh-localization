@@ -31,3 +31,12 @@ __pycache__/
 *.pyc
 .DS_Store
 .zcode/
+
+# Per-block derived data. 中文正文（blockN_zh.txt）是要入库的，下面这些不是：
+# 全部由 tools/block_work.py（_work.tsv / _work.json）和构建本身（_enc.json）重生成。
+docs/research/*_work.json
+docs/research/*_jp.txt
+docs/research/*_enc.json
+docs/research/*_seg.txt
+# AppleDouble sidecars from macOS file transfers.
+._*
