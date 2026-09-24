@@ -388,10 +388,10 @@ file   = (bank-$80)*0x8000 + (addr & 0x7FFF)
 汉字公式：
 
 ```
-index = 0x1C5 + ((ku - 16) * 94 + (cell - 1))          (JIS X0208 level 1 upwards)
+index = 0x1C5 + ((ku - 16) * 94 + (cell - 1))          (JIS X0208 第 1 水准起)
 ku    = 16 + (index - 0x1C5) / 94
 cell  = 1  + (index - 0x1C5) % 94
-EUC-JP bytes = (0xA0 + ku), (0xA0 + cell)
+EUC‑JP 两字节 = (0xA0 + ku), (0xA0 + cell)
 ```
 
 锚点验证（把位图渲染出来用眼睛读）：
