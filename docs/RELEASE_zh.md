@@ -103,7 +103,7 @@ docs/prologue_zh/        序章渲染表与 index.txt 转录（PNG 不入库）
 docs/history/            旧交接与破解笔记，非权威（README 写了为什么作废）
 docs/ALL_CHARACTERS.txt  wiki 角色资料（15 个人物），人名译法依据
 tools/                   32 个脚本：验收链 15 个，其余是侦察仪表
-translations/            中文稿 + 三张口径表 + 一张短语词典
+translations/            三张口径表（人名/术语/短语）+ TM 命中表，中文正文在 docs/research/
 reference/               J2E 第三方素材，只读输入，不入库
 start-screenshots/       日文原版启动流程截图
 out/                     从母盘 dump 出来的分析文本，可重生成，不入库
@@ -116,9 +116,11 @@ out/                     从母盘 dump 出来的分析文本，可重生成，�
 
 其余都是派生物，2026-09-24 起不入库、目录里也清掉了：`blockN_jp.txt`、`blockN_work.json`
 由 `tools/block_work.py <块号>` 重生成，`blockN_enc.json`、`*_seg.txt` 由构建重生成。
-这次一起清掉的还有 10 个侦察期脚本（`corpusmap`、`textmap`、`poolscan`、`ramprobe`、`findaccess`、
-`whouses`、`price_block0`、`blocktails`、`uicollide`、`prologue_boxes`）——它们的结论都已经在文档里，
-需要时从 git 历史找回。跟踪文件从 825 个降到 373 个。
+同一天还清掉 10 个侦察期脚本（`corpusmap`、`textmap`、`poolscan`、`ramprobe`、`findaccess`、
+`whouses`、`price_block0`、`blocktails`、`uicollide`、`prologue_boxes`）和 `translations/` 里
+四份早期草稿（`TKSC2_zh.tsv`、`TKSC3_zh.tsv`、`shrine_zh.json`、`tm_coverage.txt`——正文早就被
+`docs/research/*_zh.txt` 取代，charledger 的草稿档也随之撤了）。结论都在文档里，需要时从 git
+历史找回。跟踪文件从 825 个降到 369 个。
 
 `translations/` 里 `name_glossary.tsv`（64 行人名）、`term_glossary.tsv`（43 行系统术语）、
 `phrase_glossary.tsv`（1,022 行短语词典）是口径表，改译法之前先看它们。
