@@ -1,15 +1,14 @@
 """Census the whole game's text from the decoded script dump, not from ROM bytes.
 
-`tools/corpusmap.py` walks the pointer table looking for block ends and cannot tell a
-text block from the 1.7 MB of non-text that sits behind block 133's base, so its totals
-are inflated past credibility.  The J2E material already contains the game's complete
-decoded Japanese script -- `translations/pending.json` is one extracted line list per
-TKSC file, and `reference/.../Japanese/` holds the same text as raw EUC -- so the corpus
-size, the kana load and the distinct-kanji count can be read off those directly.
+The J2E material in `reference/` already contains the game's complete decoded Japanese
+script -- `translations/pending.json` is one extracted line list per TKSC file, and
+`reference/.../Japanese/` holds the same text as raw EUC -- so the corpus size, the kana
+load and the distinct-kanji count can be read off those directly, without having to
+recover block ends from the ROM's pointer table.
 
-The number that decides whether "no Japanese character left" is reachable is the count
-of *distinct kanji* in the source: each Chinese rendering needs a record, and a record
-is free when the source kanji already occupies a slot in the font's kanji band.
+What this output means today: coverage, not debt.  Every text block is translated, and TKSC
+file numbers do not map one-to-one onto ROM block numbers, so a per-file line count here is
+never a claim about a single block.
 
 usage: python3 tools/corpus_from_dump.py [--json out.json]
 """

@@ -1,16 +1,19 @@
 """Which $E8-$EF sub-macro indexes, and which bank-$C3 bytes, are dead.
 
-The sub table (file 0x2196A8, 2048 x LE16 offsets in bank $C3) is a phrase
-dictionary the game itself uses.  A Chinese translation can borrow it: point
-*unreferenced* indexes at Chinese bodies and the Japanese keeps every entry it
-actually reads.
+The sub table (file 0x2196A8, 2048 x LE16 offsets in bank $C3) is a phrase dictionary
+the game itself uses.  This scan measures it; it does NOT license moving dictionary
+bodies somewhere else, and that route was tried and closed: an index that no TEXT_PTRS
+block references statically can still be taken dynamically by a variable code such as
+⟦E806⟧/⟦ECA5⟧, and the 1,883 recorded spans铺满整个 32 KB 段, so the "dead runs" below
+are unread *text* inside a live table, not free space to lay bodies in.  中文词典体因此
+只能在原地改写（改一条覆盖几十处调用），细节见 AGENTS.md §四 与 §五。
 
 `census()` answers two questions, and caches the answer in
-docs/research/macroband.json because the transitive scan takes ~40s:
+docs/research/macroband.json (derived, not tracked) because the transitive scan takes ~40s:
 
   available  sub indexes no text block reaches (null *or* orphan)
-  dead_runs  byte runs inside the spans of those orphan indexes, i.e. space that
-             is provably sub-band data and provably unread
+  dead_runs  byte runs inside the spans of those orphan indexes -- unread text, and by the
+             paragraph above still not a place to put anything
 """
 import sys, os, json, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

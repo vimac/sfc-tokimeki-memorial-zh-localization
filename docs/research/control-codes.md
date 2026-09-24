@@ -1,9 +1,9 @@
-# Tokimeki Memorial (SFC JP Rev 1) — control-code widths and semantics
+# 心跳回忆（SFC 日版 Rev 1）——控制码的宽度与语义
 
-Recovered by disassembling every handler reachable from the text dispatcher
-(`$80:CA6D`), not copied from the archived handoffs in `docs/history/`.
+本文的结论逐条来自反汇编：从文本派发器（`$80:CA6D`）出发，把它能到达的每个处理程序都拆了一遍，
+不是从 `docs/history/` 的旧交接笔记里抄的。
 
-## Dispatch path (`$80:CAEB`, file `0x4AEB`)
+## 派发路径（`$80:CAEB`，file `0x4AEB`）
 
 ```
 80CAEB: A0 01 00   LDY #$0001        ; Y = 1, used by every operand read below
@@ -17,55 +17,55 @@ Recovered by disassembling every handler reachable from the text dispatcher
 80CB06: 85 00 / 6C 00 00  STA $00 : JMP ($0000)
 ```
 
-**The table is 47 entries (`$00`-`$2E`), at file `0x4B0B`.** `$2F` and above are *not*
-out-of-range: `$30..$37` and `$38..$3F` each have a single indexed handler, so a block that
-uses them (block 8 uses `$39` x24, `$3A` x8, `$3B` x29, `$3C`/`$3D`/`$3F`) is legitimate.
+**分发表共 47 项（`$00`-`$2E`），在 file `0x4B0B`。** `$2F` 往上不算越界：
+`$30..$37` 和 `$38..$3F` 各有自己的索引式处理程序，所以用到它们的块完全合法
+（block 8 就用了 `$39` 24 次、`$3A` 8 次、`$3B` 29 次，还有 `$3C`/`$3D`/`$3F`）。
 
-Advance is read off the handler's tail: the cursor-advance chain is five stacked
-`INC $B4` at `$CA9A/$CA9C/$CA9E/$CAA0/$CAA2`, so `JMP $CAA2`=1 byte, `$CAA0`=2, `$CA9E`=3,
-`$CA9C`=4, `$CA9A`=5.
+宽度直接从处理程序的尾部读出：游标前进链是 `$CA9A/$CA9C/$CA9E/$CAA0/$CAA2` 处叠起来的
+五条 `INC $B4`，所以 `JMP $CAA2` 吃 1 字节、`$CAA0` 吃 2、`$CA9E` 吃 3、`$CA9C` 吃 4、
+`$CA9A` 吃 5。
 
-## Width table (bytes consumed, code byte included)
+## 宽度表（吃掉的字节数，含码字节本身）
 
-| code | handler | width | operand reads | what it does |
+| 码 | 处理程序 | 宽度 | 读操作数 | 作用 |
 |---|---|---|---|---|
-| `$00 xx` | `$CB69` | 2 | 0 | `LDA #$0000 : JSL $D23D` = draw the blank cell; the operand is ignored |
-| `$01 xx` | `$CB73` | 2 | 2 | **computed forward jump** (see below) |
-| `$02 xx` | `$CB8B` | 2 | 0 | call: pushes `cursor+3` then `STA $B4` from the operand -> jump to a 1-byte address in the same bank |
-| `$03 xx yy` | `$CB9C` | 4 | 2 | reads a 16-bit WRAM word selected by 2 operands, `JSL $CFC5`, advance 4 |
-| `$04 xx` | `$CBD0` | 2 | 1 | `STA $0A2C` = **set the font style flags** (bit0 planes, bit1 outline, bit4 kana, bit5 bold) |
-| `$05` | `$CBDB` | 1 | 0 | copies the 16-px cell at `$7E:9FFE` <-> `$7EA000` around `$0A26`, `INC $0A26` |
-| `$06` | `$CBF9` | 1 | 0 | `LDA $0A26 : STA $0A28` = save the line-start cell |
-| `$07 xx` | `$CC02` | 2 | 1 | `$0A26 += operand` = move the cell cursor right |
-| `$08 xx` | `$CC11` | 2 | 1 | `$0A26 = $0A28 + operand` = absolute cell on the current line |
-| `$09 xx yy` | `$CC20` | 3 | 1 (16-bit) | `$0A26 = $0A28 = word` = **absolute tile cursor**, advance 3 (NOT a space) |
-| `$0A` | `$CC2B` | 1 | 0 | macro return: `PLA : BNE : RTL / STA $B4 : PLA : STA $B6` |
-| `$0B` | `$CC37` | 1 | 0 | newline: `$0A26 = $0A28 + $40` |
-| `$0C` | `$CC47` | 1 | 0 | pop one pending sub-parse level (`PLA : PLA : $0A`-like) |
-| `$0D` | `$CC4E` | 1 | 0 | tile-counter arithmetic from `$0A22` |
-| `$0E` | `$CCB5` | 1 | 0 | big handler (178 B), `JSR` twice then advance 1 |
-| `$0F p0 p1 p2 p3` | `$CBB0` | **5** | 2 | reads 2 operands + a WRAM word, `JSL $CFC5`, advance 5 |
-| `$10` | `$CDC9` | 1 | 0 | `LDA #$0010 : STA $0A2C` = switch to the kana-variant ("handwritten") font |
-| `$11` | `$CDD2` | 1 | 0 | `STZ $0A2C` = back to the normal font |
-| `$12` / `$13` / `$16` | `$CDD8`/`$CDE8`/`$CDF8` | 1 | 0 | push the cursor and re-dispatch on WRAM `$0E00`/`$0E08`/`$0E10` (player name buffers) |
-| `$14` | `$CE7D` | 1 | 0 | box/line geometry: `JSR $CF36`, then a loop that pushes `$0C` and `JSL $81E86C` |
+| `$00 xx` | `$CB69` | 2 | 0 | `LDA #$0000 : JSL $D23D`，画空白格；操作数被忽略 |
+| `$01 xx` | `$CB73` | 2 | 2 | **计算式前跳**（见下） |
+| `$02 xx` | `$CB8B` | 2 | 0 | 调用：先压入 `cursor+3`，再按操作数 `STA $B4`——跳到同 bank 内的 1 字节地址 |
+| `$03 xx yy` | `$CB9C` | 4 | 2 | 用 2 个操作数选中一个 16 位 WRAM 字，`JSL $CFC5`，前进 4 |
+| `$04 xx` | `$CBD0` | 2 | 1 | `STA $0A2C`，**设置字形风格标志**（bit0 图层、bit1 描边、bit4 假名、bit5 加粗） |
+| `$05` | `$CBDB` | 1 | 0 | 把 `$7E:9FFE` <-> `$7EA000` 的 16 像素格在 `$0A26` 附近对拷，`INC $0A26` |
+| `$06` | `$CBF9` | 1 | 0 | `LDA $0A26 : STA $0A28`，记下行首格 |
+| `$07 xx` | `$CC02` | 2 | 1 | `$0A26 += operand`，格游标右移 |
+| `$08 xx` | `$CC11` | 2 | 1 | `$0A26 = $0A28 + operand`，定位到当前行的绝对格 |
+| `$09 xx yy` | `$CC20` | 3 | 1 (16-bit) | `$0A26 = $0A28 = word`，**绝对像素游标**，前进 3（不是空格） |
+| `$0A` | `$CC2B` | 1 | 0 | 宏返回：`PLA : BNE : RTL / STA $B4 : PLA : STA $B6` |
+| `$0B` | `$CC37` | 1 | 0 | 换行：`$0A26 = $0A28 + $40` |
+| `$0C` | `$CC47` | 1 | 0 | 弹出一层挂起的子解析（类似 `PLA : PLA : $0A`） |
+| `$0D` | `$CC4E` | 1 | 0 | 基于 `$0A22` 的格计数器运算 |
+| `$0E` | `$CCB5` | 1 | 0 | 大处理程序（178 字节），两次 `JSR` 之后前进 1 |
+| `$0F p0 p1 p2 p3` | `$CBB0` | **5** | 2 | 读 2 个操作数加一个 WRAM 字，`JSL $CFC5`，前进 5 |
+| `$10` | `$CDC9` | 1 | 0 | `LDA #$0010 : STA $0A2C`，切到假名变体（「手写体」）字库 |
+| `$11` | `$CDD2` | 1 | 0 | `STZ $0A2C`，切回普通字库 |
+| `$12` / `$13` / `$16` | `$CDD8`/`$CDE8`/`$CDF8` | 1 | 0 | 压入游标，再按 WRAM 的玩家姓名缓冲 `$0E00`/`$0E08`/`$0E10` 重新派发 |
+| `$14` | `$CE7D` | 1 | 0 | 框/行几何：`JSR $CF36`，随后一个循环压入 `$0C` 并 `JSL $81E86C` |
 | `$15` | `$CE9A` | 1 | 0 | `JSL $80D0B8 : LDA #$0008 : JSL $80C563` |
-| `$17` | `$CE08` | 1 | 0 | push cursor, re-dispatch on `$83:8318` |
-| `$18` | `$CEA8` | 1 | 0 | `JSL $80D061`-family + `INC $17DE` |
-| `$19` | `$CE7D` | 1 | 0 | **alias of `$14`** (same handler address in the table) |
-| `$1A`-`$1F` | `$CEB8`.. | 1 | 0 | chain: `LDA #$0000..#$0005` then `BRA` into one shared tail; `$1F` additionally reads `$00C4` |
-| `$20` | `$CE68` | 1 | 0 | compares `$BC` with `$000A`, conditional `JSL $80D0F3` |
-| `$21` `$22` `$23` | `$CE5F` `$CEFA` `$CF03` | 1 | 0 | set / clear the WRAM flag at `$17DC` / `$17DE` |
-| `$24` `$25` `$26` | `$CF09` `$CF2C` `$CF31` | 1 | 0 | one routine with `Y = $0C / $08 / $04` (the `BRA` chaining proves it) |
-| `$27` | `$CE40` | 1 | 0 | wait loop on `$17DC` |
-| `$28 xx` | `$CE48` | 2 | 1 | `STZ $17DE`, operand scaled `*4`, `PHA : JSL $81E86C` = pass a parameter to the text engine |
-| `$29` | `$CE8F` | 1 | 0 | `JSR $CF36 : INC $0A26 : LDA #$000C : BRA $CE7D` = open a box then behave like `$14` |
-| `$2A`-`$2D` | `$CC47` | 1 | 0 | **aliases of `$0C`** |
-| `$2E` | `$CAA2` | 1 | 0 | the handler *is* the advance stub -> a literal no-op pad byte |
-| `$30`-`$37 xx` | `$CD8C` | 2 | 0 | reads the operand, indexes by `(code-$30)*32` into a table |
-| `$38`-`$3F` | `$CD67` | 1 | 0 | reads the operand, `SEC : SBC #$0038 : JSL $CD77` = 8 variants of one indexed op |
+| `$17` | `$CE08` | 1 | 0 | 压入游标，按 `$83:8318` 重新派发 |
+| `$18` | `$CEA8` | 1 | 0 | `JSL $80D061` 一族 + `INC $17DE` |
+| `$19` | `$CE7D` | 1 | 0 | **`$14` 的别名**（表里的处理程序地址相同） |
+| `$1A`-`$1F` | `$CEB8`.. | 1 | 0 | 连锁：`LDA #$0000..#$0005` 之后 `BRA` 进一个共享尾部；`$1F` 额外读 `$00C4` |
+| `$20` | `$CE68` | 1 | 0 | 比较 `$BC` 与 `$000A`，条件性 `JSL $80D0F3` |
+| `$21` `$22` `$23` | `$CE5F` `$CEFA` `$CF03` | 1 | 0 | 置位 / 清除 WRAM 标志 `$17DC` / `$17DE` |
+| `$24` `$25` `$26` | `$CF09` `$CF2C` `$CF31` | 1 | 0 | 同一个例程，只是 `Y = $0C / $08 / $04`（`BRA` 的串联方式可以证明） |
+| `$27` | `$CE40` | 1 | 0 | 在 `$17DC` 上的等待循环 |
+| `$28 xx` | `$CE48` | 2 | 1 | `STZ $17DE`，操作数按 `*4` 定标，`PHA : JSL $81E86C`，给文本引擎传一个参数 |
+| `$29` | `$CE8F` | 1 | 0 | `JSR $CF36 : INC $0A26 : LDA #$000C : BRA $CE7D`，先开框，然后按 `$14` 行事 |
+| `$2A`-`$2D` | `$CC47` | 1 | 0 | **`$0C` 的别名** |
+| `$2E` | `$CAA2` | 1 | 0 | 处理程序*本身*就是前进桩——纯粹的 no-op 垫字节 |
+| `$30`-`$37 xx` | `$CD8C` | 2 | 0 | 读操作数，按 `(code-$30)*32` 索引一张表 |
+| `$38`-`$3F` | `$CD67` | 1 | 0 | 读操作数，`SEC : SBC #$0038 : JSL $CD77`，同一个索引操作的 8 个变体 |
 
-## `$01`, the code that garbles a naive parse
+## `$01`：天真线性解析就是在这里被打乱的
 
 ```
 80CB73: B7 B4   LDA [$B4],Y   ; operand = the byte after the code
@@ -79,20 +79,17 @@ Advance is read off the handler's tail: the cursor-advance chain is five stacked
 80CB88: 4C 6D CA JMP $CA6D
 ```
 
-`new cursor = c + byte_at(c + word@($0000+operand) + 3)` — the jump distance is taken
-relative to the `$01` byte, so the operand selects which in-stream distance table to use and
-the runtime word selects which entry. In block 8 the operand is `$A0` 160 times and `$00` 50
-times, i.e. the WRAM selector lives at `$7E:00A0/$7E:0000`. A linear walk therefore keeps
-reading, but the *bytes after* a `$01` are partly distance-table, not text.
+`new cursor = c + byte_at(c + word@($0000+operand) + 3)`——跳距以 `$01` 字节本身为基准：
+操作数决定用流内的哪张距离表，运行时字决定取表里的哪一项。block 8 的操作数是 `$A0` 共 160 次、
+`$00` 共 50 次，也就是说 WRAM 选择器住在 `$7E:00A0/$7E:0000`。因此线性往下读还会接着读到东西，
+但 `$01` *后面的字节*有一部分是距离表，不是正文。
 
-## Consequences for patching
+## 对打补丁的影响
 
-1. Any block that executes `$00/$01/$02/$03/$04/$07/$08/$09/$0F/$28/$30..$37` must be walked
-   with these widths. Reading them as 1 byte desynchronises every later atom: the symptom is
-   correct words with phantom syllables injected (`（最近、女子生徒じゃないか？）` ->
-   `（最よ近、女演奏生じゃないか徒？」`).
-2. Because `$01` jumps to `c + <distance byte>`, translating a block that uses it can only be
-   done with **every atom offset preserved** (block-144-style fixed spans), or by recomputing
-   the distance bytes as well. Preserving spans is the safe default.
-3. `tools/block_boxes.py` implements the widths and splits a block into its TERM-delimited
-   segments (per-block dumps are derived data, regenerate on demand -- see AGENTS §二).
+1. 凡执行 `$00/$01/$02/$03/$04/$07/$08/$09/$0F/$28/$30..$37` 的块，都必须按这些宽度来走。
+   把它们当 1 字节读，后面每个原子都会失步：症状是词都对、却凭空混进假音节
+   （`（最近、女子生徒じゃないか？）` -> `（最よ近、女演奏生じゃないか徒？」`）。
+2. 由于 `$01` 跳到 `c + <distance byte>`，翻译用到它的块只有两条路：**保住每个原子的偏移**
+   （block 144 那种定长 span），或者把距离字节一起重算。保长度是安全的默认选择。
+3. `tools/block_boxes.py` 已按这些宽度实现，把一个块切成以 TERM 分隔的段（逐块 dump 是派生
+   数据，按需重生成——见 AGENTS §二）。

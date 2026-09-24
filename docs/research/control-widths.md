@@ -1,8 +1,7 @@
-# Control-code widths in the text dispatcher
+# 文本派发器里各控制码的宽度
 
-Measured from the ROM itself with `tools/ctrl_advance.py` (it reads each of the
-48 handler tails reached through the table at file `0x4B0B` and reports which
-advance stub it jumps to).  The dispatcher at `$80:CA6D` is:
+数据由 `tools/ctrl_advance.py` 从 ROM 本身实测得出：它读出经 file `0x4B0B` 那张表可达的
+48 个处理程序尾部，报告每个跳到哪条前进桩。`$80:CA6D` 处的派发器是：
 
 ```
 CA6A: PEA #$0000            ; a zero marker for the sub-parse stack
@@ -14,47 +13,38 @@ CA84: CMP #$0040 / BMI $CAEB   ; $00-$3F : control
 CA86:                ; else $40-$9F: 1-byte glyph from the BE16 table at $83:8000
 ```
 
-The advance stubs are a chain of `INC $B4` at `$CA9A/$CA9C/$CA9E/$CAA0/$CAA2`,
-so a handler's tail says how many stream bytes the code eats:
-`JMP $CAA2` = 1, `JMP $CAA0` = 2, `JMP $CA9E` = 3, `BRA $CAA0` = 4.
+前进桩是 `$CA9A/$CA9C/$CA9E/$CAA0/$CAA2` 处的一串 `INC $B4`，处理程序尾部就交代了这条码
+吃掉几个流字节：`JMP $CAA2` = 1、`JMP $CAA0` = 2、`JMP $CA9E` = 3、`BRA $CAA0` = 4。
 
-## Codes that consume operand bytes
+## 吃操作数的码
 
-| code | handler | bytes eaten | what it does |
+| 码 | 处理程序 | 吃掉字节 | 作用 |
 |------|---------|-------------|--------------|
-| `$00` | `$CB69` | 2 | 1 operand byte |
-| `$01` | `$CB73` | 2 | 1 operand byte |
-| `$09` | `$CC20` | 3 | `LDA [$B4],Y` (Y=1) -> 16-bit operand stored to `$0A26/$0A28`: **set the tile write cursor** |
-| `$28` | `$CE48` | 2 | operand = a frame-count delay, `(n+1)*4` |
+| `$00` | `$CB69` | 2 | 1 个操作数字节 |
+| `$01` | `$CB73` | 2 | 1 个操作数字节 |
+| `$09` | `$CC20` | 3 | `LDA [$B4],Y`（Y=1）读一个 16 位操作数存进 `$0A26/$0A28`：**设置像素写游标** |
+| `$28` | `$CE48` | 2 | 操作数 = 以帧计的延时，`(n+1)*4` |
 
-Everything else below `$30` that the prologue actually executes eats one byte:
-`$0A $0C $14 $18 $1C $24 $25 $26 $29 $2E`.  `$38-$3F` (`$CD67`) and `$30-$37`
-(`$CD8C`) are the text-style/variable families and also need care, but block 144
-executes none of them.
+序章真正执行到的、`$30` 以下其余的码全都只吃 1 字节：
+`$0A $0C $14 $18 $1C $24 $25 $26 $29 $2E`。  `$38-$3F`（`$CD67`）和 `$30-$37`
+（`$CD8C`）是文字风格/变量两族，同样要小心，只是 block 144 一条都没执行到。
 
-**Correction to earlier notes.**  `$09` is *not* a full-width space and `$0A` is
-*not* a line break:
+**`$09` 不是全宽空格，`$0A` 也不是换行符**，别凭想象用它们：
 
-* `$0A` -> `$CC2B` is `PLA / BNE / RTL / STA $B4 / PLA / STA $B6 / JMP $CA6D`.
-  Because the `$CA6A` `PEA #$0000` marker is what a top-level parse has on the
-  stack, a top-level `$0A` pulls a zero word and `RTL`s (end of this parse),
-  while a `$0A` inside a macro body pulls the cursor the call pushed at
-  `$CAA6`/`$CAC6` and resumes after the call.  Its own advance is 1 byte.
-* `$0B` -> `$CC37` is the newline (`$0A26 += $40`); `$0C` -> `$CC47` pops a
-  pending sub-parse level and re-tests.
-* `$2E` -> the table entry literally is `$CAA2`, i.e. a 1-byte no-op.
+* `$0A` -> `$CC2B` 是 `PLA / BNE / RTL / STA $B4 / PLA / STA $B6 / JMP $CA6D`。
+  顶层解析的栈顶放着 `$CA6A` 那条 `PEA #$0000` 标记，所以顶层的 `$0A` 弹出一个零字就
+  `RTL`（本次解析结束）；宏体里的 `$0A` 弹出的则是调用点在
+  `$CAA6`/`$CAC6` 压下的游标，从调用处之后继续。它自身前进 1 字节。
+* `$0B` -> `$CC37` 才是换行（`$0A26 += $40`）；`$0C` -> `$CC47` 弹出一层挂起的子解析再重新判断。
+* `$2E` -> 表项干脆就是 `$CAA2`，即 1 字节 no-op。
 
-Block 144's executed control multiset (`tools/ctrl_widths.py`):
+Block 144 实际执行的控制码多重集（`tools/ctrl_widths.py`）：
 `$0A:5  $0C:84  $14:116  $18:1  $1C:1  $24:8  $25:20  $26:1  $29:2  $2E:7`
-— 245 bytes, all one-byte.  So the Chinese re-layout cannot desync the cursor
-through a control operand; counting raw bytes `$00-$3F` in the block instead
-gives 60+ extra "controls" that are really the second byte of a `$F0/$F1/...`
-glyph pair (`f0 09`, `f6 00`, `fd 01`), which is why an earlier pass suspected
-operand bugs here.
+—— 245 字节，全是 1 字节。所以中文重排不可能经由控制操作数弄乱游标。
+另有一条坑要避开：在块内按裸字节数 `$00-$3F` 会多数出 60 多个假「控制码」，它们其实是
+`$F0/$F1/...` 字形对的第二个字节（`f0 09`、`f6 00`、`fd 01`），统计必须按原子走。
 
-## Font dispatch detail
+## 字库派发细节
 
-`$80:D23D` (the shared glyph drawer for both bands) reads `$0A2C`:
-bit 4 routes the index through the kana-variant redirect at `$80:D4BD`, bit 5
-double-strikes the record, bit 1 selects another transform.  None of them touch
-`$B4`, so drawing a glyph can never move the cursor.
+`$80:D23D`（两条带共用的字形绘制例程）读 `$0A2C`：bit 4 让索引走 `$80:D4BD` 的假名变体
+转接，bit 5 把记录重打一遍，bit 1 选另一种变换。它们都不碰 `$B4`，所以画字形永远不会移动游标。

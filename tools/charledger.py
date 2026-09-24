@@ -10,10 +10,11 @@ the pool is short, drop the tail first.
 usage: python3 tools/charledger.py init | ingest | report | tail [N]
 
 The database is derived, never authoritative: out/charledger.sqlite is rebuilt from the
-sources listed in SOURCES (plus the builder's own UI_TEXT_ROWS), and the ROM is not touched.
+every docs/research/*_zh.txt (plus the builder's own UI_TEXT_ROWS); the ROM is not touched.
 """
 import os
 import re
+import glob
 import sys
 import sqlite3
 import collections
@@ -28,160 +29,15 @@ ALLOC = os.path.join(ROOT, 'docs', 'research', 'glyph_alloc.json')
 MACRO = re.compile(r'⟦[^⟧]*⟧')
 HANZI = lambda c: '一' <= c <= '鿿'
 
-SOURCES = (
-    ('block144', 'docs/research/prologue_zh.txt'),
-    ('block8', 'docs/research/block8_zh.txt'),
-    # Block 0's file grows one box-run at a time from segment 0, so the lines that
-    # are not shipped yet simply are not in it -- nothing here may assume it is whole.
-    ('block0', 'docs/research/block0_zh.txt'),
-    ('block2', 'docs/research/block2_zh.txt'),
-    ('block32', 'docs/research/block32_zh.txt'),
-    ('block35', 'docs/research/block35_zh.txt'),
-    ('block38', 'docs/research/block38_zh.txt'),
-    ('block18', 'docs/research/block18_zh.txt'),
-    ('block44', 'docs/research/block44_zh.txt'),
-    ('block95', 'docs/research/block95_zh.txt'),
-    ('block107', 'docs/research/block107_zh.txt'),
-    ('block126', 'docs/research/block126_zh.txt'),
-    ('block131', 'docs/research/block131_zh.txt'),
-    ('block132', 'docs/research/block132_zh.txt'),
-    ('block96', 'docs/research/block96_zh.txt'),
-    ('block97', 'docs/research/block97_zh.txt'),
-    ('block99', 'docs/research/block99_zh.txt'),
-    ('block108', 'docs/research/block108_zh.txt'),
-    ('block68', 'docs/research/block68_zh.txt'),
-    ('block21', 'docs/research/block21_zh.txt'),
-    ('block70', 'docs/research/block70_zh.txt'),
-    ('block27', 'docs/research/block27_zh.txt'),
-    ('block49', 'docs/research/block49_zh.txt'),
-    ('block9', 'docs/research/block9_zh.txt'),
-    ('block14', 'docs/research/block14_zh.txt'),
-    ('block6', 'docs/research/block6_zh.txt'),
-    ('block7', 'docs/research/block7_zh.txt'),
-    ('block12', 'docs/research/block12_zh.txt'),
-    ('block66', 'docs/research/block66_zh.txt'),
-    ('block72', 'docs/research/block72_zh.txt'),
-    ('block83', 'docs/research/block83_zh.txt'),
-    ('block103', 'docs/research/block103_zh.txt'),
-    ('block112', 'docs/research/block112_zh.txt'),
-    ('block137', 'docs/research/block137_zh.txt'),
-    ('block92', 'docs/research/block92_zh.txt'),
-    ('block46', 'docs/research/block46_zh.txt'),
-    ('block24', 'docs/research/block24_zh.txt'),
-    ('block71', 'docs/research/block71_zh.txt'),
-    ('block135', 'docs/research/block135_zh.txt'),
-    ('block141', 'docs/research/block141_zh.txt'),
-    ('block65', 'docs/research/block65_zh.txt'),
-    ('block64', 'docs/research/block64_zh.txt'),
-    ('block31', 'docs/research/block31_zh.txt'),
-    ('block42', 'docs/research/block42_zh.txt'),
-    ('block134', 'docs/research/block134_zh.txt'),
-    ('block130', 'docs/research/block130_zh.txt'),
-    ('block16', 'docs/research/block16_zh.txt'),
-    ('block127', 'docs/research/block127_zh.txt'),
-    ('block128', 'docs/research/block128_zh.txt'),
-    ('block23', 'docs/research/block23_zh.txt'),
-    ('block26', 'docs/research/block26_zh.txt'),
-    ('block29', 'docs/research/block29_zh.txt'),
-    ('block41', 'docs/research/block41_zh.txt'),
-    ('block47', 'docs/research/block47_zh.txt'),
-    ('block110', 'docs/research/block110_zh.txt'),
-    ('block3', 'docs/research/block3_zh.txt'),
-    ('block17', 'docs/research/block17_zh.txt'),
-    ('block19', 'docs/research/block19_zh.txt'),
-    ('block74', 'docs/research/block74_zh.txt'),
-    ('block5', 'docs/research/block5_zh.txt'),
-    ('block69', 'docs/research/block69_zh.txt'),
-    ('block4', 'docs/research/block4_zh.txt'),
-    ('block30', 'docs/research/block30_zh.txt'),
-    ('block37', 'docs/research/block37_zh.txt'),
-    ('block25', 'docs/research/block25_zh.txt'),
-    ('block40', 'docs/research/block40_zh.txt'),
-    ('block20', 'docs/research/block20_zh.txt'),
-    ('block33', 'docs/research/block33_zh.txt'),
-    ('block34', 'docs/research/block34_zh.txt'),
-    ('block10', 'docs/research/block10_zh.txt'),
-    ('block39', 'docs/research/block39_zh.txt'),
-    ('block43', 'docs/research/block43_zh.txt'),
-    ('block45', 'docs/research/block45_zh.txt'),
-    ('block88', 'docs/research/block88_zh.txt'),
-    ('block60', 'docs/research/block60_zh.txt'),
-    ('block48', 'docs/research/block48_zh.txt'),
-    ('block81', 'docs/research/block81_zh.txt'),
-    ('block80', 'docs/research/block80_zh.txt'),
-    ('block121', 'docs/research/block121_zh.txt'),
-    ('block78', 'docs/research/block78_zh.txt'),
-    ('block75', 'docs/research/block75_zh.txt'),
-    ('block138', 'docs/research/block138_zh.txt'),
-    ('block86', 'docs/research/block86_zh.txt'),
-    ('block63', 'docs/research/block63_zh.txt'),
-    ('block89', 'docs/research/block89_zh.txt'),
-    ('block106', 'docs/research/block106_zh.txt'),
-    ('block82', 'docs/research/block82_zh.txt'),
-    ('block94', 'docs/research/block94_zh.txt'),
-    ('block53', 'docs/research/block53_zh.txt'),
-    ('block56', 'docs/research/block56_zh.txt'),
-    ('block100', 'docs/research/block100_zh.txt'),
-    ('block52', 'docs/research/block52_zh.txt'),
-    ('block87', 'docs/research/block87_zh.txt'),
-    ('block140', 'docs/research/block140_zh.txt'),
-    ('block105', 'docs/research/block105_zh.txt'),
-    ('block58', 'docs/research/block58_zh.txt'),
-    ('block73', 'docs/research/block73_zh.txt'),
-    ('block11', 'docs/research/block11_zh.txt'),
-    ('block143', 'docs/research/block143_zh.txt'),
-    ('block136', 'docs/research/block136_zh.txt'),
-    ('block133', 'docs/research/block133_zh.txt'),
-    ('block118', 'docs/research/block118_zh.txt'),
-    ('block117', 'docs/research/block117_zh.txt'),
-    ('block98', 'docs/research/block98_zh.txt'),
-    ('block119', 'docs/research/block119_zh.txt'),
-    ('block13', 'docs/research/block13_zh.txt'),
-    ('block142', 'docs/research/block142_zh.txt'),
-    ('block90', 'docs/research/block90_zh.txt'),
-    ('block124', 'docs/research/block124_zh.txt'),
-    ('block91', 'docs/research/block91_zh.txt'),
-    ('block102', 'docs/research/block102_zh.txt'),
-    ('block22', 'docs/research/block22_zh.txt'),
-    ('block84', 'docs/research/block84_zh.txt'),
-    ('block85', 'docs/research/block85_zh.txt'),
-    ('block79', 'docs/research/block79_zh.txt'),
-    ('block67', 'docs/research/block67_zh.txt'),
-    ('block28', 'docs/research/block28_zh.txt'),
-    ('block36', 'docs/research/block36_zh.txt'),
-    ('block61', 'docs/research/block61_zh.txt'),
-    ('block57', 'docs/research/block57_zh.txt'),
-    ('block77', 'docs/research/block77_zh.txt'),
-    ('block93', 'docs/research/block93_zh.txt'),
-    ('block54', 'docs/research/block54_zh.txt'),
-    ('block76', 'docs/research/block76_zh.txt'),
-    ('block139', 'docs/research/block139_zh.txt'),
-    ('block120', 'docs/research/block120_zh.txt'),
-    ('block51', 'docs/research/block51_zh.txt'),
-    ('block55', 'docs/research/block55_zh.txt'),
-    ('block109', 'docs/research/block109_zh.txt'),
-    ('block116', 'docs/research/block116_zh.txt'),
-    ('block62', 'docs/research/block62_zh.txt'),
-    ('block122', 'docs/research/block122_zh.txt'),
-    ('block123', 'docs/research/block123_zh.txt'),
-    ('block125', 'docs/research/block125_zh.txt'),
-    ('block129', 'docs/research/block129_zh.txt'),
-    ('block115', 'docs/research/block115_zh.txt'),
-    ('block113', 'docs/research/block113_zh.txt'),
-    ('block111', 'docs/research/block111_zh.txt'),
-    ('block50', 'docs/research/block50_zh.txt'),
-    ('block101', 'docs/research/block101_zh.txt'),
-    ('block104', 'docs/research/block104_zh.txt'),
-    ('block114', 'docs/research/block114_zh.txt'),
-    ('block15', 'docs/research/block15_zh.txt'),
-)
+# Every translated source is censused: the shipped 中文正文 lives in exactly one place,
+# so the list is derived from the tree instead of being maintained by hand.
+def sources():
+    for rel in sorted(glob.glob(os.path.join(ROOT, 'docs', 'research', '*_zh.txt'))):
+        stem = os.path.basename(rel)[:-len('_zh.txt')]
+        src = 'block144' if stem == 'prologue' else stem
+        yield src, os.path.relpath(rel, ROOT)
 
-# Draft translations that are *not* in the ROM yet -- pricing them is the whole point of
-# the ledger, so they get censused under their own src name and stay out of the build.
-DRAFTS = (
-    ('draft:TKSC2_zh', 'translations/TKSC2_zh.tsv'),
-    ('draft:TKSC3_zh', 'translations/TKSC3_zh.tsv'),
-)
+
 
 
 def connect():
@@ -243,24 +99,10 @@ def store(db, src, counter):
                    [(ch, src, n) for ch, n in counter.items()])
 
 
-def tsv_counts(path):
-    out = collections.Counter()
-    with open(os.path.join(ROOT, path), encoding='utf-8') as f:
-        header = f.readline()
-        col = max(header.rstrip('\n').split('\t').index('chinese'), 0)
-        for line in f:
-            fields = line.rstrip('\n').split('\t')
-            if len(fields) > col:
-                out.update(c for c in fields[col] if HANZI(c))
-    return out
-
-
 def ingest(db):
-    for src, rel in SOURCES:
+    for src, rel in sources():
         store(db, src, text_counts(open(os.path.join(ROOT, rel), encoding='utf-8').read()))
     store(db, 'bank-ui', row_counts())
-    for src, rel in DRAFTS:
-        store(db, src, tsv_counts(rel))
     db.commit()
 
 
@@ -296,11 +138,7 @@ def show(rows, label):
 
 
 def report(db):
-    show(tiered(db), 'census (in-build + draft)')
-    show(tiered(db, 'WHERE src NOT LIKE ?', ('draft:%',)), 'shipped text only')
-    show(tiered(db, "WHERE src LIKE 'draft:%' AND ch NOT IN "
-                    '(SELECT ch FROM usage WHERE src NOT LIKE ?)',
-                ('draft:%',)), 'draft lines, characters the build does not have yet')
+    show(tiered(db), 'shipped text')
     print('  "inplace" is the free tier -- those chars already have a stock index of their own, '
           'so a whole-font backfill rewrites the record in place at zero slot cost, and '
           'surviving Japanese text still reads correctly.')
@@ -319,7 +157,8 @@ def main():
     elif cmd == 'ingest':
         ingest(db)
         print('ingested %d distinct hanzi from %d sources'
-              % (db.execute('SELECT COUNT(*) FROM census').fetchone()[0], len(SOURCES) + 1))
+              % (db.execute('SELECT COUNT(*) FROM census').fetchone()[0],
+                db.execute('SELECT COUNT(DISTINCT src) FROM usage').fetchone()[0]))
     elif cmd == 'tail':
         n = int(sys.argv[2]) if len(sys.argv) > 2 else 60
         rows = tiered(db)
