@@ -177,7 +177,8 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (144, 'prologue_zh.txt', END))
 # Which phrase ($B9) and sub-text ($C3) dictionary entries have a Chinese reading.
 # Rows are key/cap/refs/japanese/chinese/bytes/fit; only key and chinese are read
-# here, the rest is `tools/phrasedict.py` output kept for eyeballing.
+# here.  The diagnostic columns come from `tools/segtext.py --dict`, which walks
+# every Chinese line and lists the entries its macro calls actually reach.
 PHRASE_GLOSSARY = os.path.join(ROOT, 'translations', 'phrase_glossary.tsv')
 
 # The default player name.  The prologue's 〔姓〕/〔名〕 markers draw the WRAM buffers at
@@ -308,6 +309,11 @@ PANEL_TEXT_REGION = (0x18340, 0x183DC)
 TAB_TEXT_REGION = (0x1AF80, 0x1B040)
 # The label tables this bank still holds in Japanese (club list, date-spot map, event
 # titles, the profile screens).
+# The upper bound is not arbitrary: text stops at 0x1A460.  Right behind it starts a
+# fixed-stride table of short record rows -- small integers, a `$40`-ish count column,
+# `$80xx`-style values and `ff ff` sentinels towards the end -- i.e. the placement and
+# sprite data the drawing script reads, not a string table.  J2E patched over it;
+# packing Chinese there would move map markers and event sprites.
 BANK_TEXT_REGION = (0x18800, 0x1A460)
 # The school-festival arcade: nine mini-game cards and their instruction boxes, the
 # stall keepers' lines and the 勇者マジラ play-within-the-game script.
@@ -3894,6 +3900,7 @@ def verify(char2idx, ctx, dst, total):
     txt, ctrls = decode_stream(patch_rom.data, dst, dst + total,
                                pcode, slot2ch)
     want_txt = ''.join(l.replace('|', '') for l in ctx['zh'])
+    pref = txt[:len(want_txt)]      # the translated prefix; the tail is untouched JP
     jp_ctrl = [c for a in ctx['atoms'] for c in a['ctrl']]
     strip = lambda cs: [c for c in cs if c != PAD]
     ok_ctrl = strip(ctrls) == strip(jp_ctrl)
@@ -3921,7 +3928,37 @@ def verify(char2idx, ctx, dst, total):
                 break
         print('   lengths %d vs %d' % (len(txt), len(want_txt)))
     ok_grid = verify_grid(ctx['atoms'], pcode, dst, total)
-    return ok_ctrl and ok_txt and ok_grid
+    ok_body = verify_bodies(pref, slot2ch)
+    return ok_ctrl and ok_txt and ok_grid and ok_body
+
+
+KANA = lambda c: 0x3041 <= ord(c) <= 0x3096 or 0x30A1 <= ord(c) <= 0x30FA
+POOL_MARK = re.compile(r'⟦[0-9A-Fa-f]{2,4}⟧|〔姓〕|〔名〕')
+
+
+def verify_bodies(pref, slot2ch):
+    """No dictionary body a Chinese line calls may still draw Japanese.
+
+    Why this has to live in the build: once the whole font band is WenQuanYi, the
+    render labels and jisaudit read a slot by its *old JIS name*, so a phrase or
+    sub-text body nobody translated can no longer surface as a kana cell -- it
+    surfaces as a Chinese-looking cell that happens to be wrong.  The decoded
+    prefix above is the corpus the engine will actually draw, pool insertions
+    aside, so it is the last place that still proves the bodies.  Same-form
+    kanji bodies (庶民/反省) are deliberately not a failure: they read correctly,
+    and AGENTS §六.2 keeps them.  Kana or an unknown slot is.
+    """
+    bare = POOL_MARK.sub('', pref)
+    kana = sorted({c for c in bare if KANA(c)})
+    unk = sorted({c for c in bare if c == '?'})
+    stock = sorted({c for c in bare if c not in set(slot2ch.values())})
+    print('bodies drawn: %d kana, %d unknown-slot%s'
+          % (len(kana), len(unk),
+             '' if not (kana or unk) else ' -> %r' % (kana + unk)))
+    if stock:
+        print('   %d chars ride a stock slot (same-form kanji, not a defect): %s'
+              % (len(stock), ''.join(stock)[:60]))
+    return not kana and not unk
 
 
 def verify_grid(jp_atoms, pcode, dst, total):

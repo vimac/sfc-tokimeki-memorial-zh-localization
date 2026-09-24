@@ -1,7 +1,8 @@
 """Tokimeki Memorial (SFC, JP Rev1) text codec.
 
 Bands proven from the text dispatcher at $80:CA6D (file 0x4A6D):
-  00-3F  control code          (handler table: file 0x4B0B, 42 x LE16)
+  00-3F  control code          (handler table: file 0x4B0B, 47 x LE16 = $00-$2E;
+                                $2F is past the table end, $30+ branch before the lookup)
   40-9F  single-byte glyph     (table: file 0x18000, 96 x BE16, idx = BE16 & $0FFF)
   A0-E7  phrase macro (call)   (table: file 0x1CCAA5, 72 x LE16 offset in bank $B9)
   E8-EF  2-byte sub-text call  (table: file 0x2196A8, 2048 x LE16 offset in bank $C3)

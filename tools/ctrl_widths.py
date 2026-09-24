@@ -2,11 +2,11 @@
 
 The dispatcher's control path ($80:CAEB) looks up a handler per byte and the
 handler tail decides the advance: `JMP $CAA2` = 1 byte, `JMP $CAA0` = 2,
-`JMP $CA9E` = 3.  $00, $01 and $28 jump through a 16-bit operand read with
-`LDA [$B4],Y` (Y=1), so they are 2-byte instructions; $09 does the same with a
-16-bit operand and advances 3.  Copying such a code as a lone byte while the
-engine eats its operand shifts every later atom -- which is what garbles a
-length-changed (Chinese) stream.
+`JMP $CA9E` = 3.  The codes that are *not* 1 byte are $00/$01/$02/$04/$07/$08/$28
+and the pen family $30-$37 (2), $09 (3), $03 (4) and $0F (5); everything else in
+$00-$2E, including $25/$26/$2F, eats just itself.  Copying a wide code as a lone
+byte while the engine eats its operand shifts every later atom -- which is what
+garbles a length-changed (Chinese) stream.
 
 usage: python3 tools/ctrl_widths.py [rom] [block]
 """
@@ -15,9 +15,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
 import build_prologue as B
 
-# advance width per control code, read off the handler tails (tools/ctrl_advance.py)
-WIDE = {0x00: 2, 0x01: 2, 0x09: 3, 0x28: 2}
-UNKNOWN = {0x2F, 0x25, 0x26}          # 0x25/0x26 fall into the 1-byte delay tail
+# advance width per control code: measured by tools/ctrl_advance.py, and the one
+# copy of that table is build_prologue.CTRL_WIDTH (everything not listed is 1).
+WIDE = {c: w for c, w in B.CTRL_WIDTH.items() if w > 1}
 
 ROM = sys.argv[1] if len(sys.argv) > 1 else 'rom_original_japanese.sfc'
 BLK = int(sys.argv[2]) if len(sys.argv) > 2 else 144
@@ -36,8 +36,13 @@ raw = collections.Counter(b for b in rom.data[s:e] if b < 0x40)
 print('codes that only ever appear inside a 2-byte glyph pair:',
       ' '.join('%02X:%d' % (k, raw[k] - cnt.get(k, 0))
                for k in sorted(raw) if raw[k] - cnt.get(k, 0)))
+seen, pos = {}, s
 for a in atoms:
     for c in a['ctrl']:
-        if c in WIDE or c in UNKNOWN:
-            i = s + sum(len(x['raw']) for x in atoms[:atoms.index(a)])
-            print('  !! %02X (width %d) at file %#x' % (c, WIDE.get(c, 0), i))
+        if WIDE.get(c, 1) > 1 and c not in seen:
+            seen[c] = '  $%02X width %d at file %#x' % (c, WIDE[c], pos)
+    pos += len(a['raw'])
+print('first execution of each operand-taking code (move these together with '
+      'their operand):')
+for c in sorted(seen):
+    print(seen[c])

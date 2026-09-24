@@ -1,10 +1,16 @@
 """Per-control-code cursor advance, read off the dispatcher's own handler tails.
 
-The dispatcher at $80:CA6D classifies the byte at [$B4/$B6] and the 48-entry
-table at file 0x4B0B sends $00-$2F to a handler; each handler finishes with
-JMP/BRA into the advance chain at $CA9A..$CAA2, where $CAA0 is `INC $B4` and
-$CAA2 another one.  So the tail target says how many bytes the code eats:
-JMP $CAA2 -> 1, JMP $CAA0 -> 2, and $CA9E/$CA9C/$CA9A -> 3/4/5.
+The dispatcher at $80:CA6D classifies the byte at [$B4/$B6] and the table at file
+0x4B0B holds 47 handlers -- one per code $00-$2E.  $30 and up branch off *before*
+that lookup ($30-$37 to $CD8C with an operand, $38+ to $CD67 without one), so they
+are not in the table at all.  Each handler finishes with JMP/BRA into the advance
+chain at $CA9A..$CAA2, where $CAA0 is `INC $B4` and $CAA2 another one.  So the
+tail target says how many bytes the code eats: JMP $CAA2 -> 1, JMP $CAA0 -> 2, and
+$CA9E/$CA9C/$CA9A -> 3/4/5.
+
+Slot 48 is printed too, as the guard it is: reading one word past the table end
+gives $00A9, which is the first two bytes of the $00 handler's own code at $CB69.
+It is not a handler, and $2F is therefore a 1-byte code with no dispatch target.
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -24,4 +30,5 @@ for k in range(48):
     f = a - 0x8000
     win = d[f:f + 0x80]
     hits = ['%s=%d' % (lab, n) for pat, n, lab in TAILS if pat in win]
-    print('$%02X -> $%04X  %s' % (k, a, '  '.join(hits) or '???'))
+    print('$%02X%s -> $%04X  %s' % (k, '  (past the table end)' if k == 47 else '',
+                                    a, '  '.join(hits) or '???'))

@@ -26,7 +26,7 @@
 ## 二、目录归属
 
 ```
-tools/         32 个脚本：验收链及其依赖 15 个，侦察仪表 17 个（见 §三）
+tools/         32 个脚本：验收链及其依赖 16 个，侦察仪表 16 个（见 §三）
 AGENTS.md      本文件
 docs/RELEASE_zh.md         权威状态
 docs/research/   逆向结论（*.md，带地址和偏移）+ 构建输入 + 活译文源
@@ -52,9 +52,11 @@ start-screenshots/ 日文原版启动流程截图
 
 ## 三、验收
 
-**静态层，每批译文都要过**：`build_prologue.py --patch`（每块 `0 over, 0 broken`，末尾
+**静态层，每批译文都要过**：`build_prologue.py --patch`（每块 `0 over, 0 broken`，每块
+`bodies drawn: 0 kana`——中文行调用到的词典体回读，末尾
 `VERDICT: all checks passed`）→ `render_prologue.py rom_prologue_zh.sfc <块> <首框:末框>`
 （从**已打补丁的盘**逐框出图并回读标签，判据 `0 kana cells, 0 "?" cells`）→ `name_tables.py` →
+`segtext.py rom_prologue_zh.sfc --blocks`（按**脚本步**走，段内标点缝 `INSIDE: 0`）→
 `charledger.py ingest|report`。
 
 **模拟器层**（`prologue_play.py --boot` → `prologue_shots.py` → `jisaudit.py`）**只在改动会出现在
@@ -151,6 +153,12 @@ start-screenshots/ 日文原版启动流程截图
 * **段末的「，」占 2 字节**（引擎在段末标点后还要补自己的换行码），而「。」（终止变体）和句中的
   「、」只 1 字节——所以**段末收「。」不收「，」**，紧格子尤其吃这条。
 * 行内 `|` 两侧是两段 run，各有开销：`啊|。` 比连写多 1 字节；反过来，**折叠宏后面再补「。」不省字节**。
+* **标点缝分两种，只修得了其中一种**：同一段里写「啊，|。」，屏幕上就是「啊，。」——编码器的终止标点
+  自己会发一个「。」，所以段末的逗号要删掉（`X，〔名〕。` 不算，那个逗号后面有名字）。
+  而步与步拼进一个框时叠出来的第二个「。」是引擎行为：母盘同样量出 111 处，追它等于追原版。
+  两类都由 `tools/segtext.py --blocks` 分开报（`INSIDE` / `JOIN`），别拿 `render_prologue` 的框标签当证据——
+  它把插入点丢了，会把「我，〔姓〕〔名〕。」读成「我，。」。
+* 「…，」这种省略号后面再挂逗号不写成：`…` 收尾就收，逗号留到下一段。
 * 译文里的括号必须全角。ASCII `)` 会绕过 `a3` 的终止折叠，报 `terminator a3 vs 0c`——这是字符集问题，
   不是文案问题。
 * `«A0»-«A7»` 是随机的句号变体，同一行冷启动之间结尾标点变化是正常的。

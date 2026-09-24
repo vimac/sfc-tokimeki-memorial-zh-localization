@@ -4,7 +4,7 @@
 规则和工作纪律在 `AGENTS.md`；每批干了什么的流水账不在这里，看 git log；
 `docs/history/` 的旧交接文档已作废，只用来查历史，数字不能引用。
 
-最后核对：2026-09-24。下面每个数字都是当天从当前这颗盘上量出来的。
+最后核对：2026-09-25。下面每个数字都是当天从当前这颗盘上量出来的。
 
 ## 一、进度
 
@@ -13,18 +13,21 @@
 | 做了什么 | 现在的量 | 从哪量出来的 |
 |---|---|---|
 | 剧情文本块 | 142 块全部注册、全部译完，构建报告 142/142 都是 `0 over, 0 broken` | `tools/build_prologue.py --patch` |
+| 全库逐框覆盖 | 142 块逐块全框渲染，22,600 框 / 270,517 格：假名 0、未知格 0、没画到的汉字格 0 | `tools/render_prologue.py rom_prologue_zh.sfc <块> 0:<末框>`，142 个注册块挨个跑 |
 | 中文正文 | 143 个译文源文件合计 45,933 行，逐行扫假名字母为 0 | `docs/research/*_zh.txt`（含 `prologue_zh.txt`） |
 | 序章 | 88 框，冷启动走查全程通 | `render_prologue.py … 144 0:87` |
 | 每日提示池 | 125 框 | 同上，block 8 |
 | 电话 / 系统池 | 725 框 | 同上，block 0 |
 | 画面固定文字 | 姓名输入等 1,026 条、设置与播报 477 行全部落库 | 构建报告 `ui:` / `bank lines:` |
 | 共享短语词典 | 1,015 条，1,011 条原地写入中文；剩 4 条（`e809`/`eb6c`/`eca9`/`ed35`）自己的跨度只有 1~5 B，塞不下正文，于是永不折叠、由调用点把中文写在框里 | 构建报告 `phrase bodies:` / `shorten eXXXX` |
+| 词典体回读 | 中文行实际调用到的 968 条词典体、共 59,378 次调用，逐条按本次码表回读：**0 条还带假名**；每次构建都断言这一条 | 构建报告 `bodies drawn:`，明细 `python3 tools/segtext.py rom_prologue_zh.sfc --dict` |
 | 人名 / 地点池 | 76 条记录零假名 | `tools/name_tables.py` |
-| 字库 | 2,305 格全部是文泉驿点阵（1,191 格写在自己码位上、972 格整带回填），无一处用日文字形顶替 | 构建报告 `font:` |
+| 拼接接缝 | 同一段里「标点紧跟标点」238 行（删「，」211、「、」25、「；」1、「。」1）已全部瘦身，现在**全库 INSIDE = 0**（母盘自己量出 196 处，我们比原版还干净）；跨步之间「。」叠两遍 115 处——**母盘同族 111 处，是引擎在步界自己补的，不是文案缺陷** | `python3 tools/segtext.py rom_prologue_zh.sfc --blocks`（母盘基线：把盘名换成 `rom_original_japanese.sfc` 再跑一遍） |
+| 字库 | 2,304 格全部是文泉驿点阵（1,190 格写在自己码位上、972 格整带回填），无一处用日文字形顶替 | 构建报告 `font:` |
 | 用字 | 出货文本 2,160 个不同汉字，2,159 个已有字模 | `tools/charledger.py report` |
 
 验收抽查（就在当前交付盘上）：block 0/2/8/144 四段共 981 框，`0 kana cells, 0 "?" cells`；
-`name_tables` PASS。
+`name_tables` PASS；`segtext --blocks` 全库段内标点缝 0 处。
 唯一还留在译文里的假名区段字符是 `・`（中点，681 处）和 `ー`（长音符，16 处），
 它们在这套字库里就是顿号和横线的字形，画出来是标点不是假名。
 
@@ -40,14 +43,14 @@
 
 | 文件 | md5 | 说明 |
 |---|---|---|
-| `rom_prologue_zh.sfc` | `3628a9f78477d66d91863b876cea0546` | 唯一的中文盘。只有 `tools/build_prologue.py --patch` 能写它 |
+| `rom_prologue_zh.sfc` | `8acd098ce386d1f710a677beaa60894c` | 唯一的中文盘。只有 `tools/build_prologue.py --patch` 能写它 |
 | `rom_original_japanese.sfc` | `cd36eb8982de4bf8369deb9f2f23e590` | 日版 Rev 1 母盘，只读，谁都不许写 |
 
 根目录只留这两颗 `.sfc`（`.gitignore` 已屏蔽所有 ROM、存档和 IPS）。上游命名的原版和 `.srm`
 在项目外的 `~/retro/roms/`。全量备份：`~/retro/tokimeki.backup.2609200007.tar.gz`。
 两件待用户处置：根目录还有两颗模拟器写出来的存档（`rom_original_japanese.srm`、
 `rom_prologue_zh.srm`），按上面的规矩该挪去 `~/retro/roms/`，但那是用户的通关进度，没动它。
-构建是确定性的：同一份文案重复跑，盘号不变（今天清理完目录又跑了一次，还是 `3628a9f7…`）。
+构建是确定性的：同一份文案重复跑，盘号不变（这批落库后又完整跑了一次，还是 `8acd098c…`）。
 所以盘号不需要版本管理，也**不出中间交付盘**——这颗盘每批都被覆盖着重建，只为了跑验收链，
 真正的交付只有全文翻译完成、字库整带回填之后的最后一次。历史上那些被取代的盘号不在本文档里，
 它们只活在 git log 的提交说明中。
@@ -63,12 +66,13 @@ python3 tools/build_prologue.py --patch        # 约一分半
 **静态层**，每批改完译文都要跑，全绿才算好构建：
 
 ```
-python3 tools/build_prologue.py --patch            # 每块 0 over, 0 broken，末尾 VERDICT: all checks passed
+python3 tools/build_prologue.py --patch            # 每块 0 over, 0 broken + bodies drawn: 0 kana，末尾 VERDICT: all checks passed
 python3 tools/render_prologue.py rom_prologue_zh.sfc 0 0:724     # 0 kana cells, 0 "?" cells
 python3 tools/render_prologue.py rom_prologue_zh.sfc 2 0:42
 python3 tools/render_prologue.py rom_prologue_zh.sfc 8 0:124
 python3 tools/render_prologue.py rom_prologue_zh.sfc 144 0:87
 python3 tools/name_tables.py rom_prologue_zh.sfc   # PASS: 0/76
+python3 tools/segtext.py rom_prologue_zh.sfc --blocks            # 段内标点缝 INSIDE 0（JOIN 那 115 处是引擎步界，母盘同族 111）
 python3 tools/charledger.py ingest && python3 tools/charledger.py report
 ```
 
@@ -76,6 +80,18 @@ python3 tools/charledger.py ingest && python3 tools/charledger.py report
 所以「框里还有没有假名」不用开模拟器就能判。第三个参数是闭区间，必须显式写——它同时是
 「这批声称覆盖到哪一框」的声明。它读 `docs/research/blockN_enc.json`，那是每次构建顺手刷新的派生物，
 现在不入库了。
+
+两道新加的判据，都是补「字库整带回填之后回读不可信」这个洞：
+
+* **构建内的 `bodies drawn:`**——`verify()` 把每行译文按本次码表展开，凡是中文行调用到的词典体
+  （`$A0-$E7` 短语宏和 `$E8xx` 子句）都回读一遍，出现假名或没登记的字模槽就判失败。
+  回填之后槽位的名字还是旧 JIS 字符，所以「读出来像日文」不再是证据，「这个槽画的是哪个字」才是。
+* **`tools/segtext.py`**——按**脚本步**（`blockN_work.tsv` 那一行，也就是指针网格冻结的 span）
+  而不是按框走字节，并且把 `〔姓〕/〔名〕`、`⟦E8xx⟧` 这类插入点留在原位。
+  它把标点缝分三类：`INSIDE` 是同一段里真写出来的（可修，也是唯一该修的），
+  `JOIN` 是引擎把两步拼进一个框时自己的终止标点和下一步首字符撞上（母盘同样有 111 处，别去追），
+  `POOL-steps` 是插入点替出来的字符，列出来只为不再被当成缺字。
+  `--dict` 那一路把每张词典体和它的引用数、容量、口径表行一起 dump，是「拼接读不懂」这类报告的唯一入口。
 
 **模拟器层**只在改动会出现在序章画面上时才跑（改了序章本身、人名表、UI，或那些画面用到的字模）。
 剧情池、电话池在序章里根本走不到，拿序章 walk 去验它们等于没验。
@@ -88,11 +104,13 @@ python3 tools/jisaudit.py docs/prologue_zh rom_prologue_zh.sfc
 
 判读口径（字库整带回填之后就变了，别照旧文档理解）：`jisaudit` 报出来的名字是按 JIS 码位回读的
 **索引旧名**，像素其实已经是重画后的中文点阵，所以「假名标签」不再等于缺陷。现在证明字库干净靠三条：
-构建断言每一格都携带文泉驿格（`font: 2305/2305 … 0 unclaimed slot(s) changed`）、命中的格子逐条
+构建断言每一格都携带文泉驿格（`font: 2304/2304 … 0 unclaimed slot(s) changed`）、命中的格子逐条
 比对位图、再加高频格抽查。`jisaudit` 只有落在文本网格上的那一半（`on`）有意义，`off` 是滑窗噪声。
 
-最近一次模拟器整链（批次Z，盘号未变）：冷启动→相册→姓名输入→生日→黑板→序章全程无黑屏，
+最近一次模拟器整链（批次Z，盘 `3628a9f7…`）：冷启动→相册→姓名输入→生日→黑板→序章全程无黑屏，
 `96 presses`、`88 boxes / 181 sheets`、`kana=0`，日期面板配色与母盘逐项一致。
+本批（`8acd098c…`）没重走它：改的只有剧情池和电话池里多余的标点，那些画面序章本来就走不到，
+走一遍等于没走；序章自己的 88 框和 UI/人名表是靠静态层按像素重画的（`render_prologue.py … 144 0:87`）。
 
 ## 四、目录
 
@@ -103,7 +121,7 @@ docs/research/           逆向结论（*.md）+ 构建输入 + 活译文源
 docs/prologue_zh/        序章渲染表与 index.txt 转录（PNG 不入库）
 docs/history/            旧交接与破解笔记，非权威（README 写了为什么作废）
 docs/ALL_CHARACTERS.txt  wiki 角色资料（15 个人物），人名译法依据
-tools/                   32 个脚本：验收链及其依赖 15 个，侦察仪表 17 个
+tools/                   32 个脚本：验收链及其依赖 16 个，侦察仪表 16 个
 translations/            三张口径表（人名/术语/短语）+ TM 命中表，中文正文在 docs/research/
 reference/               J2E 第三方素材，只读输入，不入库
 start-screenshots/       日文原版启动流程截图
