@@ -361,6 +361,17 @@ UI_TEXT_REGIONS = (UI_TEXT_REGION, NICK_POOL, MENU_TEXT_REGION,
 # 0x155 affinity mark, for instance.  The stock code is then copied through untouched.
 UI_KEEP = '\ue000'
 K = UI_KEEP
+# The hand-cut half-width band (0x150-0x1C4) holds small kana and kana pairs that no
+# JIS codepoint names, so `idx_to_char` calls them non-characters and they rode through
+# as UI_KEEP.  Three of them are not blanks at all: 0x158-0x15A are は/い/、, and the
+# name-entry box's yes label is exactly that string.  Naming them here is what lets the
+# row re-encode as Chinese instead of copying the Japanese cells through.
+BAND_KANA = {0x158: 'は', 0x159: 'い', 0x15A: '、'}
+
+
+def band_char(idx):
+    """The character a glyph cell draws, including the hand-cut half-width band."""
+    return T.idx_to_char(idx) or BAND_KANA.get(idx)
 
 
 def card(n, what):
@@ -386,8 +397,8 @@ UI_TEXT_ROWS = (
     (0x1F0EA, 18, '藤崎詩織の誕生日と血液型は覚えてる？',
      '藤崎诗织的生日和血型你都还记得吗？', 'R'),
     (0x1F110, 6, 'これでいい？', '这样可以吗？', 'R'),
-    (0x1F11E, 2, 'はい', '好的', 'R'),
-    (0x1F124, 3, 'いいえ', '不太好', 'R'),
+    (0x1F11E, 2, 'はい', '是', 'R'),
+    (0x1F124, 3, 'いいえ', '否', 'R'),
     (0x1F12B, 3, '名前：', '姓名：', 'R'),
     (0x1F13B, 4, 'あだ名：', '昵称：', 'R'),
     (0x1F14A, 2, '前頁', '上页', 'R'),
@@ -1695,14 +1706,15 @@ UI_LINE_ROWS = (
     # pin mechanism: 0x1974F opens with «12 0000» (speaker 〔姓〕 + blank splice),
     # and the park line keeps its «0000»/⟦0B⟧ mid-line.  ⟦E9E1⟧ has no translated
     # body, so the call is dropped and the sentence reads around it.
-    (0X1974F, 13, '〔姓〕«0000»「今日は何を⟦EBBE⟧な«A0»', '〔姓〕«0000»去哪玩呢«A0»'),
+    (0X1974F, 13, '〔姓〕«0000»「今日は何を⟦EBBE⟧な«A0»', '〔姓〕«0000»⟦EC9A⟧做什么«A0»'),
     (0X19A4D, 25, '遊園地に体感マシーン⟦0B⟧«0000»⟦E9E1⟧が⟦ED73⟧',
      '游乐园体感游艺机⟦0B⟧«0000»已⟦ED73⟧'),
-    # The name-entry confirmation.  Three half-width supplement cells (0x158-0x15A,
-    # no character of either language) ride through as KEEP; the row is loose
-    # because a $06 operand precedes it.
-    (0X1F284, 25, 'これでいい？⟦0B⟧' + K * 3 + 'いいえ',
-     '就这样好吗？⟦0B⟧' + K * 3 + '不要', True),
+    # The name-entry confirmation.  Its second line is the yes/no pair, and the yes half
+    # is not blank: 0x158-0x15A are the hand-cut half-width は/い/、 (BAND_KANA), so the
+    # Japanese reads はい、いいえ.  是/否 keeps the published menu wording and the
+    # same 3+3 cell layout.  The row is loose because a $06 operand precedes it.
+    (0X1F284, 25, 'これでいい？⟦0B⟧はい、いいえ',
+     '就这样好吗？⟦0B⟧是  否  ', True),
     # 「ドン」 with its bracketing control pair pinned verbatim.
     (0X193C6, 6, '«3B»ドン«39»', '«3B»咚«39»'),
     # task #45 (endgame, batch U): the five unregistered scenario streams --
@@ -3256,7 +3268,7 @@ def ui_line_text(toks, sbjp):
     out = []
     for t in toks:
         if t[0] == 'g':
-            out.append(T.idx_to_char(t[1]) or UI_KEEP)
+            out.append(band_char(t[1]) or UI_KEEP)
         elif t[0] == 'b':
             out.append(sbjp[t[1]] or '??')
         elif t[0] == 'p':
@@ -3334,7 +3346,7 @@ def line_raw_runs(line):
 def line_keeps(toks):
     """The raw cell bytes of the glyph tokens no Japanese page names (UI_KEEP)."""
     return [k2(t[1]) for t in toks
-            if t[0] == 'g' and T.idx_to_char(t[1]) is None]
+            if t[0] == 'g' and band_char(t[1]) is None]
 
 
 LINE_NL = '⟦0B⟧'          # in-line newline, kept at its Japanese offset
