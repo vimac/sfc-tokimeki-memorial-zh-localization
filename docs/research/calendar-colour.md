@@ -26,7 +26,8 @@
 （复现：`python3 tools/dis2.py rom_original_japanese.sfc 0xC5A0F 0x18 0x98DA0F`。）
 
 * `$38-$3F` 是**画笔族**控制码：`$80:CD67`（file `0x04D67`）里 `SEC : SBC #$38 : JSL $CD77`，
-  8 个变体同一个操作（见 `control-codes.md`）。`$30-$37 xx` 是带操作数的另一族（`$80:CD8C`）。
+  8 个变体同一个操作（见 `control-codes.md`）。它们都不吃操作数，做的是把 `码-$38` 这个 0–7
+  的索引写进 `$0A2A` 的 bit10-12。`$30-$37 xx` 是带操作数的另一族（`$80:CD8C`）。
 * 字形：日号 = `0x15B + LDA $81:F3FA,X`，即 `$81:F3FA`（file `0x00F3FA`，内容是 12 个月天数
   `1F 1C 1F 1E …`）当偏移，落到半宽补充带 `$0153-$01C4` 的那批数字格上。
 * 消费 `0A2A` 的处理与两处 `JSL $80CD77` 也都在同一带代码里。
@@ -92,9 +93,18 @@
 80CDB5: C8 C8          INY ×2
 80CDB7: BF 38 FE FF    LDA $FFFE38,X
 80CDBB: 97 00          STA [$00],Y
+80CDBD: C8             INY
+80CDBE: C8             INY
+80CDBF: 68             PLA
+80CDC0: 97 00          STA [$00],Y
+80CDC2: 22 30 AA 80    JSL $80AA30       ; 触发一次真正的调色板传输
+80CDC6: 4C A0 CA       JMP $CAA0         ; 前进桩 = 2 字节（码 + 操作数）
 ```
 
-（复现：`python3 tools/dis2.py rom_original_japanese.sfc 0x4D8C 0x34 0x80CD8C`。）
+（复现：`python3 tools/dis2.py rom_original_japanese.sfc 0x4D8C 0x3C 0x80D8C`。）
+
+一次调用连着写三个 16 位字（`$FF:FE3A,X`、`$FF:FE38,X`、再把第一个值重复一遍），
+所以每条表项实际用到的就是 `$FF:FE38` 起的那 4 个字节。
 
 `X = 操作数 × 4`，所以 **`$FF:FE38` 是一张 4 字节表项的调色板**。
 按 `$83`/`$81` 那套「bank-$80 起算 32 KB」的映射，`$FF:FE38` = file **`0x3FFE38`**
