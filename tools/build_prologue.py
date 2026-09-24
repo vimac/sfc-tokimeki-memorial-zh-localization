@@ -1689,7 +1689,7 @@ UI_LINE_ROWS = (
     # pin mechanism: 0x1974F opens with «12 0000» (speaker 〔姓〕 + blank splice),
     # and the park line keeps its «0000»/⟦0B⟧ mid-line.  ⟦E9E1⟧ has no translated
     # body, so the call is dropped and the sentence reads around it.
-    (0X1974F, 13, '〔姓〕«0000»「今日は何を⟦EBBE⟧な«A0»', '〔姓〕«0000»去哪玩？«A0»'),
+    (0X1974F, 13, '〔姓〕«0000»「今日は何を⟦EBBE⟧な«A0»', '〔姓〕«0000»去哪玩呢«A0»'),
     (0X19A4D, 25, '遊園地に体感マシーン⟦0B⟧«0000»⟦E9E1⟧が⟦ED73⟧',
      '游乐园体感游艺机⟦0B⟧«0000»已⟦ED73⟧'),
     # The name-entry confirmation.  Three half-width supplement cells (0x158-0x15A,
@@ -2225,7 +2225,7 @@ def backfill_records(code, char2idx, written_idx):
         ch = T.idx_to_char(i)
         if ch in KANA_HOMO:
             out[i] = rec(KANA_HOMO[ch])
-    for i in range(T.JIS_KANJI, T.MAX_INDEX):  # kanji band
+    for i in range(T.JIS_KANJI, T.GLYPH_WRITABLE_MAX):  # kanji band
         if i in owned or i in out:
             continue
         ch = T.idx_to_char(i)
@@ -2800,7 +2800,7 @@ def stock_binding(need, code):
                 or c.startswith('⟦')):
             continue
         idx = T.char_to_idx(c)
-        if idx is None or not 0 <= idx < T.MAX_INDEX:
+        if idx is None or not 0 <= idx < T.GLYPH_WRITABLE_MAX:
             continue
         if T.idx_to_char(idx) != c or (idx & 0xFF) in TERM:
             continue
@@ -2845,7 +2845,7 @@ def allocate(need, code, verbose=True):
     # fidelity was waived (user 2026-09-20), and no intermediate deliverable ships, so
     # this is pool widening, not the B/C-band retargeting reserved for the final pass.
     boundset = set(bound.values())
-    pool = [i for i in range(T.JIS_KANJI, T.MAX_INDEX)
+    pool = [i for i in range(T.JIS_KANJI, T.GLYPH_WRITABLE_MAX)
             if i not in used and i not in boundset]
     pool += [i for i in range(1, T.JIS_KANJI)
              if i not in used and i not in boundset]

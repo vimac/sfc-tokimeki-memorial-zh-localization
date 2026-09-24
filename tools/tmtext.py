@@ -23,6 +23,11 @@ PAGE_SLOTS   = 0x492
 SLOT_BYTES   = 28
 NUM_PAGES    = 3
 MAX_INDEX    = NUM_PAGES * PAGE_SLOTS          # 0x0DB6 exclusive
+# The last 16 slots are NOT glyphs.  $80:CD8C, the handler for the `$30-$37 xx`
+# pen family, loads a colour triple for every text pen out of a table at
+# $FF:FE38 (= glyph_offset(0xDA6)) -- that is where 周日粉红/周六蓝 get their RGB.
+# Writing a bitmap from 0xDA6 up repaints the palette, so the writable band ends here.
+GLYPH_WRITABLE_MAX = 0x0DA6
 NAME_PTRS    = 0x9872
 PTR_COUNT    = 145
 TEXT_PTRS    = NAME_PTRS + PTR_COUNT * 3       # 0x9A25
