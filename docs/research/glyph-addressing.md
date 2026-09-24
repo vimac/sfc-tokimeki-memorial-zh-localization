@@ -1,35 +1,35 @@
-# Tokimeki Memorial (SFC, JP Rev‑1) — text bytes → font glyph: exact algorithm
+# 心跳回忆（SFC，日版 Rev‑1）——文本字节 → 字库字模：精确算法
 
-Target ROM: `REPO_ROOT/rom_original_japanese.sfc` (4 MiB, LoROM, 65816 native, 16‑bit A/X/Y).
-Everything below was derived from the ROM's own machine code (byte‑level disassembly, no reliance on prior
-notes) and verified by decoding real game text and rendering real glyph bitmaps.
-The ROM was **not modified**.
+这份文件证明的是：一个文本码怎么算出字模索引，索引又怎么算出字模在 ROM 里的地址。
+目标 ROM：`REPO_ROOT/rom_original_japanese.sfc`（4 MiB、LoROM、65816 原生、16 位 A/X/Y）。
+下面每条结论都是从这颗盘自己的机器码读出来的（逐字节反汇编，不引用旧笔记），并且拿真实游戏文本的解码、
+真实字模位图的渲染验证过。母盘**没有被改动**。
 
-Tooling used (created for this analysis):
-* `tools/dis2.py` — 65816 disassembler with M/X flag tracking.
+本次分析用的工具（为它现写的）：
+* `tools/dis2.py`——带 M/X 标志跟踪的 65816 反汇编器。
   `python3 tools/dis2.py <rom> <file_off_hex> <len_hex> [base_addr_hex]`
-* `tools/glyphview.py` — implements the `$D490` formula and renders glyph slots as ASCII/PNG.
+* `tools/glyphview.py`——照 `$D490` 那条公式取字模，把字模格渲染成 ASCII/PNG。
   `python3 tools/glyphview.py idx 0x546` / `blank` / `hist`
 
 ---
 
-## 1. LoROM address map (verified)
+## 1. LoROM 地址映射（已验证）
 
 `file = (bank - 0x80) * 0x8000 + (addr & 0x7FFF)`
 
-Three absolute‑long operands inside the text routine prove it independently:
+文本例程里有三个绝对长寻址的操作数，各自独立证明了这条映射：
 
-| operand in code | file offset | check |
+| 代码里的操作数 | 文件偏移 | 校验 |
 |---|---|---|
-| `LDA $838000,X` @ `$80:CA8C` | `0x18000` | (0x83‑0x80)*0x8000 = 0x18000 ✓ (contains a valid 96‑entry glyph table) |
-| `LDA $B9CAA5,X` @ `$80:CAB2` | `0x1CCAA5` | (0xB9‑0x80)*0x8000 + 0x4AA5 = 0x1CCAA5 ✓ (valid pointer table) |
-| `LDA $C396A8,X` @ `$80:CAD0` | `0x2196A8` | (0xC3‑0x80)*0x8000 + 0x16A8 = 0x2196A8 ✓ (valid pointer table) |
+| `LDA $838000,X` @ `$80:CA8C` | `0x18000` | (0x83‑0x80)*0x8000 = 0x18000 ✓（那里是一张成立的 96 项字模表） |
+| `LDA $B9CAA5,X` @ `$80:CAB2` | `0x1CCAA5` | (0xB9‑0x80)*0x8000 + 0x4AA5 = 0x1CCAA5 ✓（成立的指针表） |
+| `LDA $C396A8,X` @ `$80:CAD0` | `0x2196A8` | (0xC3‑0x80)*0x8000 + 0x16A8 = 0x2196A8 ✓（成立的指针表） |
 
 ---
 
-## 2. The text dispatcher — `$80:CA6D` (file `0x4A6D`)
+## 2. 文本分发器——`$80:CA6D`（file `0x4A6D`）
 
-Raw bytes `a7 b4 29 ff 00 c9 f0 00 10 67 c9 e8 00 10 44 c9 a0 00 10 25 c9 40 00 30 65 38 e9 40 00 0a`
+这一段的原始字节：`a7 b4 29 ff 00 c9 f0 00 10 67 c9 e8 00 10 44 c9 a0 00 10 25 c9 40 00 30 65 38 e9 40 00 0a`
 
 ```
 80CA6D: A7 B4          LDA [$B4]        ; $B4/$B5/$B6 = 24-bit text cursor (bank at $B6)
@@ -97,62 +97,61 @@ Raw bytes `a7 b4 29 ff 00 c9 f0 00 10 67 c9 e8 00 10 44 c9 a0 00 10 25 c9 40 00 
 80CAE9: 80 B5          BRA $CAA0        ; advance 2
 ```
 
-Note on `D4 zp` (2 bytes): not a standard 65816 mnemonic. The reading "push the 16‑bit direct‑page word at
-`zp`" is the only one that is consistent with all three of:
-(a) the control‑code `$0A` handler, which pops exactly `$B4` then `$B6` in that LIFO order (§3.4);
-(b) the paired `PLA : STA zp` epilogues used throughout this ROM (e.g. `$D23F`–`$D245`);
-(c) linear‑sweep alignment — read as a 3‑byte `CPY abs`, the phrase block would end at `$CABF`, not at the
-    observed next block start `$CAC0` (same test for the `$E8` block: `$CADC` vs the real `$CADE`).
+关于 `D4 zp`（2 字节）：它不是标准的 65816 助记符。唯一讲得通的读法是「把直接页 `zp` 那个 16 位字压栈」，
+因为只有它同时满足下面三条：
+（a）控制码 `$0A` 的处理程序弹出 `$B4`、`$B6`，次序正好是这个 LIFO 顺序（§3.4）；
+（b）本盘到处成对出现的 `PLA : STA zp` 收尾（例如 `$D23F`–`$D245`）；
+（c）线性扫描的对边距——按 3 字节的 `CPY abs` 读，phrase 段会结束在 `$CABF`，而不是实际看到的下一段起点
+    `$CAC0`（对 `$E8` 段做同样的测试：`$CADC` 对真实的 `$CADE`）。
 
-### Byte bands (final, from the code above)
+### 字节带（最终版，就是从上面那段代码读出来的）
 
-| text byte(s) | meaning | driving table |
+| 文本字节 | 含义 | 驱动的表 |
 |---|---|---|
-| `$00`–`$3F` | control codes (`$00` = blank/space glyph, `$0A` = end‑of‑macro return) | `$80:CB0B` = file `0x4B0B`, 42 × 2 B little‑endian |
-| `$40`–`$9F` | single‑byte glyph shortcut (96 slots) | `$83:8000` = file `0x18000`, 96 × 2 B big‑endian |
-| `$A0`–`$E7` | phrase macro (text subroutine call) | `$B9:CAA5` = file `0x1CCAA5`, 72 × 2 B little‑endian |
-| `$E8`–`$EF` | 2‑byte pointer into a secondary text bank | `$C3:96A8` = file `0x2196A8`, 2048 × 2 B little‑endian |
-| `$F0`–`$FF` | **2‑byte glyph code — direct arithmetic, no table** | — |
+| `$00`–`$3F` | 控制码（`$00` = 空白/空格字模，`$0A` = 宏结束返回） | `$80:CB0B` = file `0x4B0B`，42 项 × 2 B 小端 |
+| `$40`–`$9F` | 单字节字模捷径（96 格） | `$83:8000` = file `0x18000`，96 项 × 2 B 大端 |
+| `$A0`–`$E7` | phrase 宏（文本子程序调用） | `$B9:CAA5` = file `0x1CCAA5`，72 项 × 2 B 小端 |
+| `$E8`–`$EF` | 2 字节指针，指向次级文本 bank | `$C3:96A8` = file `0x2196A8`，2048 项 × 2 B 小端 |
+| `$F0`–`$FF` | **2 字节字模码——纯算术，没有表** | — |
 
-**This refutes the prior claim that `$A0`–`$FC` are 2‑byte kanji codes.** `$A0`–`$E7` are phrase macros,
-`$E8`–`$EF` are sub‑table selectors, and only `$F0`+ introduces a 2‑byte glyph code.
+**这就推翻了「`$A0`–`$FC` 是 2 字节汉字码」这个旧说法。** `$A0`–`$E7` 是 phrase 宏，
+`$E8`–`$EF` 是 sub‑table 选择符，只有 `$F0` 起头才是 2 字节字模码。
 
 ---
 
-## 3. The tables, exactly
+## 3. 三张表，逐张写实
 
-### 3.1 Single‑byte glyph table — file `0x18000` (`$83:8000`)
-* 96 entries × 2 bytes = 192 bytes, `0x18000`–`0x180BF`.
-* **Big‑endian**: `XBA` after the load, then `AND #$0FFF`. The stored value is literally a 2‑byte text code
-  (`$F0xx`), so `index = BE16(entry) & $0FFF`.
-* Entry for text byte `c` lives at `0x18000 + 2*(c - 0x40)`.
-* Contents (index after masking, character identified via §7):
+### 3.1 单字节字模表——file `0x18000`（`$83:8000`）
+* 96 项 × 2 字节 = 192 字节，`0x18000`–`0x180BF`。
+* **大端**：读出来先 `XBA`，再 `AND #$0FFF`。存的值本身就是一个 2 字节文本码（`$F0xx`），
+  所以 `index = BE16(entry) & $0FFF`。
+* 文本字节 `c` 的那一项在 `0x18000 + 2*(c - 0x40)`。
+* 内容（掩码后的索引，字符靠 §7 认出来）：
   `$40→035 「` `$41→036 」` `$42→029 （` `$43→02A ）` `$44→001 、` `$45→002 。` `$46→008 ？`
   `$47→023 …` `$48→024 ‥` `$49→14F ン` `$4A→11F ッ` `$4B→100 イ` `$4C→124 ト` `$4D→106 オ`
   `$4E→01B ー` `$4F→0FC ん` `$50→0AA ぁ` `$51→0AB あ` `$52→612 私` `$53→0AD` `$54→573 今`
   `$58→546 行` … `$82→9D0 当` `$83→605 思` `$86→CB2 来` `$87→A34 日` `$88→39E 気` `$89→4BF 見`
   `$8B→6BA 出` `$8C→773 人` `$8D→210 一` … `$9D→4D4 言` `$9F→0FB を`
-  (punctuation, a katakana grab‑bag, the whole hiragana run `$4F`–`$9F`, and 13 high‑frequency kanji.)
-* Those 13 kanji are 私(27‑68) 今(26‑03) 行(25‑52) 当(37‑86) 思(27‑55) 来(45‑72) 日(38‑92) 気(21‑04)
-  見(24‑11) 出(29‑48) 人(31‑45) 一(16‑76) 言(24‑32) — every one lands on the correct JIS X0208 position
-  under the §7 mapping. This is an **independent confirmation** of that mapping, from a table the earlier
-  notes never mentioned.
+  （标点、一个片假名杂物袋、一整条平假名带 `$4F`–`$9F`，外加 13 个高频汉字。）
+* 那 13 个汉字是 私(27‑68) 今(26‑03) 行(25‑52) 当(37‑86) 思(27‑55) 来(45‑72) 日(38‑92) 気(21‑04)
+  見(24‑11) 出(29‑48) 人(31‑45) 一(16‑76) 言(24‑32)——在 §7 那张映射下，每一个都落在正确的 JIS X0208
+  位置上。这等于从一张旧笔记从没提过的表里，对那张映射做了一次**独立佐证**。
 
-### 3.2 Phrase macro table — file `0x1CCAA5` (`$B9:CAA5`)
-* 72 entries × 2 bytes, **little‑endian 16‑bit offsets inside bank `$B9`** (bank is forced to `$B9`).
-* Entry for text byte `c`: `0x1CCAA5 + 2*(c - 0xA0)`.
-* Valid range: codes `$A0`–`$E6` → pointers `$CB33`…`$CCC6` (file `0x1CCB33`…`0x1CCCC6`). Code `$E7` holds
-  `$02F0` (out of the `$8000`–`$FFFF` window) = unused.
-* Phrase text is a normal stream in the same encoding; `$0A` separates the individual phrases.
+### 3.2 phrase 宏表——file `0x1CCAA5`（`$B9:CAA5`）
+* 72 项 × 2 字节，**bank `$B9` 内部的小端 16 位偏移**（bank 被硬写成 `$B9`）。
+* 文本字节 `c` 的那一项：`0x1CCAA5 + 2*(c - 0xA0)`。
+* 有效范围：码 `$A0`–`$E6` → 指针 `$CB33`…`$CCC6`（file `0x1CCB33`…`0x1CCCC6`）。码 `$E7` 存的是
+  `$02F0`（在 `$8000`–`$FFFF` 窗口之外）= 未使用。
+* phrase 正文就是同一套编码的正常流；各个 phrase 之间用 `$0A` 分隔。
 
-### 3.3 Sub‑table — file `0x2196A8` (`$C3:96A8`)
-* 2048 entries × 2 bytes (4096 bytes, `0x2196A8`–`0x21A6A7`), **little‑endian**, bank forced to `$C3`.
-* Index = `BE16(E8xx..EFxx) & $07FF`, so the low byte selects within a 256‑entry page and `$E8`…`$EF`
-  select pages 0…7. 1401 entries form a contiguous valid prefix, 1693 valid overall.
+### 3.3 sub‑table——file `0x2196A8`（`$C3:96A8`）
+* 2048 项 × 2 字节（4096 字节，`0x2196A8`–`0x21A6A7`），**小端**，bank 硬写成 `$C3`。
+* 索引 = `BE16(E8xx..EFxx) & $07FF`，所以低字节在一张 256 项的页内挑，`$E8`…`$EF` 挑页 0…7。
+  前 1401 项连续有效，一共 1693 项有效。
 
-### 3.4 Control jump table — file `0x4B0B` (`$80:CB0B`)
-* 42 entries × 2 bytes little‑endian for codes `$00`–`$29` (e.g. `$00→$CB69`, `$0A→$CC2B`, `$14→$CE7D`).
-* The `$0A` handler is the proof of the macro call/return mechanism and of the `PSHD` reading:
+### 3.4 控制码跳转表——file `0x4B0B`（`$80:CB0B`）
+* 码 `$00`–`$29`，42 项 × 2 字节小端（例如 `$00→$CB69`、`$0A→$CC2B`、`$14→$CE7D`）。
+* `$0A` 的处理程序同时证明了两件事：宏的调用/返回机制，以及 `PSHD` 那种读法：
 ```
 80CC2B: 68             PLA              ; pop saved cursor address ($B4)
 80CC2C: D0 01          BNE $CC2F        ; zero => sentinel => RTL (whole text routine exits)
@@ -162,19 +161,19 @@ Note on `D4 zp` (2 bytes): not a standard 65816 mnemonic. The reading "push the 
 80CC32: 85 B6          STA $B6
 80CC34: 4C 6D CA       JMP $CA6D        ; resume the caller's stream
 ```
-  LIFO order matches `PSHD $B6 : PSHD $B4` exactly. `$00` (`$CB69`) is `LDA #$0000 : JSL $D23D :`
-  `JMP $CAA0` = draw the blank glyph (space).
+  弹出的次序正好和 `PSHD $B6 : PSHD $B4` 构成 LIFO。`$00`（`$CB69`）是 `LDA #$0000 : JSL $D23D :`
+  `JMP $CAA0`，也就是画那颗空白字模（空格）。
 
-### 3.5 Kana‑variant index list — file `0x54E4` (`$80:D4E4`)
-* 76 bytes terminated by `$00` at file `0x5530`; all values in `$AB`–`$FC` (hiragana range).
+### 3.5 假名变体索引表——file `0x54E4`（`$80:D4E4`）
+* 76 字节，在 file `0x5530` 处由 `$00` 收尾；所有值都在 `$AB`–`$FC`（平假名带）之内。
   `ab ad af b1 b3 b4 b6 b8 ba bc be c0 c2 c4 c6 c8 ca cd cf d1 d3 d4 d5 d6 d7 d8 db de e1 e4 e7 e8 e9 ea
    eb ed ef f1 f2 f3 f4 f5 f6 f8 fb fc f0 cc ec b5 b7 b9 bb bd bf c1 c3 c5 c7 c9 cb ce d0 d2 d9 dc df e2
    e5 da dd e0 e3 e6 f9 fa`
-* Missing from `$AB`–`$FC`: `AC AE B0 B2 EE F7` (5 hiragana + 1 katakana‑range byte).
+* `$AB`–`$FC` 里缺的：`AC AE B0 B2 EE F7`（5 个平假名 + 1 个片假名带字节）。
 
 ---
 
-## 4. Glyph index → glyph record address — `$80:D490` (file `0x5490`)
+## 4. 字模索引 → 字模记录地址——`$80:D490`（file `0x5490`）
 
 ```
 80D490: A2 FD 00       LDX #$00FD       ; bank = $FD + page
@@ -207,7 +206,7 @@ Note on `D4 zp` (2 bytes): not a standard 65816 mnemonic. The reading "push the 
 80D4BC: 60             RTS
 ```
 
-So the routine builds a 24‑bit pointer at `$00/$01/$02`:
+所以这段子程序在 `$00/$01/$02` 处搭出一个 24 位指针：
 
 ```
 page   = index / 0x492                  (0,1,2)
@@ -218,16 +217,20 @@ file   = (bank-$80)*0x8000 + (addr & 0x7FFF)
        = 0x3E8000 + page*0x8000 + (index % 0x492)*28
 ```
 
-Constants proven: `0x492` (1170) appears three times as an immediate; `28` is built as `y*32 - y*4` and is
-independently confirmed by the `$1C` copy loop in `$80:D265` (§5); `$FD` is the `LDX #$00FD` seed.
+常数的出处：`0x492`（1170）作为立即数出现三次；`28` 是用 `y*32 - y*4` 搭出来的，并且被 `$80:D265`
+里那个 `$1C` 拷贝循环独立确认（§5）；`$FD` 来自 `LDX #$00FD` 的种子。
 
-Addressable slot space: **3 pages × 1170 = 3510 slots, indices `$0000`–`$0DB5`.**
-Index `$0DB6` and above would set bank `$100` and read from `$00:xxxx` — i.e. it is *not* addressable
-without patching `$D490`.
+可寻址的格子空间：**3 页 × 1170 = 3510 格，索引 `$0000`–`$0DB5`。**
+索引 `$0DB6` 往上会把 bank 置成 `$100`、从 `$00:xxxx` 读——也就是说，不动 `$D490` 就*寻不到*。
+
+**可写的空间比可寻址的空间小：这条带止于 `$0DA5`。** page 2 的最后 16 格（`$0DA6`–`$0DB5`，file `0x3FFE38`）根本不是字模记录，
+而是引擎的文字画笔调色板：`$30`–`$37 xx` 的画笔码一执行，处理程序 `$80:CD8C` 就把它们当作 `$FF:FE38` 读走。
+往这些格子上画位图，就是 批次Z 的 #47（日历粉红变黑、蓝变绿）。构建里这个上界是 `tmtext.GLYPH_WRITABLE_MAX`。
+详见 `docs/research/calendar-colour.md`。
 
 ---
 
-## 5. The glyph record — `$80:D23D` (file `0x523D`)
+## 5. 字模记录——`$80:D23D`（file `0x523D`）
 
 ```
 80D23D: DA             PHX
@@ -319,21 +322,21 @@ without patching `$D490`.
 80D3D3: EE 22 0A       INC  $0A22       ; next tile index
 ```
 
-### Record format (proved)
-* **28 bytes = 14 × 16‑bit row words**, little‑endian in memory.
-* Reading the pair as `w = (byte[1] << 8) | byte[0]` gives the pixel row with **bit15 = leftmost pixel**;
-  only the **top 14 bits** are used (bits 1–0 are always 0 → the rightmost 2 pixels of the 16‑px cell are
-  never drawn). So: `byte[1]` = left 8 pixels (MSB first), `byte[0]` bits 7…2 = pixels 8…13.
-* The 14 rows are placed at **rows 1…14** of a 16‑row cell; rows 0 and 15 are forced blank
-  (`STZ $C100`, `STZ $C11E`). Effective ink area = 14 × 14, drawn into a 16 × 16 cell.
-* Runtime expansion: 1bpp → 2bpp (`plane1 = word | (word >> 1)`), then packed as a 2×2 block of 8×8 4bpp
-  tiles (64 bytes) at `$7E:C000`, copied to the tile buffer `$7E:C200` by `$D459`.
-* Style flags at `$7E:0A2C`: bit4 kana variant (`$D4BD` remap), bit5 bold, bit1 outline, bit0 plane mode.
-  Tile counter `$0A22`, BG‑map cell cursor `$0A26`.
+### 记录格式（已证实）
+* **28 字节 = 14 个 16 位行字**，内存里按小端存。
+* 一个字节对读成 `w = (byte[1] << 8) | byte[0]`，拿到的就是那一行像素，**bit15 是最左像素**；
+  只有**高 14 位**会用到（bits 1–0 恒为 0 → 16 px 那格最右边 2 个像素永远画不出来）。也就是说：
+  `byte[1]` = 左边 8 个像素（最高位在前），`byte[0]` 的 bits 7…2 = 像素 8…13。
+* 这 14 行放在 16 行那格的**第 1…14 行**，第 0 行和第 15 行被强制清空（`STZ $C100`、`STZ $C11E`）。
+  真正能落墨的地方是 14 × 14，画在 16 × 16 的格子里。
+* 运行时展开：1bpp → 2bpp（`plane1 = word | (word >> 1)`），再打包成 2×2 块 8×8 的 4bpp tile
+  （64 字节）放在 `$7E:C000`，最后由 `$D459` 拷进 tile 缓冲 `$7E:C200`。
+* 风格标志在 `$7E:0A2C`：bit4 假名变体（`$D4BD` 重映射）、bit5 粗体、bit1 描边、bit0 plane 模式。
+  tile 计数器是 `$0A22`，BG‑map 的格子游标是 `$0A26`。
 
 ---
 
-## 6. Optional runtime redirect — `$80:D4BD` (file `0x54BD`)
+## 6. 可选的运行时重定向——`$80:D4BD`（file `0x54BD`）
 
 ```
 80D4BD: A5 00          LDA  $00          ; glyph index
@@ -356,32 +359,33 @@ without patching `$D490`.
 80D4E3: 60             RTS
 ```
 
-Active only when `$0A2C` bit 4 is set. It maps hiragana indices `$AB`–`$FC` (76 of the 83) onto indices
-`$0D5A`–`$0DCA` (page 2, file `0x3FF5E8`…), i.e. a second, stylistically different kana set.
+只有 `$0A2C` 的 bit 4 置起来才生效。它把平假名索引 `$AB`–`$FC`（83 个中的 76 个）映射到索引
+`$0D5A`–`$0DCA`（page 2，file `0x3FF5E8`…），也就是第二套风格不同的假名字体。
 
 ---
 
-## 7. The glyph index space (calibrated by rendering real bitmaps)
+## 7. 字模索引空间（靠渲染真实位图标定）
 
-| index range | count | contents |
+| 索引区间 | 数量 | 内容 |
 |---|---|---|
-| `$0000` | 1 | blank (space) — the only all‑zero slot in the font |
-| `$0001`–`$005D` | 93 | **JIS X0208 ku 1, cells 2–94** (、。「」（）… ？ ！ ＿ etc.). Verified anchors: `$01`、 `$02`。 `$08`？ `$09`！ `$1B`ー `$24`‥ `$29`（ `$2A`） `$35`「 `$36`」 |
-| `$005E`–`$006B` | 14 | **JIS ku 2, cells 1–14**: ◆□■△▲▽▼※〒→←↑↓〓 (rendered and confirmed) |
+| `$0000` | 1 | 空白（空格）——整张字库里唯一全零的一格 |
+| `$0001`–`$005D` | 93 | **JIS X0208 ku 1 的第 2–94 格**（、。「」（）… ？ ！ ＿ 等）。实测锚点：`$01`、 `$02`。 `$08`？ `$09`！ `$1B`ー `$24`‥ `$29`（ `$2A`） `$35`「 `$36`」 |
+| `$005E`–`$006B` | 14 | **JIS ku 2 的第 1–14 格**：◆□■△▲▽▼※〒→←↑↓〓（渲染过，确认） |
 | `$006C`–`$0075` | 10 | ０–９ |
 | `$0076`–`$008F` | 26 | Ａ–Ｚ |
 | `$0090`–`$00A9` | 26 | ａ–ｚ |
-| `$00AA`–`$00FC` | 83 | **hiragana = JIS ku 4 cells 1–83** (ぁ…ん, incl. ゐ`$F9` ゑ`$FA` を`$FB` ん`$FC`) |
-| `$00FD`–`$0152` | 86 | **katakana = JIS ku 5 cells 1–86** (ァ`$FD` … ヶ`$152`) |
-| `$0153`–`$015A` | 8 | narrow/half‑width extras: two 7‑px kana pairs, half‑width ー, italic `AB`, solid ◀ cursor |
-| `$015B`–`$0179` | 31 | large proportional numerals **1–31** (calendar days) |
-| `$017A` | 1 | solid heart |
-| `$017B`–`$0182` | 8 | Greek lowercase ρ σ τ υ φ χ ψ ω |
-| `$0183`–`$01A3` | 33 | Cyrillic uppercase А–Я |
-| `$01A4`–`$01C4` | 33 | Cyrillic lowercase а–я |
-| `$01C5`–`$0DB5` | 3057 | **kanji in JIS X0208 order, starting at ku 16 cell 1** |
+| `$00AA`–`$00FC` | 83 | **平假名 = JIS ku 4 的第 1–83 格**（ぁ…ん，含 ゐ`$F9` ゑ`$FA` を`$FB` ん`$FC`） |
+| `$00FD`–`$0152` | 86 | **片假名 = JIS ku 5 的第 1–86 格**（ァ`$FD` … ヶ`$152`） |
+| `$0153`–`$015A` | 8 | 窄格/半宽补充格：两对 7 像素假名、半宽 ー、斜体 `AB`、实心 ◀ 光标 |
+| `$015B`–`$0179` | 31 | 大号比例数字 **1–31**（日历日期） |
+| `$017A` | 1 | 实心心形 |
+| `$017B`–`$0182` | 8 | 希腊小写 ρ σ τ υ φ χ ψ ω |
+| `$0183`–`$01A3` | 33 | 西里尔大写 А–Я |
+| `$01A4`–`$01C4` | 33 | 西里尔小写 а–я |
+| `$01C5`–`$0DA5` | 3041 | **汉字按 JIS X0208 顺序排，从 ku 16 第 1 格开始**——这也正是可写区的末端 |
+| `$0DA6`–`$0DB5` | 16 | 不是字模：文字画笔的调色板（§4），由 `$80:CD8C` 当作 `$FF:FE38` 读取 |
 
-Kanji formula:
+汉字公式：
 
 ```
 index = 0x1C5 + ((ku - 16) * 94 + (cell - 1))          (JIS X0208 level 1 upwards)
@@ -390,11 +394,11 @@ cell  = 1  + (index - 0x1C5) % 94
 EUC-JP bytes = (0xA0 + ku), (0xA0 + cell)
 ```
 
-Anchor proofs (bitmap rendered, then read visually):
+锚点验证（把位图渲染出来用眼睛读）：
 
-| index | JIS | rendered glyph |
+| 索引 | JIS | 渲染出的字模 |
 |---|---|---|
-| `$01C5` | 16‑01 | 亜 (first level‑1 kanji) |
+| `$01C5` | 16‑01 | 亜（level‑1 的第一个汉字） |
 | `$01C6` | 16‑02 | 唖 |
 | `$01C7`–`$01CC` | 16‑03…08 | 娃 阿 哀 愛 挨 姶 |
 | `$039C` | 21‑02 | 帰 |
@@ -407,21 +411,19 @@ Anchor proofs (bitmap rendered, then read visually):
 | `$0A34` | 38‑92 | 日 |
 | `$0C2A` | 44‑30 | 名 |
 | `$0AF2` | 40‑94 | 美 |
-| `$0DB5` | 48‑49 | 佰 (last slot; solid `$FFFF…` block) |
+| `$0DB5` | 48‑49 | 佰——其实不是字模，是调色板最后一个字（全 `$FFFF`） |
 
-The last slot of each of `$0DAE`–`$0DB5` is a duplicate all‑`$FF` (solid) block — the only duplicated
-bitmaps at the end of the range. Elsewhere, 24 slots duplicate an earlier bitmap, all of them Cyrillic
-letters that are visually identical to a Latin letter (`$0183`А = `$0076`A, `$0185`В = `$0077`B,
-`$0191`Н = `$007D`H, `$01B3`о = `$009E`o, …) — an additional, independent confirmation of the block map.
+`$0DAE`–`$0DB5` 那 8 格读出来全是「实心方块」，因为整段 `$0DA6`–`$0DB5` 根本不是字模，而是**画笔调色板**：一个不透明的 RGB 字就是 `$FFFF`。批次Z 把整带回填的上界收到 `$0DA5` 之后，这 16 格恢复原样，日历上周日／节假日的粉红和周六的蓝也回来了。
+真正重复的字模只有 24 格，全跟早先的字模重复，因为它们都是与拉丁字母长得一样的西里尔字母（`$0183`А = `$0076`A、`$0185`В = `$0077`B、`$0191`Н = `$007D`H、`$01B3`о = `$009E`o……）——这反过来又是一次独立的分块佐证。
 
 ---
 
-## 8. Worked examples, taken from actual game text
+## 8. 实例，全部取自真实游戏文本
 
-### 8.1 `F3 9C` → 帰 (page 0)
-File `0x1CCB82` (bank `$B9`, `$B9:CB82`) is the start of phrase macro `$B0` — the phrase‑table entry at
-`0x1CCAA5 + 2*(0xB0-0xA0) = 0x1CCAC5` holds `$CB82`; the bytes there are `… 0A F3 9C 99 F0 E7 66 96 55 0A …`
-which the confirmed decoder renders as 「帰りましょう」 (`99` is the single‑byte shortcut → index `$0F3` = り).
+### 8.1 `F3 9C` → 帰（page 0）
+文件偏移 `0x1CCB82`（bank `$B9`，`$B9:CB82`）是 phrase 宏 `$B0` 的起点——phrase 表里
+`0x1CCAA5 + 2*(0xB0-0xA0) = 0x1CCAC5` 那一项存的正是 `$CB82`；那里的字节是 `… 0A F3 9C 99 F0 E7 66 96 55 0A …`，
+已经确认的解码器把它读成「帰りましょう」（`99` 是单字节捷径 → 索引 `$0F3` = り）。
 
 ```
 text bytes            : F3 9C
@@ -434,26 +436,25 @@ $80:D490  3 x SBC 0492: $039C < $0492 -> page 0, y = $039C, bank = $FD
 pointer               : $FD:$E510
 file offset           : (0xFD-0x80)*0x8000 + 0x6510 = $3EE510
 ```
-Bitmap at `$3EE510` (28 bytes) rendered as 1bpp/14 columns = 帰 ✓ (see the ASCII art in §8.4).
+`$3EE510` 处那 28 字节的位图，按 1bpp/14 列渲染出来就是 帰 ✓（ASCII 图见 §8.4）。
 
-### 8.2 `F5 46` → 行 (page 1)
+### 8.2 `F5 46` → 行（page 1）
 ```
 index = $F546 - $F000 = $0546 ;  $0546 >= $0492 -> page 1, y = $0546-$0492 = $00B4 (180)
 bank $FE, addr = $8000 + 180*28 = $8000 + 5040 = $93B0
 file  = 0x3F0000 + $13B0 = $3F13B0        -> renders as 行 ✓
 ```
-(`$58` in the single‑byte table also points at index `$0546`, i.e. text byte `$58` = 行.)
+（单字节表里的 `$58` 也指向索引 `$0546`，也就是文本字节 `$58` = 行）。
 
-### 8.3 `FA F2` → 美 (page 2), from real text at file `0x1CCBB6`
+### 8.3 `FA F2` → 美（page 2），取自 file `0x1CCBB6` 的真实文本
 ```
 index = $FAF2 - $F000 = $0AF2 ;  $0AF2 >= 2*$0492 -> page 2, y = $0AF2 - $0924 = $01CE (462)
 bank $FF, addr = $8000 + 462*28 = $8000 + 12936 = $B288
 file  = 0x3F8000 + $3288 = $3FB288        -> renders as 美 ✓   (JIS 40-94)
 ```
-Context: `… FC 6F FA F2 …` = 「優美」, preceded at `0x1CCBA7` by `FB 69` = 聞 (index `$0B69`,
-file `$3FBF8C`).
+上下文：`… FC 6F FA F2 …` = 「優美」；`0x1CCBA7` 处紧挨在它前面的是 `FB 69` = 聞（索引 `$0B69`，file `$3FBF8C`）。
 
-### 8.4 The bitmap at `$3EE510` decoded with the §5 format
+### 8.4 按 §5 的格式解码 `$3EE510` 处的位图
 ```
    ________________
    _____#__________
@@ -475,90 +476,71 @@ file `$3FBF8C`).
 
 ---
 
-## 9. Answers
+## 9. 结论逐条
 
-**(a) 2‑byte code → glyph index.** Pure arithmetic, no table:
+**(a) 2 字节码 → 字模索引。** 纯算术，没有表：
 `index = ((b0 << 8) | b1) - 0xF000`.
-The only runtime redirect is `$D4BD`, which (when `$0A2C` bit 4 is set) maps index `$AB`–`$FC` through the
-76‑byte list at file `0x54E4` to `$0D5A + position`.
+唯一的运行时重定向是 `$D4BD`：`$0A2C` 的 bit 4 置起来时，它把索引 `$AB`–`$FC` 经过 file `0x54E4`
+那张 76 字节的表映射成 `$0D5A + 位置`。
 
-**(b) Index → file offset.**
-`file = 0x3E8000 + (index / 0x492) * 0x8000 + (index % 0x492) * 28`, i.e. banks `$FD`, `$FE`, `$FF`,
-1170 slots each, 28 bytes per slot. Record format: 14 little‑endian 16‑bit row words, MSB = leftmost pixel,
-top 14 bits used, drawn at rows 1–14 of a 16×16 cell.
+**(b) 索引 → 文件偏移。**
+`file = 0x3E8000 + (index / 0x492) * 0x8000 + (index % 0x492) * 28`，也就是 bank `$FD`、`$FE`、`$FF`，
+每页 1170 格、每格 28 字节。记录格式：14 个小端的 16 位行字，MSB = 最左像素，只有高 14 位有用，
+画在 16×16 那格的第 1–14 行。
 
-**(c) What to edit to redirect a code to another glyph slot.**
-* 2‑byte codes: **no table exists** — the code *is* the index. Edit the two text bytes to
-  `((0xF000 + new_index) >> 8) & $FF`, `(0xF000 + new_index) & $FF`. Legal new index range `$0000`–`$0DB5`
-  (equivalently codes `$F0 00` … `$FD B5`).
-* Single‑byte codes `$40`–`$9F`: edit the big‑endian pair at `0x18000 + 2*(code - 0x40)`; write
-  `0xF000 | new_index` big‑endian (only the low 12 bits are read). 96 slots.
-* Kana‑variant redirect: edit the 76‑byte list at file `0x54E4` (values `$AB`–`$FC`, `$00`‑terminated) —
-  the target index is `$0D5A + position`, so the *targets* are fixed and only the *membership* is editable.
-* Addressable slot space without touching any code: **3510 slots (index `$0000`–`$0DB5`), occupying
-  `$3E8000`–`$3FFFFF` (96 KiB) at 28 bytes each, 8 spare `$FF` bytes at the end of each bank.**
+**(c) 想把一个码改指到另一格，该动哪里。**
+* 2 字节码：**根本没有表**——码本身就是索引。把那两个文本字节改成
+  `((0xF000 + new_index) >> 8) & $FF`, `(0xF000 + new_index) & $FF`。可写索引范围 `$0000`–`$0DA5`（码 `$F0 00` … `$FD A5`）；
+  `$0DA6`–`$0DB5` 是调色板，落笔会改掉文字颜色（见 §4 与 `calendar-colour.md`）。
+* 单字节码 `$40`–`$9F`：改 `0x18000 + 2*(code - 0x40)` 处那个大端字节对，按大端写
+  `0xF000 | new_index`（只有低 12 位会被读走）。一共 96 格。
+* 假名变体重定向：改 file `0x54E4` 处那 76 字节列表（值域 `$AB`–`$FC`，`$00` 收尾）——目标索引是
+  `$0D5A + 位置`，所以*目标*是固定的，能改的只有*名单*。
+* 可寻址的字模空间：**3 页 × 1170 = 3,510 格，索引 `$0000`–`$0DB5`，占 `$3E8000`–`$3FFFFF`（96 KiB）**。
+其中能当字模写的只有 3,494 格，末尾 16 格是调色板。
 
-**(d) Blank / unused slots in `$3E8000`–`$3FFFFF`.** Scanned all 3510 slots (`tools/glyphview.py blank`):
+**(d) `$3E8000`–`$3FFFFF` 里的空格/未用格。** 3510 格全扫过（`tools/glyphview.py blank`）：
 
-| metric | value |
+| 指标 | 数值 |
 |---|---|
-| slots examined | 3510 |
-| completely blank (28 × `$00`) | **1** — index `$0000` only (page 0) |
-| near‑blank (≤ 6 lit pixels) | 8 (`$0000`, `$0001`, `$0003`, `$0004`, `$000A`, `$000C`, `$000D`, `$001D`) |
-| duplicate bitmaps | 24 slots = 16 Cyrillic‑look‑alike‑of‑Latin + 8 solid `$FF` blocks (`$0DAE`–`$0DB5`, all equal to `$0DAD`) |
-| distinct bitmaps | 3486 |
-| zero bytes in `$3E8000`–`$3FFFFF` | 12.0 %, and the **longest contiguous zero run anywhere in the 96 KiB is 52 bytes** (at `$3E81F5`) — no free 28‑byte slot exists outside index `$0000` |
-| free space elsewhere in the top 1 MiB | none — no zero run ≥ 2 KiB exists in `$300000`–`$3FFFFF`; banks `$F0`–`$FC` are high‑entropy data |
+| 扫过的格数 | 3510 |
+| 完全空白（28 × `$00`） | **1**——只有索引 `$0000`（page 0） |
+| 接近空白（亮着 ≤ 6 个像素） | 8（`$0000`、`$0001`、`$0003`、`$0004`、`$000A`、`$000C`、`$000D`、`$001D`） |
+| 重复的位图 | 24 格（西里尔字母与拉丁字母同形的那些）；`$0DAE`–`$0DB5` 的「实心块」不算，那是调色板 |
+| 互不相同的位图 | 3486 |
+| `$3E8000`–`$3FFFFF` 里的零字节 | 12.0 %，而且整个 96 KiB 里**最长的连续零只有 52 字节**（在 `$3E81F5`）——除了索引 `$0000`，没有任何一整格 28 字节的空位 |
+| 上方 1 MiB 别处的空闲空间 | 没有——`$300000`–`$3FFFFF` 里连 ≥ 2 KiB 的连续零都没有；bank `$F0`–`$FC` 全是高熵数据 |
 
-**The font is fully packed: there is effectively no unused glyph slot and no unused space.**
-
----
-
-## 10. Verdicts on the prior claims
-
-CONFIRMED
-* LoROM mapping `file = (B-0x80)*0x8000 + (A & 0x7FFF)` (three in‑code proofs, §1).
-* The drawing routine is entered at `$80:D23D` = **file `0x523D`** (the claimed `$D200`–`$D500` window is
-  the right area; the actual index→address math is at `$D490` = file `0x5490`).
-* `$D490` page/stride normalisation, **28‑byte stride**, `0x492` slots per page, 3 pages, base bank `$FD`,
-  base file `0x3E8000`.
-* Glyph bitmaps are **14×16 1bpp, big‑endian pixel order, top 14 bits of each row used** (rows stored as
-  little‑endian 16‑bit words), placed at rows 1–14 of a 16×16 cell.
-* A single‑byte redirect table exists: file `0x18000`, 96 entries × 2 bytes, big‑endian.
-* The kana‑variant runtime redirect (`$D4BD`) exists, and `F0 AB` = あ (index `$0AB` = あ under the JIS  ku‑4 mapping).
-* The prior anchor IDs `FC2A`=名, `F628`=字, `F40D`=教, `F812`=前, `FA34`=日 are **all correct**
-  under the confirmed formula (名 = index `$0C2A` = JIS 44‑30, 字 = `$0628` = 27‑90, 教 = `$040D` =
-  22‑21, 前 = `$0812` = 33‑16, 日 = `$0A34` = 38‑92) — each bitmap was rendered and read. The old
-  notes were right about these five anchors; they were wrong about the *mechanism* that produced
-  them. Additional anchors established here: `$01C5`=亜, `$039C`=帰, `$0546`=行, `$04D4`=言,
-  `$08EC`=知, `$0AF2`=美, `$0DB5`=佰.
-
-REFUTED
-* "Bytes `$A0`–`$FC` + low byte form a 2‑byte kanji code." Only `$F0`+ does. `$A0`–`$E7` = phrase macros,
-  `$E8`–`$EF` = sub‑table pointers, `$40`–`$9F` = single‑byte shortcuts, `$00`–`$3F` = control codes.
-* Any ROWDELTA / per‑row‑delta glyph selection — the record is a flat 14 × 2‑byte bitmap, copied verbatim.
-* "Kana table at file `0xD4E4`" — it is file **`0x54E4`** (`$80:D4E4`, bank `$80`).
-* J2E (`reference/j2e_full/tokistuff_x/Offsets.txt`) font offsets `018200`, `1CCCA3`, `1CCD31` do **not**
-  apply to this Rev‑1 ROM: the real tables are `0x18000`, `0x1CCAA5`, `0x2196A8`.
-
-UNDETERMINED (not needed for injection)
-* The exact semantics of the `$0153`–`$015A` half‑width extras and of the `$0A20`/`$0A24`/`$0A2A`
-  BG‑map/tile‑allocator variables.
-* Whether the shipped game ever sets `$0A2C` bit 4 in normal dialogue (the kana‑variant font is clearly
-  used somewhere — the 76 remapped kana exist as real bitmaps at `$0D5A`+).
+**字库是实心的：既没有可用的空格子，也没有别的空闲空间。**
 
 ---
 
-## 11. Practical consequence for a Chinese font
+## 10. 只在这颗盘上成立的数字
 
-1. There is **no free glyph space**: 3510/3510 slots are populated (only index `$0000` is empty) and the
-   rest of the top megabyte is dense data. Any Chinese bitmap font must **overwrite** the 96 KiB at
-   `$3E8000`–`$3FFFFF` (or the ROM must be enlarged and `$D490` patched to add pages).
-2. Because the 2‑byte code is *arithmetic*, a Chinese code→index assignment is completely free: choose any
-   index in `$0000`–`$0DB5`, write the bitmap at `0x3E8000 + (index/0x492)*0x8000 + (index%0x492)*28`, and
-   emit the two bytes `(0xF000+index) >> 8`, `(0xF000+index) & $FF` into the script.
-3. The 14 × 14 usable ink area and the 16‑row cell (rows 1–14) are fixed by the hardware path
-   (`$C100`/`$C11E` + 2×2 tile assembly), so a 14×14 1bpp cell is the maximum glyph size without further
-   code changes.
-4. If a 4th page is ever needed, `$D490` must be extended (one more `INX / TAY / SBC #$0492 / BCC` block and
-   a bank seed below `$FD`) **and** the ROM enlarged — banks `$F8`–`$FC` are occupied.
+§1–§9 每条都带着地址，换个版本就得重量。下面几条是量过之后确认**不成立**的，写工具时别再引进来：
+
+* 字模没有逐行位移表（所谓 ROWDELTA）。记录就是一张平铺的 14 × 2 字节位图，原样拷走——任何
+  「行号 + delta」式的还原方法都会画出错的东西。
+* `$A0`–`$FC` 不是双字节汉字码。字节带见 §2：只有 `$F0` 起头才是双字节字模码。
+* 假名变体表在 file `0x54E4`（`$80:D4E4`，bank `$80`），不在 `0xD4E4`。
+* J2E 的 `reference/j2e_full/tokistuff_x/Offsets.txt` 给的那三个偏移（`018200`、`1CCCA3`、`1CCD31`）
+  对这颗 Rev‑1 不成立；这里的三张表是 `0x18000`、`0x1CCAA5`、`0x2196A8`（§2、§3）。
+
+还没量过的：`$0153`–`$015A` 那批半宽补充格的逐格语义、`$0A20`/`$0A24`/`$0A2A` 这几个 BG‑map/tile
+分配变量、普通对话里到底有没有置起过 `$0A2C` 的 bit 4（假名变体字体肯定在哪儿用了——那 76 个被
+重映射的假名在 `$0D5A`+ 是实打实的位图）。这些都不影响注字模。
+
+---
+
+## 11. 对中文字库的实际含义
+
+1. **没有空余字模空间**：3,510 格里只有索引 `$0000` 是空的，其余全是活数据，所以中文字库必须**覆盖写入**
+   `$3E8000`–`$3FFFFF`。这就是终局走的路：汉字带整带回填（可写带止于 `$0DA5`）。
+2. 双字节码是**纯算术**的，所以中文的码→索引分配完全自由：取 `$0000`–`$0DA5` 之间任意索引，
+   把点阵写到 `0x3E8000 + (index/0x492)*0x8000 + (index%0x492)*28`，脚本里发出
+   `(0xF000+index) >> 8`、`(0xF000+index) & $FF` 两个字节即可。
+3. 能落墨的 14 × 14 和 16 行那格（第 1–14 行）是硬件通路定死的（`$C100`/`$C11E` + 2×2 的 tile 拼装），
+   所以不改代码的话，14×14 的 1bpp 格就是字模能做到的最大尺寸。
+4. 加第 4 页字形表这条路**已经关掉**（用户 2026-09-20 定稿）：可写的 3,494 格对出货文本的 2,160 个
+   不同汉字（`python3 tools/charledger.py report`）绰绰有余，不必扩 ROM。技术上它要改 `$D490`（多一段 `INX / TAY / SBC #$0492 / BCC`）并把 `$FD` 之下的空 bank 腾出来，
+   而 `$F8`–`$FC` 都占着——留在这里只是为了别再有人去算这条路。
