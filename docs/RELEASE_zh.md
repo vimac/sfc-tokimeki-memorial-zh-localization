@@ -102,7 +102,7 @@ docs/research/           逆向结论（*.md）+ 构建输入 + 活译文源
 docs/prologue_zh/        序章渲染表与 index.txt 转录（PNG 不入库）
 docs/history/            旧交接与破解笔记，非权威（README 写了为什么作废）
 docs/ALL_CHARACTERS.txt  wiki 角色资料（15 个人物），人名译法依据
-tools/                   31 个脚本：验收链及其依赖 15 个，侦察仪表 16 个
+tools/                   32 个脚本：验收链及其依赖 15 个，侦察仪表 17 个
 translations/            三张口径表（人名/术语/短语）+ TM 命中表，中文正文在 docs/research/
 reference/               J2E 第三方素材，只读输入，不入库
 start-screenshots/       日文原版启动流程截图

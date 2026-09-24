@@ -68,7 +68,9 @@ A0 00 34   LDY #$3400       ; 类型 6（周六）-> 笔 $34 = 蓝
 ```
 80CD8C: A7 B4    LDA [$B4]        ; 取到 $3x 与它的操作数
 80CD92: 38 E9 30 00  SEC : SBC #$0030
-80CD99: 0A 0A 0A 1A 1A  A8        ; Y = (code-$30)*8 + 2
+80CD96: 0A 0A 0A       ASL ×3
+80CD99: 1A 1A          INC ×2           ; Y = (code-$30)*8 + 2
+80CD9B: A8             TAY
 80CD9C: A9 00 2C 85 00  A9 7E 00 85 02   ; 目标 = $7E:2C00（WRAM 画笔表）
 80CDAE: BF 3A FE FF  LDA $FFFE3A,X       ; ← 颜色三元组来自 ROM
 80CDB2: 97 00        STA [$00],Y

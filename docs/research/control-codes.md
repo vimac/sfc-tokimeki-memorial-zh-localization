@@ -6,16 +6,23 @@
 ## 派发路径（`$80:CAEB`，file `0x4AEB`）
 
 ```
-80CAEB: A0 01 00   LDY #$0001        ; Y = 1, used by every operand read below
-80CAEE: C9 38 00   CMP #$0038
-80CAF1: 30 03      BMI $CAFE
-80CAF3: 4C 67 CD   JMP $CD67         ; $38..$3F -> handler $CD67 (indexed by code-$38)
-80CAFE: C9 30 00   CMP #$0030
-80CAFB: 4C 8C CD   JMP $CD8C         ; $30..$37 -> handler $CD8C (indexed by (code-$30)*32)
-80CAFE: DA 0A AA   PHX : ASL : TAX   ; $00..$2F -> table
-80CB01: BF 0B CB 80 LDA $80CB0B,X    ; handler address, little-endian
-80CB06: 85 00 / 6C 00 00  STA $00 : JMP ($0000)
+80CAEB: A0 01 00       LDY #$0001        ; Y = 1，下面每次读操作数都用它
+80CAEE: C9 38 00       CMP #$0038
+80CAF1: 30 03          BMI $CAF6
+80CAF3: 4C 67 CD       JMP $CD67         ; $38..$3F -> 处理程序 $CD67（按 码−$38 索引）
+80CAF6: C9 30 00       CMP #$0030
+80CAF9: 30 03          BMI $CAFE
+80CAFB: 4C 8C CD       JMP $CD8C         ; $30..$37 -> 处理程序 $CD8C（按 (码−$30)×32 索引）
+80CAFE: DA             PHX
+80CAFF: 0A             ASL
+80CB00: AA             TAX               ; $00..$2F -> 查 file 0x4B0B 那张表
+80CB01: BF 0B CB 80    LDA $80CB0B,X     ; 处理程序地址，小端
+80CB05: FA             PLX
+80CB06: 85 00          STA $00
+80CB08: 6C 00 00       JMP ($0000)
 ```
+
+（复现：`python3 tools/dis2.py rom_original_japanese.sfc 0x4AEB 0x40 0x80AEB`。）
 
 **分发表共 47 项（`$00`-`$2E`），在 file `0x4B0B`。** `$2F` 往上不算越界：
 `$30..$37` 和 `$38..$3F` 各有自己的索引式处理程序，所以用到它们的块完全合法
