@@ -37,8 +37,12 @@ def glyph_stream(code, start, end):
     Macro folds are expanded through the body's own token list, so the control
     bytes a macro emits ($14 inside $A8-$AD, $0C inside $A0-$A7) land where the
     engine will act on them.  The body's trailing $0A return is not content.
+
+    Returns the stream plus the number of call sites left unexpanded: those are
+    the runtime-variable bodies ($00/$0E/$0F parameters, a body that calls another
+    macro), which no static reader can draw -- they are reported, not hidden.
     """
-    out = []
+    out, ndrop = [], 0
     for a in code.walk(start, end):
         k = a['k']
         if k == 'c':
@@ -51,7 +55,9 @@ def glyph_stream(code, start, end):
             out.append(('n', a['raw'][0]))
         elif k == 'm':
             out += a['toks']
-    return out
+        elif k == 'v':
+            ndrop += 1
+    return out, ndrop
 
 
 def boxes(stream):
@@ -143,22 +149,29 @@ def main():
     for f in os.listdir(OUT):
         os.remove(os.path.join(OUT, f))
 
-    start = rom.text_ptr(BLK)
-    bs = boxes(glyph_stream(code, start, start + total))
-    print('%s block %d: %d bytes, %d segments translated -> %d boxes, %d lines'
-          % (os.path.basename(ROM), BLK, total, cov, len(bs),
-             sum(len(b) for b in bs)))
-    dist = {}
-    for b in bs:
-        dist[len(b)] = dist.get(len(b), 0) + 1
-    print('lines per box:', dist)
-    print('line widths (cells):', sorted({len(l) for b in bs for l in b}))
-
     slot2ch = {}
     alloc = json.load(open('docs/research/glyph_alloc.json', encoding='utf-8'))
     for kind in ('fresh', 'inplace'):
         for ch, idx in alloc[kind].items():
             slot2ch[int(idx, 16)] = ch
+    # A dictionary body reads a glyph slot, and half the slots in this disc are
+    # characters the JIS band never had.  Without the patch's own names every
+    # Chinese body parses as "not plain text" and its call site is dropped, so the
+    # box under-reads (批次 AH: 3,123 of 59,703 call sites).
+    code.names = slot2ch
+
+    start = rom.text_ptr(BLK)
+    stream, ndrop = glyph_stream(code, start, start + total)
+    bs = boxes(stream)
+    print('%s block %d: %d bytes, %d segments translated -> %d boxes, %d lines, '
+          '%d runtime-only call site(s)'
+          % (os.path.basename(ROM), BLK, total, cov, len(bs),
+             sum(len(b) for b in bs), ndrop))
+    dist = {}
+    for b in bs:
+        dist[len(b)] = dist.get(len(b), 0) + 1
+    print('lines per box:', dist)
+    print('line widths (cells):', sorted({len(l) for b in bs for l in b}))
 
     items, labels, kana = [], [], 0
     for k, box in enumerate(bs[lo:hi + 1 if hi is not None else None], lo):
