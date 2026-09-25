@@ -2862,8 +2862,14 @@ def allocate(need, code, verbose=True):
     # so claiming the rest takes no glyph the engine still draws.  The gojūon chart's
     # fidelity was waived (user 2026-09-20), and no intermediate deliverable ships, so
     # this is pool widening, not the B/C-band retargeting reserved for the final pass.
+    # Draw the fresh slots off the *top* of the kanji band.  The name-entry 漢字 page
+    # does not author its own cells: it walks the band from $1C5 upwards, and JIS X0208
+    # orders kanji by 音読み, so a band whose head is left alone browses as a
+    # reading-ordered name list.  Parking fresh (non-JIS / simplified / ASCII) characters
+    # at the head is what turned it into 亜唖娃→「% 0 1 A D」.  Slot numbers reach no
+    # box's byte budget -- `build_code_page` picks characters by frequency -- so this is free.
     boundset = set(bound.values())
-    pool = [i for i in range(T.JIS_KANJI, T.GLYPH_WRITABLE_MAX)
+    pool = [i for i in range(T.GLYPH_WRITABLE_MAX - 1, T.JIS_KANJI - 1, -1)
             if i not in used and i not in boundset]
     pool += [i for i in range(1, T.JIS_KANJI)
              if i not in used and i not in boundset]
