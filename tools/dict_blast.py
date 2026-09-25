@@ -12,8 +12,10 @@ usage: python3 tools/dict_blast.py e979 ea0b
          批次 AG 的 b47 就是这么炸的：先改体、后改壳行，少一边就破框。
 
 跨度只信 `macro_span()`：`phrase_glossary.tsv` 第 2 列是人账，批次 AN 实测 1,016 条里有 383 行与真值
-不符（三行写着 0，正文却住着 6~8 B），所有「span 未登记」的悬案都出在那一列。字节按**本次 86 字码表**
-（`block0_enc.json` 的 `codepage`）算：表内字 1 B、其余汉字 2 B、段末「，」2 B 而段末「。」1 B——
+不符（三行写着 0，正文却住着 6~8 B），所有「span 未登记」的悬案都出在那一列。**装正文的上限是
+`span - 1`**——体末尾还要落一个 `$0A`。字节按**本次 86 字码表**
+（`block0_enc.json` 的 `codepage`）算：表内字 1 B、其余汉字 2 B、`SB_SHARE` 那批中日共用格
+（「」（）、。？…‥）1 B、段末「，」2 B 而段末「。」1 B——
 所以这个数是给裁决用的，落库仍以构建的每框账为准（AGENTS §三.7）。
 """
 import sys, os, re, glob, json, collections
@@ -24,7 +26,8 @@ import build_prologue as B
 
 # 段末那一个字符会被编码成框的终止码，所以它不算字面壳（AGENTS §五 终止符表）
 TERMC = set(u'。？！、…」）’】「『（')
-P1 = u'、。？！…「」』【】'
+# 「」（）、。？…‥ 是中日共用的单字节 SB 码（`SB_SHARE`），照汉字计 2 B 会把体长估长一倍
+P1 = B.SB_SHARE | set(u'、。？！…「」』【】')
 PAGE = set(json.load(open('%s/docs/research/block0_enc.json' % ROOT, encoding='utf-8'))['codepage'])
 GLOS = B.phrase_glossary()
 _rom = B.T.Rom(B.SRC_ROM)
@@ -72,15 +75,18 @@ def classify(body):
 def scan(key, want=None):
     body = GLOS.get(key)
     lo, hi = B.macro_span(_code, key)
-    span = hi - lo
+    # 宏体后面还要落一个 `$0A` 终止符，它住在同一段里：体最长只能是 span-1 B
+    # （`macro_bodies` 判的是 `len(body) + 1 > span`，批次 AO 就是拿这条把
+    # 「拜托了，神大人」10 B 从「正好装得下」改成「装不下」的）。
+    span = hi - lo - 1
     if not body:
-        print('%-5s span %-3d 无中文正文（A′ 新建类：%s）' %
+        print('%-5s 体上限 %-4dB 无中文正文（A′ 新建类：%s）' %
               (key, span, '装得下 %d B' % span if want and cost(want) <= span
                else '装不下 %d B' % cost(want) if want else '要先写正文'))
         return
     hits = classify(body)
     c = collections.Counter(k for _, _, k, _ in hits)
-    print('%-5s 正文=%r %dB / span %d 余 %d   调用 %d 段（裸 %d / 尾挂 %d / 真壳 %d）' %
+    print('%-5s 正文=%r %dB / 体上限 %d 余 %d   调用 %d 段（裸 %d / 尾挂 %d / 真壳 %d）' %
           (key, body, cost(body), span, span - cost(body), len(hits),
            c['bare'], c['tail'], c['shell']))
     for blk, n, k, seg in [h for h in hits if h[2] == 'shell'][:8]:
