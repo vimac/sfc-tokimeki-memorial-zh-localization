@@ -187,8 +187,9 @@ PHRASE_GLOSSARY = os.path.join(ROOT, 'translations', 'phrase_glossary.tsv')
 # name is drawn at random -- across cold boots the prologue introduced the player as
 # 铃木一路 and once as 铃木ジョン.  Left alone both point at the *Japanese* font's
 # records, which would leave the protagonist's name as kanji inside the translated
-# prologue that WenQuanYi does not draw; and the three kana entries (さと / めも / ジョン)
-# have no Chinese reading at all, so the whole pool is renamed, not just repaged.
+# prologue that WenQuanYi does not draw; and the four kana entries (ときめ / さとし /
+# めもる / ジョン) have no Chinese reading at all, so the whole pool is renamed, not just
+# repaged.
 # 一路 and friends keep their characters and only change font; 鈴 becomes 铃.
 # Each pool record is 3 glyph slots plus the `$0A` end-of-step control, so a replacement
 # name may be at most 3 characters and short names pad with the null glyph as stock does.
@@ -200,22 +201,23 @@ NAME_IMM = ((0x48f1, '鈴', '铃'), (0x48f9, '木', '木'), (0x28b54, '鈴', '�
 # eight surnames on the Japanese font -- harmless-looking for the kanji ones, but the
 # first is the game's own joke name ときめ (kana, so it has no Chinese reading at all and
 # no WenQuanYi record), and it shows up on roughly one cold boot in sixteen as
-# 「我叫ときめ英幸。」.  佟心 keeps the pun: 佟 sounds like とき and 心 is the 心跳 of
-# 心跳回忆.
+# 「我叫ときめ英幸。」.  The four joke names collapse to one character each, which keeps
+# the word behind the joke instead of its reading: 时 for ときめき, 守 for めもリアル,
+# 聪 for the name さとし, and 囧 for ジョン -- chosen for the face, as the user ruled.
 NAME_POOL = ((0x1f890, '青山', '青山'), (0x1f897, '安田', '安田'),
              (0x1f89e, '石原', '石原'), (0x1f8a5, '市原', '市原'),
              (0x1f8ac, '吉岡', '吉冈'), (0x1f8b3, '長谷川', '长谷川'),
-             (0x1f8ba, '藤井', '藤井'), (0x1f8c1, 'ときめ', '佟心'),
+             (0x1f8ba, '藤井', '藤井'), (0x1f8c1, 'ときめ', '时'),
              (0x1f8c8, '高上', '高上'), (0x1f8cf, '原田', '原田'),
              (0x1f8d6, '佐々木', '佐佐木'), (0x1f8dd, '鈴木', '铃木'),
              (0x1f8e4, '衛藤', '卫藤'), (0x1f8eb, '井上', '井上'),
              (0x1f8f2, '高橋', '高桥'), (0x1f8f9, '黒田', '黑田'),
              (0x1f900, '和浩', '和浩'), (0x1f907, '宣之', '宣之'),
              (0x1f90e, '一路', '一路'), (0x1f915, '景虎', '景虎'),
-             (0x1f91c, 'さとし', '思远'), (0x1f923, '淳', '淳'),
-             (0x1f92a, '秀徳', '秀德'), (0x1f931, 'めもる', '美玲'),
+             (0x1f91c, 'さとし', '聪'), (0x1f923, '淳', '淳'),
+             (0x1f92a, '秀徳', '秀德'), (0x1f931, 'めもる', '守'),
              (0x1f938, '浩一', '浩一'), (0x1f93f, '栄次郎', '荣次郎'),
-             (0x1f946, 'ジョン', '建华'), (0x1f94d, '弦', '弦'),
+             (0x1f946, 'ジョン', '囧'), (0x1f94d, '弦', '弦'),
              (0x1f954, '英幸', '英幸'), (0x1f95b, '秀登', '秀登'),
              (0x1f962, '紀三', '纪三'), (0x1f969, '信勝', '信胜'))
 NAME_ROWS = NAME_IMM + NAME_POOL
@@ -2118,6 +2120,59 @@ KANA_HOMO = {
  'ゥ':'屋','ェ':'也','ォ':'哟','ヮ':'瓦','ヰ':'伟','ヱ':'未','ヴ':'弗','ヵ':'咔',
  'ヶ':'克','ー':'—','―':'—','゛':'★','゜':'☆',
 }
+# The two kana tabs are repurposed as name-kanji keycaps (batch AE).  Each cell keeps its
+# own kana index -- the pool rows and the engine's input semantics are untouched -- and
+# only the bitmap at that index changes, so this moves no pool byte and no code-page slot.
+# Each page is one record the engine draws as a 6x15 grid, row-major: `$02` heads column
+# groups 2 and 3, `$01` closes an index *range* the engine expands itself (the ま/ら/な
+# rows store two cells and draw five), `$F0 $00` is an empty keycap, and one cell per page
+# is the long-vowel mark ($1B/$1C), which the 記号 page shares and which stays a dash.
+# So the two lines below are the 80 name kanji each page shows, in the order the player
+# reads them: 平假页 takes surnames and radicals, 片假页 male given-name characters, and
+# 高见公人 sits at cells 11-14, straight after 一二三四五六七八九十.
+NAME_KEYCAPS = (
+    '一二三四五六七八九十高见公人大小上下中天地山川木本松林森竹杉桐石岩'
+    '崎谷井冈岸岛田村前后边内外原野藤佐渡吉朝月星桥长间门阳云雪雷风波海'
+    '江河泉清润泽虹甫辅史康龙谦加',
+    '太郎助介亮仁彦彰悟悠敬春晓智毅淳博翔翼吾匠升和喜嘉成政敦文新昌昭显'
+    '时晃晋有正武治泰浩源准义肇至航良荣始孝宏宗定宣实承斗裕豪辰达邦雅雄'
+    '辉重金之丞镜如好也朗次刚司哉',
+)
+KEYCAP_PAGES = ((0x1F38E, 0x1F435), (0x1F436, 0x1F4DF))   # the 平假 / 片假 records
+assert all(len(line) == 80 for line in NAME_KEYCAPS)
+
+
+def keycap_cells(data):
+    """The glyph index of every keycap on the two kana pages, in screen order."""
+    pages = []
+    for lo, hi in KEYCAP_PAGES:
+        cells, i = [], lo
+        while i < hi and data[i]:
+            b = data[i]
+            if b < 0xF0:
+                i += 1
+                continue
+            idx = ((b & 0x0F) << 8) | data[i + 1]
+            if data[i + 2] == 0x01:
+                end = ((data[i + 3] & 0x0F) << 8) | data[i + 4]
+                cells.extend(range(idx, end + 1))
+                i += 5
+            else:
+                cells.append(idx)
+                i += 2
+        pages.append([c for c in cells if T.JIS_HIRA <= c < 0x0153])
+    return pages
+
+
+def kana_glyph_map(data):
+    """kana -> the character its record must draw: the keycap table, homophones elsewhere."""
+    glyph = dict(KANA_HOMO)
+    for cells, line in zip(keycap_cells(data), NAME_KEYCAPS):
+        assert len(cells) == len(line), 'keycap page has %d cells, not %d' % (
+            len(cells), len(line))
+        glyph.update({T.idx_to_char(c): ch for c, ch in zip(cells, line)})
+    return glyph
+
 # JP shinjitai (and old-form) codepoints still referenced by shipped data, mapped to
 # the Simplified glyph their record must now draw.  Produced by the translation itself
 # (glossary single-position alignments + the keyboard wave), not by a converter.
@@ -2224,6 +2279,7 @@ def backfill_records(code, char2idx, written_idx):
     """
     data = code.rom.data
     owned = set(char2idx.values()) | set(written_idx)
+    glyph = kana_glyph_map(data)
 
     def rec(ch):
         return W.record(ch, WQY_DX,
@@ -2234,15 +2290,15 @@ def backfill_records(code, char2idx, written_idx):
     while data[KANA_REMAP_LIST + n]:
         src, slot = data[KANA_REMAP_LIST + n], KANA_REMAP_BASE + n
         ch = T.idx_to_char(src)
-        if slot < T.MAX_INDEX and slot not in owned and ch in KANA_HOMO:
-            out[slot] = rec(KANA_HOMO[ch])
+        if slot < T.MAX_INDEX and slot not in owned:
+            out[slot] = rec(glyph[ch])
         n += 1
     for i in range(T.JIS_HIRA, 0x0153):        # direct kana records (katakana band)
         if i in owned or i in out:
             continue
         ch = T.idx_to_char(i)
-        if ch in KANA_HOMO:
-            out[i] = rec(KANA_HOMO[ch])
+        if ch in glyph:
+            out[i] = rec(glyph[ch])
     for i in range(T.JIS_KANJI, T.GLYPH_WRITABLE_MAX):  # kanji band
         if i in owned or i in out:
             continue
