@@ -52,6 +52,11 @@ def codec(path):
         ref = B.Codec(B.T.Rom(B.SRC_ROM))
         code.ph_off, code.ph_next = ref.ph_off, ref.ph_next
         code.sub_off, code.sub_next = ref.sub_off, ref.sub_next
+        # Same names the engine draws with: half the slots in this disc are characters
+        # JIS never had, and `parse_body` calls a body holding one "not plain text", so
+        # without them the walk files that call site as a variable and --dict loses the
+        # whole dictionary entry (批次 AL: e97d 「（好像没留下什么」 dropped over its 么).
+        code.names = slot_chars(code, path)
     return rom, code
 
 
