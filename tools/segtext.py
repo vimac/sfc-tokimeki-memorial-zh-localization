@@ -33,9 +33,10 @@ CJK = re.compile(r'[一-鿿]')
 ROM = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('-') else B.OUT_ROM
 # --blocks with a list narrows the sweep to those blocks; bare --blocks is the whole
 # corpus, which is what the acceptance gate asks for.
-_ARG = sys.argv.index('--blocks') + 1 if '--blocks' in sys.argv else 0
+_HAS = '--blocks' in sys.argv
+_ARG = sys.argv.index('--blocks') + 1 if _HAS else 1
 ONLY = ([int(x) for x in sys.argv[_ARG].split(',')]
-        if _ARG < len(sys.argv) and not sys.argv[_ARG].startswith('-') else [])
+        if _HAS and _ARG < len(sys.argv) and not sys.argv[_ARG].startswith('-') else [])
 DICT = '--dict' in sys.argv
 
 
