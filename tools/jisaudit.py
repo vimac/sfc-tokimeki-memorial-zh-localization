@@ -30,7 +30,7 @@ json_out = None
 if '--json' in argv:
     json_out = argv.pop(argv.index('--json') + 1)
 DIR = argv[0] if argv else os.path.join(ROOT, 'docs', 'prologue_zh')
-rom = argv[1] if len(argv) > 1 else os.path.join(ROOT, 'rom_prologue_zh.sfc')
+rom = argv[1] if len(argv) > 1 else T.ROM_ZH
 a = json.load(open(os.path.join(ROOT, 'docs', 'research', 'glyph_alloc.json')))
 ours = {int(v, 16) for g in ('fresh', 'inplace', 'at_stock') for v in a[g].values()}
 table, words = U.record_map(rom)

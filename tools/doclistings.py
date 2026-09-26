@@ -13,8 +13,11 @@ import sys
 import glob
 import os
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import tmtext as T
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ROM = os.path.join(ROOT, 'rom_original_japanese.sfc')
+ROM = T.ROM_JP
 LINE = re.compile(r'^'
                   r'(?:\$?([0-9A-Fa-f]{2}):([0-9A-Fa-f]{4})'
                   r'|([0-9A-Fa-f]{6})'

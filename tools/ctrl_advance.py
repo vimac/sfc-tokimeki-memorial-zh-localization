@@ -16,7 +16,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
 
-ROM = sys.argv[1] if len(sys.argv) > 1 else 'rom_original_japanese.sfc'
+ROM = sys.argv[1] if len(sys.argv) > 1 else T.ROM_JP
 rom = T.Rom(ROM)
 d = rom.data
 TAILS = [(b'\x4c\xa2\xca', 1, 'JMP $CAA2'), (b'\x4c\xa0\xca', 2, 'JMP $CAA0'),

@@ -1,4 +1,4 @@
-"""Build the Chinese prologue patch (block 144) of rom_original_japanese.sfc.
+"""Build the Chinese patch of the whole game, written onto the Japanese image.
 
 Model -- every part of it is proven by the byte-exact reconstruction assert in
 Codec.walk() and by the disassembly documented in docs/research/glyph-addressing.md:
@@ -48,7 +48,7 @@ Codec.walk() and by the disassembly documented in docs/research/glyph-addressing
     no text block, no name block and the kana-variant remap list reach, so the
     Japanese font is never rewritten and the rest of the game still renders.
 
-usage: python3 tools/build_prologue.py [--dump|--stats|--patch]
+usage: python3 tools/build_zh.py [--dump|--stats|--patch]
 """
 import sys, os, re, json, collections, unicodedata
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -56,8 +56,8 @@ import tmtext as T
 import wqyfont as W
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC_ROM = os.path.join(ROOT, 'rom_original_japanese.sfc')
-OUT_ROM = os.path.join(ROOT, 'rom_prologue_zh.sfc')
+SRC_ROM = T.ROM_JP
+OUT_ROM = T.ROM_ZH
 BLOCK = 144
 NEIGHBOR = 71                        # the block that follows in address order
 END = 0x22FA1F                       # text_ptr(71): first byte past the block

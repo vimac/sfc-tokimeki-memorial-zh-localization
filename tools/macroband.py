@@ -120,7 +120,7 @@ def census(rom, code, use_cache=True):
 
 
 if __name__ == '__main__':
-    import build_prologue as B
+    import build_zh as B
     rom = T.Rom()
     c = census(rom, B.Codec(rom), use_cache='--refresh' not in sys.argv)
     print('available sub indexes: %d' % len(c['available']))

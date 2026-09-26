@@ -7,8 +7,9 @@ import os
 import struct
 import zlib
 
-ROM_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "rom_original_japanese.sfc")
+import tmtext
+
+ROM_PATH = tmtext.ROM_JP
 
 _cache = {}
 

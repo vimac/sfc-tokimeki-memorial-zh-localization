@@ -22,7 +22,7 @@ import sys, os, re, glob, json, collections
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
-import build_prologue as B
+import build_zh as B
 
 # 段末那一个字符会被编码成框的终止码，所以它不算字面壳（AGENTS §五 终止符表）
 TERMC = set(u'。？！、…」）’】「『（')
@@ -41,7 +41,7 @@ for _p in glob.glob('%s/docs/research/block*_zh.txt' % ROOT) + ['%s/docs/researc
 
 
 def cost(s):
-    """What a line costs its box, in bytes, on the code page the current disc carries."""
+    """What a line costs its box, in bytes, on the code page the current image carries."""
     n = 0
     for seg in s.split('|'):
         for i, c in enumerate(seg):

@@ -11,11 +11,12 @@ usage: python3 tools/prologue_shots.py [transcript] [outdir]
 import sys, os, re, shutil, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boxbudget as BB
+import tmtext as T
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = sys.argv[1] if len(sys.argv) > 1 else '/tmp/play/boot_walk_zh.txt'
 OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT, 'docs/prologue_zh')
-FRAMES = os.path.dirname(SRC) + '/pp_rom_prologue_zh'
+FRAMES = os.path.dirname(SRC) + '/pp_' + T.rom_tag(T.ROM_ZH)
 
 HEAD, LAST = 0x22F1AB, 0x22FA1E            # block 144: head $0A, then 88 contiguous boxes
 boxes, spans, zh = BB.pack()[:3]

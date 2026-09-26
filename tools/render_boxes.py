@@ -10,13 +10,13 @@ pools answer calls that only exist mid-game), so a batch of translated boxes can
 be looked at without booting an emulator: pass the block and the box range the
 batch covers, and the labels come out with kana counted per box.
 
-usage: python3 tools/render_prologue.py [rom] [block] [first:last]
+usage: python3 tools/render_boxes.py [rom] [block] [first:last]
 """
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 ROM = sys.argv[1] if len(sys.argv) > 1 else B.OUT_ROM
 BLK = int(sys.argv[2]) if len(sys.argv) > 2 else B.BLOCK
@@ -24,7 +24,7 @@ BLK = int(sys.argv[2]) if len(sys.argv) > 2 else B.BLOCK
 # the translated prefix is still Japanese, so the range defaults to the leading boxes.
 RANGE = sys.argv[3] if len(sys.argv) > 3 else ''
 OUT = 'docs/research/render_%s%s' % (
-    os.path.splitext(os.path.basename(ROM))[0],
+    T.rom_tag(ROM),
     '' if BLK == B.BLOCK and not RANGE else '_b%d%s' % (BLK, RANGE.replace(':', '-')))
 CELL, PITCH, MARGIN = 16, 16, 6
 BOX_CTRL, LINE_CTRL_B = (0x0C, 0x0A), 0x14
@@ -131,7 +131,7 @@ def main():
     code = B.Codec(rom)
     # The span tables come from the source ROM: name-pool records sit in the
     # sub-text table's dead zone, and their patched glyph pairs re-parse as
-    # body offsets there (see patched_codec in build_prologue).
+    # body offsets there (see patched_codec in build_zh).
     ref = B.Codec(B.T.Rom(B.SRC_ROM))
     code.ph_off, code.ph_next = ref.ph_off, ref.ph_next
     code.sub_off, code.sub_next = ref.sub_off, ref.sub_next
@@ -154,7 +154,7 @@ def main():
     for kind in ('fresh', 'inplace'):
         for ch, idx in alloc[kind].items():
             slot2ch[int(idx, 16)] = ch
-    # A dictionary body reads a glyph slot, and half the slots in this disc are
+    # A dictionary body reads a glyph slot, and half the slots in this image are
     # characters the JIS band never had.  Without the patch's own names every
     # Chinese body parses as "not plain text" and its call site is dropped, so the
     # box under-reads (批次 AH: 3,123 of 59,703 call sites).

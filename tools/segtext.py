@@ -1,6 +1,6 @@
 """Prove: is a punctuation seam on screen ours, or is it the script's own step boundary?
 
-`render_prologue.py` answers "what does a box show", and it must -- that is the
+`render_boxes.py` answers "what does a box show", and it must -- that is the
 acceptance gate.  But it throws away two things this question needs: which *script
 step* (a `blockN_work.tsv` row, the span the pointer grid freezes) each character came
 from, and every name/pool insertion it skips.  So a box label like 「、、送我礼物了。」 or
@@ -26,7 +26,7 @@ usage: python3 tools/segtext.py [rom] [--blocks 0,8] [--json out.json]   # bare 
 import sys, os, re, json, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 SEAM = re.compile(r'，。|。，|、。|。。|…，|？。|！。|，，|、，')
 CJK = re.compile(r'[一-鿿]')
@@ -43,9 +43,9 @@ DICT = '--dict' in sys.argv
 def codec(path):
     """A reader whose span tables come from the source ROM, like every other gate.
 
-    Records for the name and place pools live inside the patched disc's sub-text
-    span table, so re-deriving the table from the disc we wrote shifts spans
-    (build_prologue.patched_codec documents the mangle).
+    Records for the name and place pools live inside the patched image's sub-text
+    span table, so re-deriving the table from the image we wrote shifts spans
+    (build_zh.patched_codec documents the mangle).
     """
     rom = T.Rom(path)
     code = B.Codec(rom)
@@ -53,7 +53,7 @@ def codec(path):
         ref = B.Codec(B.T.Rom(B.SRC_ROM))
         code.ph_off, code.ph_next = ref.ph_off, ref.ph_next
         code.sub_off, code.sub_next = ref.sub_off, ref.sub_next
-        # Same names the engine draws with: half the slots in this disc are characters
+        # Same names the engine draws with: half the slots in this image are characters
         # JIS never had, and `parse_body` calls a body holding one "not plain text", so
         # without them the walk files that call site as a variable and --dict loses the
         # whole dictionary entry (批次 AL: e97d 「（好像没留下什么」 dropped over its 么).
@@ -62,7 +62,7 @@ def codec(path):
 
 
 def slot_chars(code, path):
-    """Glyph index -> the character that slot actually paints on this disc.
+    """Glyph index -> the character that slot actually paints on this image.
 
     Empty for the source ROM: there every slot still holds its own JIS glyph, so
     `idx_to_char` is already the truth and applying our allocation to it would

@@ -144,7 +144,7 @@ def main(argv):
                 for y, line in decode_lines(os.path.join(dirpath, n), table, words, label):
                     print('  y%3d %s' % (y, line))
         return
-    table, words = record_map(os.path.join(ROOT, 'rom_original_japanese.sfc'))
+    table, words = record_map(T.ROM_JP)
     seen = collections.defaultdict(list)
     total = 0
     for dirpath in dirs:

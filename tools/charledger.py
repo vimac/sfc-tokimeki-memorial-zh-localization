@@ -84,7 +84,7 @@ def text_counts(text):
 
 
 def row_counts():
-    import build_prologue as B
+    import build_zh as B
     out = collections.Counter()
     for row in B.UI_TEXT_ROWS:
         for ch in row[3]:
@@ -142,7 +142,7 @@ def report(db):
     print('  "inplace" is the free tier -- those chars already have a stock index of their own, '
           'so a whole-font backfill rewrites the record in place at zero slot cost, and '
           'surviving Japanese text still reads correctly.')
-    print('  "new" has to be placed: the fresh pool is what build_prologue.py prints on its '
+    print('  "new" has to be placed: the fresh pool is what build_zh.py prints on its '
           '`glyphs:` line every build -- read it there, never here, because this file is a '
           'snapshot and that one is the ledger.  The rest waits for the end-of-game B-tier '
           'takeover, one stock index at a time, as its last Japanese reference gets translated.')

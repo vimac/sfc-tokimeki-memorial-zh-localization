@@ -9,7 +9,7 @@
 1. **调用点**：`dictscan` 按「现中文正文是段内子串」枚举每个宏体的调用，分**裸**（那一段只有宏体
    + 终止符）与**带壳**（体前后还有实义字面）。改宏体＝同时改全部带壳行，否则那些框不再折叠、
    凭空多出整段字面字节（AGENTS §五、批次 AG 的 b47）。
-2. **宏体自己的跨度**：只能用 `build_prologue.macro_span()`，**不能用 `phrase_glossary.tsv` 的第 2 列**。
+2. **宏体自己的跨度**：只能用 `build_zh.macro_span()`，**不能用 `phrase_glossary.tsv` 的第 2 列**。
    那列是人账，实测有三行写着 `cap 0`（`e9c2`/`ea34`/`e84d`）却住着 6~8 B 的中文正文，还有一批子文本
    宏整列空白——裁决表里所有「span 未登记／cap 异常」的悬案都出在这一列。本批按 `macro_span()` 把这一列
    全表刷了一遍：1,016 条有中文正文的条目里 **383 行**的登记值与真值不符。刷完仪表和构建对上了——
@@ -37,7 +37,7 @@
 ## 三、本批落库的 13 条宏体
 
 「调用」列＝改后 `dictscan` 复测的段数（裸/带壳）；带壳的那些行**同一批已照新体重写**，
-复测时它们已带新正文。全部改动经 `build_prologue.py --patch` 复账（见第六节）。
+复测时它们已带新正文。全部改动经 `build_zh.py --patch` 复账（见第六节）。
 
 | 宏码 | 旧正文 | 新正文 | span | 体 B | 调用（裸/壳） | 出处与理由 |
 |---|---|---|---|---|---|---|
@@ -118,17 +118,17 @@
 
 ## 六、验收
 
-全部数字是 2026-09-26 从**批次 AN 那颗交付盘**（md5 `2af8a44604811808545d0d9b2758d598`）
-重量一遍，母盘 `cd36eb8982de4bf8369deb9f2f23e590` 复述未变。这颗盘已被批次 AO 的 `e7378dc32f6ce8abb788b57c0cefffb4`
+全部数字是 2026-09-26 从**批次 AN 那个交付镜像**（md5 `2af8a44604811808545d0d9b2758d598`）
+重量一遍，原镜像 `cd36eb8982de4bf8369deb9f2f23e590` 复述未变。这个镜像已被批次 AO 的 `e7378dc32f6ce8abb788b57c0cefffb4`
 取代，AO 的账在 `docs/RELEASE_zh.md` §三：
 
-* `build_prologue.py --patch`：142 块全部 `0 over, 0 broken`、`grid: all match the Japanese spans and
+* `build_zh.py --patch`：142 块全部 `0 over, 0 broken`、`grid: all match the Japanese spans and
   terminators`、每块 `bodies drawn: 0 kana, 0 unknown-slot`、`phrase bodies: 1012 of 1016`（4 条正文长过
   自己的跨度、永不折叠）、`code page: 86/86`、`glyphs: 2289`、`font: 2293/2293`、`bank lines: 477/477`、
   `ui: 1026/1026`、`VERDICT: all checks passed`。
-* `render_prologue.py` 142 块并行：22,600 框 / 45,780 条上屏行 / 271,615 格，`0 kana cells`、
+* `render_boxes.py` 142 块并行：22,600 框 / 45,780 条上屏行 / 271,615 格，`0 kana cells`、
   `0 "?" cells`、0 unknown-slot；157 处运行时变量调用点仍画不出来（§三.10 那两类）。
-* `segtext.py --blocks`：45,784 步，`INSIDE 0`／`JOIN 116`（母盘同族 111，引擎在步界自己补的）／`POOL-steps 230`。
+* `segtext.py --blocks`：45,784 步，`INSIDE 0`／`JOIN 116`（原镜像同族 111，引擎在步界自己补的）／`POOL-steps 230`。
 * `segtext.py --dict`：**965 条词典体 / 55,236 次调用**，20 条无词典行（是 `a0`-`a7` 那族终止码变体），
   **0 条还带假名**。
 * `name_tables.py`：PASS，0/76 条记录留假名或未知格。

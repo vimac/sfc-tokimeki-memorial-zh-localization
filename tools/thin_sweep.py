@@ -13,7 +13,7 @@ import sys, csv, json, pathlib, collections, argparse
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent / 'docs/research'
 JP_FUN = set('かよねねなよネヨもわぞざぜっんンぁぃぅぇぉゃゅょッ々ー')
@@ -68,7 +68,7 @@ def insertions(a, b):
 
 
 def steps():
-    """全盘逐步：日文显示串、中文、实义字数、所在框的字节余量。"""
+    """整个镜像逐步：日文显示串、中文、实义字数、所在框的字节余量。"""
     pl = B.plan(verbose=False)
     out = []
     for p in sorted(ROOT.glob('block*_work.tsv')):
@@ -151,7 +151,7 @@ def report(hits, wall, path):
     L = ['# 批次 AH 清单：同一句日文在别处写得更满、这一框被写薄了',
          '',
          '这是批次 AG 那条路（「同一句日文在别处本来译得很好、这一框却写成残句」）按全库铺开后的清单。',
-         '复现：`python3 tools/thin_sweep.py`（约 3 分钟，读母盘算每框字节账）。',
+         '复现：`python3 tools/thin_sweep.py`（约 3 分钟，读原镜像算每框字节账）。',
          '',
          '## 一、判据（五条同时成立才算命中）', '',
          '1. **同一句日文**：剥掉句尾助词和 `もう/どうも/やっぱり/実は/ほんとうに` 这类前缀后一致，'
@@ -167,7 +167,7 @@ def report(hits, wall, path):
          '## 二、命中 %d 处 / %d 种形态' % (len(hits), len(rows)), '',
          '出现 >=2 次的 **%d 种覆盖 %d 处**（下表）；余下 %d 种各 1 处（§三）。' % (
              len(multi), sum(len(v) for _, v in multi), len(single)), '',
-         '「补什么」全部取自本盘别处已经上过屏的写法：不新增措辞、不新增字模。',
+         '「补什么」全部取自本镜像别处已经上过屏的写法：不新增措辞、不新增字模。',
          '代价只是每个补字 1~2 字节，判据 5 按 2 B/字的最坏情况留量；落库前还要逐框实测一遍。', '',
          '| 处数 | 日文（词干） | 现在屏幕上 | 建议写法（别处的写法） | 补的字 | 最紧的框余量 |',
          '|---|---|---|---|---|---|']

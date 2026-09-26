@@ -17,7 +17,7 @@ usage: python3 tools/boxbudget.py [--over] [--json]
 import sys, os, json, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 NAME = os.path.join(B.ROOT, 'docs', 'research', 'prologue_zh.txt')
 
@@ -31,7 +31,7 @@ def pack(extra=(), blk=None):
 
     This used to re-derive a code page from one block alone; the page is a single
     global resource shared by every translated block, so re-deriving it made this
-    tool disagree with the ROM the build wrote.  `build_prologue.plan()` is now
+    tool disagree with the ROM the build wrote.  `build_zh.plan()` is now
     the only source of truth and every verifier reads it through here.
     """
     global _PL

@@ -1,6 +1,6 @@
 """Decode the name tables out of a built ROM, through the tables' OWN offsets.
 
-`build_prologue.verify_name_tables` checks the records it wrote; this one is the
+`build_zh.verify_name_tables` checks the records it wrote; this one is the
 independent read -- it takes the three `$E803`/`$E804`/`$E805` offset tables, the
 `$E802` date-location pool and the surname list as they now sit in the file and
 follows the distances the engine will, so a record that no longer begins where its
@@ -16,8 +16,9 @@ allocated.
 """
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import tmtext as T
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ROM = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'rom_prologue_zh.sfc')
+ROM = sys.argv[1] if len(sys.argv) > 1 else T.ROM_ZH
 POOL_HEADS = (0x21A2A6, 0x21A2B7, 0x21A2C8)     # $E804 / $E805 / $E803
 SURNAME = (0x180C0, 0x18107)                    # right after the 96-word SB table
 N_OFFS = 14

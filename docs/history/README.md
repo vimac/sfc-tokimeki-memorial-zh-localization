@@ -12,5 +12,5 @@
 | `HANDOFF_v2_2026-09-18.md` | 09-18 | 第二版交接（JIS 顶替方案时代），带「已非权威」横幅 |
 | `evidence_jis_2026-09-18/` | 09-18 | 17 张乱码截图，是当时要求重建验收链的原始证据 |
 
-当前权威只有 `docs/RELEASE_zh.md`（进度、两颗盘、验收 gate、目录归属）；
+当前权威只有 `docs/RELEASE_zh.md`（进度、两个镜像、验收 gate、目录归属）；
 引擎事实看 `docs/research/*.md`（每条都附 ROM 偏移，可用 `tools/dis2.py` 复现）。

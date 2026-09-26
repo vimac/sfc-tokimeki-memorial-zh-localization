@@ -16,7 +16,7 @@ usage: python3 tools/bank_rows.py [--min N]
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 LO, HI = B.BANK_ALL
 MIN = 3

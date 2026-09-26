@@ -19,7 +19,7 @@ usage: python3 tools/block_boxes.py <block> [--json out.json] [--end off] [--raw
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 BLOCKS = 160
 # total bytes consumed by a control code, including the code byte itself -- one copy
@@ -145,7 +145,7 @@ def segments(rom, lo, hi):
 
 def main():
     blk = int(sys.argv[1])
-    rom = T.Rom('rom_original_japanese.sfc')
+    rom = T.Rom(T.ROM_JP)
     lo = rom.text_ptr(blk)
     after = sorted({p for p in (rom.text_ptr(i) for i in range(BLOCKS))
                     if p is not None and p > lo})

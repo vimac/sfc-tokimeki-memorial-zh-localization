@@ -13,13 +13,13 @@ usage: python3 tools/ctrl_widths.py [rom] [block]
 import sys, os, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 # advance width per control code: measured by tools/ctrl_advance.py, and the one
-# copy of that table is build_prologue.CTRL_WIDTH (everything not listed is 1).
+# copy of that table is build_zh.CTRL_WIDTH (everything not listed is 1).
 WIDE = {c: w for c, w in B.CTRL_WIDTH.items() if w > 1}
 
-ROM = sys.argv[1] if len(sys.argv) > 1 else 'rom_original_japanese.sfc'
+ROM = sys.argv[1] if len(sys.argv) > 1 else T.ROM_JP
 BLK = int(sys.argv[2]) if len(sys.argv) > 2 else 144
 
 rom = T.Rom(ROM)

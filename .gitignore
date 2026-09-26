@@ -1,5 +1,5 @@
-# ROM 镜像与模拟器存档。二进制一律不入库；权威盘号与「一条命令重建」写在
-# docs/RELEASE_zh.md，摆放规则（根目录只留母盘与交付盘，其余在 ~/retro/roms/）写在 AGENTS.md §一。
+# ROM 镜像与模拟器存档。二进制一律不入库；权威镜像 md5 与「一条命令重建」写在
+# docs/RELEASE_zh.md，摆放规则（根目录只留原镜像与交付镜像，其余在 ~/retro/roms/）写在 AGENTS.md §一。
 *.sfc
 *.smc
 *.srm
@@ -7,7 +7,7 @@
 *.bps
 *.xdelta
 
-# 从母盘 dump 出来的分析文本：tools/extract_all.py、tools/dump_text.py、tools/extract_font.py 各自重生成。
+# 从原镜像 dump 出来的分析文本：tools/extract_all.py、tools/dump_text.py、tools/extract_font.py 各自重生成。
 out/
 
 # 18 MB 第三方同人资料（J2E），只读输入，不是我们能管版本的东西。
@@ -20,8 +20,9 @@ translations/tm_coverage.txt
 # prologue_shots.py 从 walk 重截的渲染证据；index.txt 转录要入库。
 # 早期那批「乱码」截图重截不回来，仍入库，但已挪进 docs/history/（非权威）。
 docs/prologue_zh/*.png
-# render_prologue.py 的分块输出目录同理：png 是派生物，gate 读的是 labels.txt，一条命令重生成。
-docs/research/render_rom_prologue_zh*/
+# render_boxes.py 的分块输出目录同理：png 是派生物，gate 读的是 labels.txt，一条命令重生成。
+# 目录名带镜像短标（render_Chinese_Localized_b<块>_<框range>），所以整批 ignore。
+docs/research/render_*/
 
 __pycache__/
 *.pyc

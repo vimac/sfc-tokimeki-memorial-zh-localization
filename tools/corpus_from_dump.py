@@ -42,7 +42,7 @@ def raw_files():
 
 
 def main():
-    rom = T.Rom('rom_original_japanese.sfc')
+    rom = T.Rom(T.ROM_JP)
     band = {T.idx_to_char(i) for i in range(T.JIS_KANJI, T.MAX_INDEX)} - {None}
     lines = dump_lines()
     text = {f: [MARKUP.sub('', l) for l in ls] for f, ls in lines.items()}

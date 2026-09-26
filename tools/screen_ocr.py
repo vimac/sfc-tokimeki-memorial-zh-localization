@@ -101,7 +101,7 @@ def ocr(path, fm, labels, x0=127, y0=161, rows=3):
 
 if __name__ == '__main__':
     rom = sys.argv[1] if sys.argv[1].endswith('.sfc') else os.path.join(ROOT, sys.argv[1])
-    frames = sys.argv[2:] or ['/tmp/play/trace_rom_prologue_zh/f011.png']
+    frames = sys.argv[2:] or ['/tmp/play/pp_' + T.rom_tag(rom) + '/f011.png']
     fm, labels = font_map(rom, os.path.join(ROOT, 'docs/research/glyph_alloc.json'))
     for p in frames:
         print('%-12s %s' % (os.path.basename(p), ' / '.join(ocr(p, fm, labels))))

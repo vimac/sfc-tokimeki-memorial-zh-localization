@@ -1,5 +1,5 @@
 """Emit the translation budget sheet for one TEXT_PTRS block, in the exact line
-format `build_prologue.py` eats (one line per segment, `|` between runs).
+format `build_zh.py` eats (one line per segment, `|` between runs).
 
 The Japanese stream decides the geometry: a box starts where the engine's grid
 probe says, so a Chinese line has to fit the box it replaces.  This prints, per
@@ -12,7 +12,7 @@ usage: python3 tools/block_work.py <block> [prefix]
 import sys, os, json, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
-import build_prologue as B
+import build_zh as B
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 blk = int(sys.argv[1])
@@ -24,7 +24,7 @@ if os.sep in out:
 else:
     jdir = os.path.join(root, 'docs', 'research')
 
-rom = T.Rom(os.path.join(root, 'rom_original_japanese.sfc'))
+rom = T.Rom(T.ROM_JP)
 code = B.Codec(rom)
 try:
     lo, hi = B.block_extent(rom, blk)
@@ -249,7 +249,7 @@ with open(os.path.join(jdir, out + '_work.tsv'), 'w',
             r['n'], r['off'], r['bytes'], r['ctrl'], r['cap'], r['box'], r['term'],
             runs.replace('\t', ' ')))
 # the translator's reference: Japanese line, commented, one pair per segment.
-# `_zh.txt` is the file build_prologue reads and must hold only the translation.
+# `_zh.txt` is the file build_zh reads and must hold only the translation.
 with open(os.path.join(jdir, out + '_jp.txt'), 'w',
           encoding='utf-8') as f:
     for r in rows:

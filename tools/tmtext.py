@@ -10,10 +10,26 @@ Bands proven from the text dispatcher at $80:CA6D (file 0x4A6D):
 
 idx -> glyph record:  0x3E8000 + (idx // 0x492) * 0x8000 + (idx % 0x492) * 28
 """
+import re
 import sys, os
 
-ROM_DEFAULT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                           'rom_original_japanese.sfc')
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# The two images that live in the project root, named after the upstream release
+# they come from.  AGENTS.md §一: the Japanese one is read-only for every tool.
+ROM_JP = os.path.join(ROOT, 'Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc')
+ROM_ZH = os.path.join(ROOT, 'Tokimeki Memorial - Densetsu no Ki no Shita de (Japan)'
+                            ' (Rev 1) (Chinese Localized).sfc')
+ROM_DEFAULT = ROM_JP
+
+
+def rom_tag(path):
+    """Shell-safe tag for a ROM path, for names derived from an image (output dirs,
+    walk logs).  The file names carry spaces and parentheses, so the last two
+    alphanumeric runs are what distinguishes the two images: Rev_1 vs Chinese_Localized.
+    """
+    stem = os.path.splitext(os.path.basename(path))[0]
+    runs = re.findall(r'[A-Za-z0-9]+', stem)
+    return '_'.join(runs[-2:] or ['rom'])
 
 CTRL_TABLE   = 0x4B0B
 SB_TABLE     = 0x18000

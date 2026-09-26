@@ -1,6 +1,6 @@
 # 文本派发器里各控制码的宽度
 
-数据全部由 `tools/ctrl_advance.py` 从母盘实测得出：它顺着 file `0x4B0B` 那张表逐个看了 48 槽，
+数据全部由 `tools/ctrl_advance.py` 从原镜像实测得出：它顺着 file `0x4B0B` 那张表逐个看了 48 槽，
 其中 47 槽（`$00`–`$2E`）是真处理程序，第 48 槽 `$2F` 已经出了表尾、读出来是代码字节 `$00A9`；
 每槽都去追函数尾部跳到哪条前进桩。`$80:CA6D` 的派发器是这样分流的：
 
@@ -20,7 +20,7 @@
 80CA8C: BF 00 80 83    LDA $838000,X
 ```
 
-（复现：`python3 tools/dis2.py rom_original_japanese.sfc 0x4A6A 0x26 0x80A6A`。）
+（复现：`python3 tools/dis2.py Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc 0x4A6A 0x26 0x80A6A`。）
 
 前进桩就是 `$CA9A/$CA9C/$CA9E/$CAA0/$CAA2` 处叠起来的一串 `INC $B4`，所以处理程序尾部跳到哪一
 条，就交代了这条码吃掉几个流字节：`JMP $CAA2` = 1、`JMP $CAA0` = 2、`JMP $CA9E` = 3、

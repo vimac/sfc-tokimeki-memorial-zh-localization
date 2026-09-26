@@ -15,7 +15,7 @@ import tmtext as T
 import screen_ocr as S
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ROM = sys.argv[1] if len(sys.argv) > 1 else 'rom_prologue_zh.sfc'
+ROM = sys.argv[1] if len(sys.argv) > 1 else T.ROM_ZH
 NP = int(sys.argv[2]) if len(sys.argv) > 2 else 90
 ENVDIR = os.path.expanduser(
     '~/.local/lib/python3.14/site-packages/stable_retro/data/stable/TokimekiSFC-Snes-v0')
@@ -24,7 +24,7 @@ slot.use(ROM)
 from play import env, step, load_state, press, save_state  # noqa: E402
 
 FM, LABELS = S.font_map(ROM, os.path.join(ROOT, 'docs/research/glyph_alloc.json'))
-OUT = '/tmp/play/pp_' + os.path.splitext(os.path.basename(ROM))[0]
+OUT = '/tmp/play/pp_' + T.rom_tag(ROM)
 os.makedirs(OUT, exist_ok=True)
 seen_at = {}                                          # (pointer, text) -> how often shown
 
@@ -123,7 +123,7 @@ def enter():
 
 
 def main():
-    stem = os.path.splitext(os.path.basename(ROM))[0]
+    stem = T.rom_tag(ROM)
     for f in os.listdir(OUT):                        # frames are keyed by press number
         if f.endswith('.png'):
             os.remove(os.path.join(OUT, f))
