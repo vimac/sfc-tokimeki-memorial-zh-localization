@@ -1,5 +1,5 @@
 # ROM 镜像与模拟器存档。二进制一律不入库；权威镜像 md5 与「一条命令重建」写在
-# docs/RELEASE_zh.md，摆放规则（根目录只留原镜像与交付镜像，其余在 ~/retro/roms/）写在 AGENTS.md §一。
+# PROGRESS.md，摆放规则（根目录只留原镜像与交付镜像，其余在 ~/retro/roms/）写在 AGENTS.md §一。
 *.sfc
 *.smc
 *.srm

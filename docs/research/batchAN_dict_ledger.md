@@ -102,7 +102,7 @@
 
 **本表标了 A′ 的六条键（`ea01`/`e968`/`e9fc`/`ec6d`/`e8c1`/`e89a`）到批次 AQ 全部有了中文正文**，
 外加 AQ 复测新发现的 `e96c`——**已知空槽清零**。以后这条路的开工方式是「重测出候选键」，
-不是照本表按图索骥（本表已经没有待建项了）。措辞全部来自用户 2026-09-26 的定稿，账在 `RELEASE_zh.md` §三批次 AQ 段。
+不是照本表按图索骥（本表已经没有待建项了）。措辞全部来自用户 2026-09-26 的定稿，流水账在 git log 的批次 AQ 提交说明里。
 
 **占卜机「相性」一族（`e979`／`ea0b`）不是欠账**：批次 AP 用修好定价之后的 `dict_blast` 复测，两条正文早已在库里并在折——
 `e979`「二人的相性，」11 B／上限 12、66 段（裸 9／真壳 57），`ea0b`「相性不好吧」7 B／上限 10、10 段（裸 2／尾挂 8），
@@ -120,7 +120,7 @@
 
 全部数字是 2026-09-26 从**批次 AN 那个交付镜像**（md5 `2af8a44604811808545d0d9b2758d598`）
 重量一遍，原镜像 `cd36eb8982de4bf8369deb9f2f23e590` 复述未变。这个镜像已被批次 AO 的 `e7378dc32f6ce8abb788b57c0cefffb4`
-取代，AO 的账在 `docs/RELEASE_zh.md` §三：
+取代，AO 及之后每批的账在 git log，当前状态在 `PROGRESS.md`。本节留的是 AN 当时的快照：
 
 * `build_zh.py --patch`：142 块全部 `0 over, 0 broken`、`grid: all match the Japanese spans and
   terminators`、每块 `bodies drawn: 0 kana, 0 unknown-slot`、`phrase bodies: 1012 of 1016`（4 条正文长过
@@ -136,4 +136,4 @@
 * `doclistings.py`：270 行反汇编清单 0 mismatch。
 
 批次 AN **没走模拟器层**：`prologue_zh.txt` 一行没动、`block8` 零改动、`block0` 只改了 13 行电话／系统池
-——那些画面在序章 walk 里走不到（AGENTS §三）。明细同步在 `RELEASE_zh.md` §二、§三。
+——那些画面在序章走查里走不到（AGENTS §三）。当前镜像与验收见 `PROGRESS.md` §二、§三。

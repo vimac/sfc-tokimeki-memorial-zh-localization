@@ -2,7 +2,7 @@
 
 Hand-copied and hand-condensed listings drift: two lines in `control-codes.md` and
 `calendar-colour.md` carried operand bytes under the wrong address.  This walks
-`docs/**/*.md`, `AGENTS.md` and `docs/RELEASE_zh.md`, reads each `ADDR: BB BB BB`
+`docs/**/*.md`, `AGENTS.md` and `PROGRESS.md`, reads each `ADDR: BB BB BB`
 line, applies the LoROM map `file = (bank-0x80)*0x8000 + (addr & 0x7FFF)`, and
 compares against the read-only master.  A 4-digit address is assumed to be bank $80.
 
@@ -27,7 +27,7 @@ LINE = re.compile(r'^'
 
 def listings():
     docs = sorted(glob.glob(os.path.join(ROOT, 'docs', '**', '*.md'), recursive=True))
-    for name in ('AGENTS.md',):
+    for name in ('AGENTS.md', 'PROGRESS.md'):
         docs.append(os.path.join(ROOT, name))
     for path in docs:
         with open(path, encoding='utf-8') as handle:
