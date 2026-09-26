@@ -3,9 +3,16 @@
 *.sfc
 *.smc
 *.srm
+*.bsz
 *.ips
 *.bps
 *.xdelta
+
+# 模拟器按镜像名自动出的截图（…-001.bmp）和桌面截图（screenshot001.png）：走查证据由
+# prologue_shots.py 从 walk 重生成，这几张是手按出来的，不入库。
+screenshot*.png
+*.sfc-*.bmp
+*-0*.bmp
 
 # 从原镜像 dump 出来的分析文本：tools/extract_all.py、tools/dump_text.py、tools/extract_font.py 各自重生成。
 out/
@@ -17,8 +24,7 @@ reference/
 translations/pending.json
 translations/tm_coverage.txt
 
-# prologue_shots.py 从 walk 重截的渲染证据；index.txt 转录要入库。
-# 早期那批「乱码」截图重截不回来，仍入库，但已挪进 docs/history/（非权威）。
+# prologue_shots.py 从 walk 重截的渲染证据；只有 index.txt 转录入库。
 docs/prologue_zh/*.png
 # render_boxes.py 的分块输出目录同理：png 是派生物，gate 读的是 labels.txt，一条命令重生成。
 # 目录名带镜像短标（render_Chinese_Localized_b<块>_<框range>），所以整批 ignore。
