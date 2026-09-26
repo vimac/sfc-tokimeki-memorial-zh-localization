@@ -146,7 +146,7 @@ start-screenshots/     日文原版启动流程截图
 `prologue_zh.txt`、`block8_zh.txt`）、`glyph_alloc.json`、`nameplate_glyph_indices.json`、
 `ui_glyph_indices.json`，以及每批都要拿去比对的 `blockN_work.tsv`。
 **派生物不入库**：`blockN_jp.txt`、`blockN_work.json`、`*_seg.txt` 由 `tools/block_work.py <块号>` 重生成，
-`blockN_enc.json` 由每次构建顺手刷新。整棵树现在 354 个跟踪文件；早期草稿、侦察期脚本和破解期旧笔记
+`blockN_enc.json` 由每次构建顺手刷新。整棵树现在 355 个跟踪文件；早期草稿、侦察期脚本和破解期旧笔记
 清过三轮，名单在 git log 里，要找回从历史取。
 
 三张口径表（行数是去掉注释后的表项）：`name_glossary.tsv` 55 行人名、`term_glossary.tsv` 31 行系统术语、
