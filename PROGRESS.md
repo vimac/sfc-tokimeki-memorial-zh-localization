@@ -4,7 +4,8 @@
 
 - 工作规则和机器事实（编码、字模、词典、池子）在 `AGENTS.md`，不在这里重复。
 - 每批干了什么是流水账，看 `git log --oneline`；本文件只写当前状态。
-- `docs/history/` 里的旧交接文档已作废，只用来查历史，里面的数字不能引用。
+- 早期破解笔记和旧交接文档已经不在树里（批次AT 删掉 `docs/history/`）；要看原文用
+  `git show ver0.99:docs/history/`。里面的数字早就被后续批次覆盖了，别引用。
 
 最后核对：2026-09-26。下面每个数字都是从当前这个中文镜像上量出来的。
 
@@ -131,7 +132,6 @@ PROGRESS.md            本文件：现状
 AGENTS.md              规则与工程纪律
 docs/research/         逆向结论（*.md，带地址和偏移）+ 构建输入 + 活译文源
 docs/prologue_zh/      序章渲染表与 index.txt 转录（PNG 可重生成、不入库）
-docs/history/          旧交接与破解笔记，非权威
 docs/ALL_CHARACTERS.txt  wiki 角色资料，人名译法依据
 tools/                 34 个脚本（验收链在 §三，其余是侦察仪表）
 translations/          三张口径表 + tm.json 命中表；中文正文不住这里，在 docs/research/
@@ -144,8 +144,8 @@ start-screenshots/     日文原版启动流程截图
 `prologue_zh.txt`、`block8_zh.txt`）、`glyph_alloc.json`、`nameplate_glyph_indices.json`、
 `ui_glyph_indices.json`，以及每批都要拿去比对的 `blockN_work.tsv`。
 **派生物不入库**：`blockN_jp.txt`、`blockN_work.json`、`*_seg.txt` 由 `tools/block_work.py <块号>` 重生成，
-`blockN_enc.json` 由每次构建顺手刷新。整棵树现在 375 个跟踪文件；早期草稿和侦察期脚本清过两轮，
-名单在 git log 里，要找回从历史取。
+`blockN_enc.json` 由每次构建顺手刷新。整棵树现在 354 个跟踪文件；早期草稿、侦察期脚本和破解期旧笔记
+清过三轮，名单在 git log 里，要找回从历史取。
 
 三张口径表（行数是去掉注释后的表项）：`name_glossary.tsv` 55 行人名、`term_glossary.tsv` 31 行系统术语、
 `phrase_glossary.tsv` 1,024 行词典表项（构建据此登记 1,023 条中文正文）。改译法之前先看它们；构建只读第 1 列（日文键）和第 5 列

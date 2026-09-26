@@ -40,7 +40,6 @@ PROGRESS.md    权威状态
 AGENTS.md      本文件
 docs/research/   逆向结论（*.md，带地址和偏移）+ 构建输入 + 活译文源
 docs/prologue_zh/  序章渲染表与 index.txt 转录（PNG 可重生成、不入库）
-docs/history/    旧交接与破解笔记，非权威，只查不引
 docs/ALL_CHARACTERS.txt  wiki 角色资料，人名译法的原始依据
 translations/    三张口径表 + tm.json 命中表；中文正文不住这里，在 docs/research/
 out/             从原镜像 dump 出来的分析文本，可重生成，不入库
@@ -57,7 +56,7 @@ start-screenshots/ 日文原版启动流程截图
 * 新脚本放 `tools/`，文件名 snake_case，docstring 第一句写清**它证明什么事实**。默认只读原镜像，
   产物写 `/tmp` 或 `docs/research/`。一次性探索脚本用完就删（git 历史留得回来）——
   别把侦察期的脚本堆在目录里，以前就是这样攒到 131 个再清掉的。
-* `docs/history/` 里的数字不可引用。凡是「某处还差 N 个字」这类账，按 `glyph_alloc.json` 重算。
+* 树里**不留历史快照**。凡是「某处还差 N 个字」这类账，按 `glyph_alloc.json` 重算，别照任何旧文档念。
 
 ## 三、验收
 
@@ -73,6 +72,18 @@ start-screenshots/ 日文原版启动流程截图
 **模拟器层**（`prologue_play.py --boot` → `prologue_shots.py` → `jisaudit.py`）**只在改动会出现在序章
 画面时跑**：改了序章本身、UI／人名表，或那些画面用到的字模。剧情池和电话池在序章里根本走不到，
 拿序章走查去验它们等于没验。
+
+走查那一层的环境是**改过的**，重装就丢，所以记在这里（`Snes.actions`、`lib`、帧尺寸三条是本机刚量过的）：
+headless 环境 `stable_retro` 的 `cores/snes9x.json` 里 `Snes.actions` 被补进了 **START 和 SELECT**
+（同目录留着 `…json.snes9x-bak`，那份没有），`tools/play.py` 则传 `use_restricted_actions=retro.Actions.ALL`。
+当年补这两个键的来路记在旧交接里：v1 撞到「即使原版未修改 ROM，START 也无法推进名字输入画面」，
+一度判成 stable-retro 不兼容、只能去 bsnes 验证；v2 把 `actions` 补上 START／SELECT 之后走查才通，
+「只能用 bsnes」那句从此作废（现在整条验收链就跑在这个环境上）。
+当前 `lib` 是 `snes9x`（早先换成 bsnes 只为看那张 256×448 隔行的名字画面，后来换回来了）。
+还有一处前端 C++ 补丁 `m_updateGeometryFromVideoRefresh = true`（所有核都开）：它让帧尺寸跟着视频刷新走，
+没有它帧会裁成 256 宽，症状是「画面看着缺了一半」——这个假象早年把「图不完整」误判过成补丁缺陷。
+**走查帧现在是 512×224**（最后一次 2026-09-26 的走查，183 张截图全是这个尺寸）：隔行那 448 行高在 snes9x
+这条路上拿不到，所以按像素判读的脚本一律按 512×224 算，别假设 448 高。
 
 要点：
 
@@ -305,3 +316,9 @@ start-screenshots/ 日文原版启动流程截图
    「宏体中文短于日文一半」（249 条绝大多数只是中文信息密度高）、
    「同句异译按多数派机械并齐」（说话人从本镜像数据里给不出来：按框拼回整句能落到 speaker 行 99.2%，
    但唯一说话人的框只有 0.1%，目标类里「说话人全为同一人」的框是 0）。
+   破解期作废的三条模型同样别再复发：`ROWDELTA` 行差表、`$0153` 带的 SJIS 重映射、
+   以及按 J2E 那个「文本表 `0x2371BF` ＋字偏移×2」公式去解池指针（实测四个指针目标全都不是可读日文）。
+5. **`docs/history/` 已由批次AT 删除**（旧交接 v1/v2、破解笔记、2026-09-18 那批 jis 证据图，
+   共 21 个跟踪文件）。里面的数字全部被后续批次覆盖，机制结论早已搬进 `docs/research/` 和本文件，
+   要看原始措辞从 git 历史取（`git show ver0.99:docs/history/`）。
+   **规则不变**：凡是「某处还差 N 个字」这类账，按 `glyph_alloc.json` 重算，别引用任何旧文档的数。
