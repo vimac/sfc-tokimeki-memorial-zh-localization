@@ -807,6 +807,28 @@ def commit_save(path, blob, original):
     return '原文备份 %s\n已写 %s（新 md5 %s）' % (bak, path, hashlib.md5(bytes(blob)).hexdigest())
 
 
+def load_dump(path):
+    """Read the export back, and name the slip this makes easy to hit: --import wants the
+    YAML, not the .srm it came out of."""
+    with open(path, 'rb') as f:
+        blob = f.read()
+    try:
+        return yaml_load(blob.decode('utf-8'))
+    except UnicodeDecodeError as e:
+        # 存档就是 4 KB 槽位的整数倍，导出文件不会是——光凭这一点加文件名就够认了
+        shaped = len(blob) >= STRIDE and len(blob) % STRIDE == 0
+        named = path.endswith(('.srm', '.bak'))
+        if not (shaped or named):
+            raise ValueError('%s 不是 UTF-8 文本（第 %d 字节 %02x 读不出字符）'
+                             % (path, e.start + 1, blob[e.start]))
+        raise ValueError(
+            '%s 不是 YAML，是 .srm 存档本身（%d 字节＝%d 个 4 KB 槽位，第一个非文本字节在第 %d 个）。'
+            '--import 要的是 --export 出来的那份，默认就写在存档旁边、同名加 .yaml 后缀；'
+            '存档只放在命令行尾巴上：\n'
+            '  python3 tools/tokimeki_srm_util.py --import 存档.srm.yaml 存档.srm [--dry-run]'
+            % (path, len(blob), len(blob) // STRIDE, e.start + 1))
+
+
 def run_import(dump, paths, dry_run, year=None, force=False):
     saves = dump.get('saves')
     if not isinstance(saves, list):
@@ -878,17 +900,18 @@ def main(argv=None):
             ap.error('--year 要在学制里（%d–%d，给了 %d）' % (TERM[0].year, TERM[1].year, a.year))
     try:
         return _run(a, ap)
-    except (ValueError, KeyError, OSError) as e:
+    except ValueError as e:
         # 一个坏值不该甩 traceback，更不该写半个存档出去（写在 stage 之后）
+        print('%s: %s' % (type(e).__name__, e) if type(e) is not ValueError else e)
+        return 1
+    except (KeyError, OSError) as e:
         print('%s: %s' % (type(e).__name__, e))
         return 1
 
 
 def _run(a, ap):
     if a.do_import:
-        with open(a.do_import, encoding='utf-8') as f:
-            dump = yaml_load(f.read())
-        run_import(dump, a.srm, a.dry_run, a.year, a.force)
+        run_import(load_dump(a.do_import), a.srm, a.dry_run, a.year, a.force)
         return 0
     if not a.srm:
         ap.error('要给至少一个 .srm 存档（--help 看用法）')
