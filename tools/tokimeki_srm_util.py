@@ -7,32 +7,36 @@ by comes from --rom (or each save's own sibling .sfc), and the original image us
 the "this glyph was redrawn" diff comes from --orig.  Without an image the names still
 read, just through the original image's index->character table.
 
-  python3 tools/tokimeki_srm_util.py [--rom 镜像.sfc] [--orig 原镜像.sfc] 存档.srm [存档.srm ...]
+  python3 tools/tokimeki_srm_util.py [--rom 镜像.sfc] [--orig 原镜像.sfc] [--year 96] 存档.srm [存档.srm ...]
   python3 tools/tokimeki_srm_util.py --export [--out 导出.yaml] 存档.srm [存档.srm ...]
   python3 tools/tokimeki_srm_util.py --import 导出.yaml [存档.srm ...] [--dry-run] [--year 96] [--force]
 
---export writes ONE file for every save named on the command line, each save keyed by its
-own path plus md5, so the Japanese-version and the localized save of the same slot number
-stay distinguishable.  The YAML is a hand-rolled subset (block mappings, block or inline
-sequences, flow maps of scalars, quoted strings, ints, true/false/null) so no pyyaml is
-needed; --import reads that same subset back.  Comment lines are safe to add, tabs are not.
+--export writes ONE file for every save named on the command line, next to the first save and
+under its own name plus a `.yaml` suffix (`存档.srm` -> `存档.srm.yaml`); each save is keyed by
+its path plus md5, so the Japanese-version and the localized save of the same slot number stay
+distinguishable.  The YAML is a hand-rolled subset: mappings are block style one key per line
+(so 属性 and 姓名 are directly editable), a list of scalars stays on one line, quoted strings,
+ints, true/false/null.  No pyyaml is needed either way -- --import reads the same subset back.
+Comment lines are safe to add, tabs are not.
 
 --import writes only these four keys, and only into slots that were actually saved into --
 any key you leave out of the file stays untouched, which is what makes export→import a no-op:
-  date          both copies, 0x1cc (day, month) and 0x038/0x03a (month, day as words)
+  date          年-月-日, written to both copies: 0x1cc (day, month) and 0x038/0x03a as words
   affinity      the 12 words at 0x100 -- all 12, or none
   visibility    the 12 status bytes at 0x142 -- all 12, or none
                 (00 未登场 / 01 登场没电话 / 0f 有电话)
-  appointments  up to 16 records for 0x16e: {month, day, girl, place}.  `girl` is a name or
-                an index 0-11.  Writing the list rewrites the whole table, because a
-                cancelled booking keeps its 对象 byte and the game still counts it.
+  appointments  up to 16 records for 0x16e: {date, girl, place}.  `girl` is a name or an index
+                0-11.  Writing the list rewrites the whole table, because a cancelled booking
+                keeps its 对象 byte and the game still counts it.
 Everything else in the file (attributes, names, unconfirmed) is dumped for reference only.
 Before a byte is written the slot's dates are proved against the calendar: 当前日期 must be a
-Sunday between 1996/4/4 and 1999/3/1 (4/4 itself passes -- it is 开学第一天, a Thursday in the
-real calendar), and every appointment must fall within 28 days AFTER that date.  A save stores
-no year, so --year pins one; without it the Sunday rule usually leaves a single candidate.
-Dates the YAML does not mention are checked too, because changing 当前日期 can push a booking
-that is already in the file out of the window.  --force turns every complaint into a warning.
+Sunday between 1996-04-04 and 1999-03-01 (4/4 itself passes -- it is 开学第一天, a Thursday in
+the real calendar), and every appointment must fall within 28 days AFTER that date.  A save
+stores month and day only, never a year and never a day counter, so --export resolves the year
+through the Sunday rule (it lands uniquely: the same month/day sits on a different weekday in
+each of 1996/1997/1998) and --year overrides that.  Dates the YAML does not mention are checked
+too, because changing 当前日期 can push a booking that is already in the file out of the window.
+--force turns every complaint into a warning.
 Writes make `<存档>.srm.bak` from the pre-write bytes; --dry-run shows the byte diff only.
 
 Slots are 4 KB apart.  The name lives twice (0x2b0/0x2b8 and 0x300/0x308) and so does the
@@ -81,7 +85,6 @@ UNCONFIRMED = ((0x042, 3, 'w'), (0x118, 10, 'w'), (0x1ae, 1, 'w'), (0x1ba, 9, 'w
                (0x15a, 1, 'b'), (0x160, 1, 'b'), (0x264, 1, 'b'))
 # Regions whose text the localization rewrote: the preset-name pool and block 144.
 VERSION_PROBE = ((0x1F890, 0x1FA40), (0x22F000, 0x22F2D4))
-EXPORT_DEFAULT = 'tokimeki_srm.yaml'
 # The calendar the writes are proved against.  A slot stores month and day only, and has
 # neither a year nor an elapsed-day counter (measured: no 16-bit window in either slot tracks
 # the gap between two saves), so the year is supplied by --year or inferred.  The inference
@@ -94,24 +97,26 @@ APPT_WINDOW = 28
 
 
 def span_text():
-    return '%d/%d/%d–%d/%d/%d' % (TERM[0].year, TERM[0].month, TERM[0].day,
-                                  TERM[1].year, TERM[1].month, TERM[1].day)
+    return '%04d-%02d-%02d–%04d-%02d-%02d' % (
+        TERM[0].year, TERM[0].month, TERM[0].day, TERM[1].year, TERM[1].month, TERM[1].day)
 
 
 HEADER = (
-    '心跳回忆 .srm 存档导出 -- tools/tokimeki_srm_util.py --export',
+    '心跳回忆 .srm 存档导出 -- tools/tokimeki_srm_util.py --export（本文件与存档同名，加 .yaml 后缀）',
     '导入只认 date／affinity／visibility／appointments 这四个键，没写的键不动；'
     'affinity／visibility 要给满 12 条。',
     '12 条按引擎下标排：0–9＝十位女主（约会记录里 girl 可写中文名），10、11 的人物身份未确认。',
-    'date 是 1 基的月/日；存档里存 0 基，写在两处（0x1cc 日,月 与 0x038/0x03a 月,日字）。',
+    'date 写成 年-月-日（比如 1997-02-12）；存档里存 0 基的月/日两份（0x1cc 日,月 与 '
+    '0x038/0x03a 月,日字），年份不住在存档里——导出时按周日推（--year 可以指定哪一年），'
+    '导入照你写的核，写了 date 就以它为准。',
     'visibility＝0x142 起 12 个状态字节（0 未登场／1 登场没电话／15 有电话）。',
-    '约会的 place 是记录第 4 字节：玩家把它读作约会地点，但这个含义尚未证实，导入按原值写回。',
+    '约会的 place 是记录第 4 字节：玩家把它读作约会地点，但这个含义尚未证实，导入按原值写回；'
+    '不写这个键就留着文件里那个字节。',
     '约会整张表重写：导出里没列出来的记录就当没有（取消过的预约会留下对象字节）。',
-    'attributes／names／unconfirmed 是给人看的，导入不写。',
+    'attributes／names／unconfirmed 是给人看的，一条一行摊开写，导入不碰。',
     '写之前过日历：date 要是 %s 之间的周日，%s 开学第一天例外（真实公历上是周四）；'
-    '每条约会要落在 date 之后 %d 天之内。存档不存年份，所以没给 --year 时按'
-    '「哪一年的这一天是周日」推——同一个月/日在这三年里各落一个不同的星期，推得唯一。'
-    % (span_text(), '%d/%d' % (TERM[0].month, TERM[0].day), APPT_WINDOW),
+    '每条约会要落在 date 之后 %d 天之内（当天算，超一天就拒）。'
+    % (span_text(), '1996-04-04', APPT_WINDOW),
 )
 
 
@@ -269,9 +274,11 @@ def _plain(v):
 
 
 def _flat(v):
-    """A container whose members are all scalars goes on one line as flow style."""
+    """Only a container of scalars that is *empty or a list* goes on one line: affinity and
+    visibility read as rows of twelve numbers, while every mapping is expanded -- 属性 and 姓名
+    are meant to be edited, and one key per line is what makes that comfortable."""
     if isinstance(v, dict):
-        return all(_scalarish(x) for x in v.values())
+        return not v
     if isinstance(v, list):
         return all(_scalarish(x) for x in v)
     return False
@@ -287,12 +294,20 @@ def _flow_line(v):
     return '{' + ', '.join('%s: %s' % (_key_out(k), _scalar_out(val)) for k, val in v.items()) + '}'
 
 
+DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+KEY_RE = re.compile(r'^(?!\d+$)[^\W]\w*$')   # 一个词：中日韩字或字母数字下划线，且不能全是数字
+                                             # （0x042 那种偏移键一旦裸写，回读就成了整数 42）
+
+
 def _scalar_out(v):
     if v is None:
         return 'null'
     if isinstance(v, bool):
         return 'true' if v else 'false'
-    return str(v) if isinstance(v, int) else _quote(v)
+    if isinstance(v, int):
+        return str(v)
+    text = str(v)
+    return text if DATE_RE.match(text) else _quote(text)
 
 
 def _key_out(k):
@@ -300,7 +315,7 @@ def _key_out(k):
         return 'true' if k else 'false'
     if isinstance(k, int):
         return str(k)
-    return k if re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', str(k)) else _quote(k)
+    return str(k) if KEY_RE.match(str(k)) else _quote(k)
 
 
 def _emit(v, indent, out):
@@ -426,14 +441,22 @@ class Image:
                 self.pair = (T.Rom(orig_path).data, rom.data)
 
 
-def read_slot(b, img):
-    """Model dict for one slot -- what the report prints and --export writes."""
+def read_slot(b, img, year=None):
+    """Model dict for one slot -- what the report prints and --export writes.
+
+    Dates are written out as 年-月-日 even though the bytes carry only month and day: the
+    year comes from guess_date, and the import proves whatever year it lands on.
+    """
     if not b[:FIELD_END].strip(b'\x00'):
         return {'untouched': True}
+    # A month/day byte the calendar can't place (0x0d 月, 2/30) reads as None, not a crash:
+    # this tool has to survive an odd save, and the report says where it came out blank.
+    fmt = lambda dt: iso(dt) if dt else None
     copy = words(b, DATE2, 2)
+    now = guess_date(b[DATE + 1] + 1, b[DATE] + 1, year)
     out = {'untouched': False,
-           'date': {'month': b[DATE + 1] + 1, 'day': b[DATE] + 1},
-           'date_copy': {'month': copy[0] + 1, 'day': copy[1] + 1},
+           'date': fmt(now),
+           'date_copy': fmt(guess_date(copy[0] + 1, copy[1] + 1, year, after=now)),
            'attributes': dict(zip(ATTR[1], words(b, ATTR[0], len(ATTR[1]))))}
     names = {}
     for label, off, ncell in NAMES:
@@ -443,7 +466,8 @@ def read_slot(b, img):
     out['names'] = names
     out['affinity'] = words(b, AFFINITY, N_REC)
     out['visibility'] = [b[PHONE + 2 * i] for i in range(N_REC)]
-    out['appointments'] = [{'at': '%03x' % o, 'month': b[o + 1] + 1, 'day': b[o] + 1,
+    out['appointments'] = [{'at': '%03x' % o,
+                            'date': fmt(guess_date(b[o + 1] + 1, b[o] + 1, year, after=now)),
                             'girl': b[o + 2], 'place': b[o + 3]}
                            for o in range(APPT, APPT + 4 * N_APPT, 4)
                            if (b[o], b[o + 1]) != (0xFF, 0xFF)]
@@ -454,16 +478,19 @@ def read_slot(b, img):
     return out
 
 
-def print_slot(n, s):
+def print_slot(n, s, year=None):
     print('\n-- 槽位 %d（文件 0x%x）--' % (n + 1, n * STRIDE))
     if s['untouched']:
         print('  没存过：0x000–0x%03x 全零，约会表连 ff 都没写过' % FIELD_END)
         return
     d, c = s['date'], s['date_copy']
-    print('  日期       %d/%d（%s：0x1cc 日,月 / 0x038·0x03a 月,日，都是 0 基）'
-          % (d['month'], d['day'],
-             '两份一致' if (c['month'], c['day']) == (d['month'], d['day'])
-             else '两份不一致！0x038 那份是 %d/%d' % (c['month'], c['day'])))
+    if not d:
+        print('  日期       存档里 0x1cc 那对月/日字节推不出学制里的任何一天（0x038 那份是 %s）' % c)
+    else:
+        print('  日期       %s（星期%s，%s：0x1cc 日,月 / 0x038·0x03a 月,日，都是 0 基；%s）'
+              % (d, WEEK[datetime.date.fromisoformat(d).weekday()],
+                 '两份一致' if c == d else '两份不一致！0x038 那份是 %s' % c,
+                 ('年份来自 --year %d' % year) if year else '存档不存年份，年份按周日推'))
     print('  属性       ' + '  '.join('%s%d' % (k, v) for k, v in s['attributes'].items()))
     for label in ('姓', '名', '昵称', '姓·副本', '名·副本'):
         if s['names'].get(label):
@@ -476,8 +503,9 @@ def print_slot(n, s):
                             or '十个女生都未登场（0x142 起全是 00）'))
     print('             第 11/12 条（身份未确认）= %02x / %02x' % (vis[10], vis[11]))
     booked = s['appointments']
-    print('  约会       ' + ('  '.join('%d/%d %s 地点?%02x[%s]'
-                                       % (a['month'], a['day'], girl(a['girl']), a['place'], a['at'])
+    print('  约会       ' + ('  '.join('%s %s 地点?%02x[%s]'
+                                       % (a['date'] or '月/日字节不对', girl(a['girl']),
+                                          a['place'], a['at'])
                                        for a in booked)
                              or '无（0x16e 起 16 条记录的日、月都是 ff）'))
     u = s['unconfirmed']
@@ -486,7 +514,7 @@ def print_slot(n, s):
     print('             ' + '  '.join('0x%s %s' % (k, v) for k, v in u['b'].items()))
 
 
-def report(path, img):
+def report(path, img, year=None):
     blob = open(path, 'rb').read()
     md5 = hashlib.md5(blob).hexdigest()
     print('=' * 78)
@@ -504,10 +532,10 @@ def report(path, img):
                  else '没有 --orig 原镜像，所以重画过的格只能印成原镜像该槽的字。'))
     slots = []
     for n in range(len(blob) // STRIDE):
-        s = read_slot(blob[n * STRIDE:(n + 1) * STRIDE], img)
+        s = read_slot(blob[n * STRIDE:(n + 1) * STRIDE], img, year)
         s = dict([('slot', n + 1)] + list(s.items()))
         slots.append(s)
-        print_slot(n, s)
+        print_slot(n, s, year)
     readable = img.path if (img.path and os.path.exists(img.path)) else None
     return {'file': os.path.abspath(path), 'md5': md5, 'bytes': len(blob),
             'rom': os.path.abspath(readable) if readable else None,
@@ -551,6 +579,22 @@ def _word_at(b, off, value, label, changes, hi=0xFFFF):
 
 # ---------------------------------------------------------------- calendar
 
+def iso(dt):
+    return '%04d-%02d-%02d' % (dt.year, dt.month, dt.day)
+
+
+def parse_date(value, label):
+    """`1997-02-12` -> a date.  One format on both sides, so a typo says so plainly."""
+    hit = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})$', str(value).strip().strip('"'))
+    if not hit:
+        raise ValueError('%s要写成 年-月-日（比如 1997-02-12），给了「%s」' % (label, value))
+    y, mo, da = (int(hit.group(i)) for i in (1, 2, 3))
+    try:
+        return datetime.date(y, mo, da)
+    except ValueError:
+        raise ValueError('%s %s 没有这么一天' % (label, value))
+
+
 def candidates(m, d, year=None):
     """Every day in the school term that this month/day could be, oldest first."""
     out = []
@@ -564,96 +608,79 @@ def candidates(m, d, year=None):
     return out
 
 
-def slot_date(s, b):
-    """The 1-based (month, day) this slot will carry after the import: the YAML's if it
-    gives a date, otherwise the one already in the file."""
-    date = s.get('date')
-    if date:
-        return int(date['month']), int(date['day'])
-    mo, da = b[DATE + 1], b[DATE]
-    return (mo + 1, da + 1) if mo <= 11 and da <= 30 else None
+def guess_date(m, d, year=None, after=None):
+    """What year a saved month/day means -- a slot keeps no year and no day counter.
+
+    The Sunday rule usually leaves one candidate in the term (the same month/day lands on a
+    different weekday in each of 1996/1997/1998).  `after` is the slot's own date and is what
+    settles a diary entry, which only means something relative to the day it was booked on.
+    """
+    cands = candidates(m, d, year) or candidates(m, d)
+    if not cands:
+        return None
+    sundays = [c for c in cands if c.weekday() == SUNDAY]
+    if (m, d) == (TERM[0].month, TERM[0].day):
+        sundays.append(TERM[0])            # 开学第一天，真实公历上是周四——玩家指定的例外
+    pool = sundays or cands
+    if after is None:
+        return pool[0]
+    ahead = [c for c in pool if c >= after]
+    return min(ahead or pool, key=lambda c: abs((c - after).days))
 
 
-def slot_appts(s, b):
-    """The appointment dates the import leaves behind, as 1-based (month, day, label)."""
+def slot_date(s, b, year=None):
+    """The 当前日期 this slot ends up with: the YAML's if it gives one, else the file's,
+    read through the Sunday rule because the bytes carry no year."""
+    if s.get('date'):
+        return parse_date(s['date'], '当前日期')
+    mo, da = b[DATE + 1] + 1, b[DATE] + 1
+    return guess_date(mo, da, year) if (mo <= 12 and da <= 31) else None
+
+
+def slot_appts(s, b, year=None, now=None):
+    """The diary dates the import leaves behind, as (标签, date) -- the YAML's list if it
+    gives one (then the year is written out), otherwise what the file holds now."""
     listed = s.get('appointments')
     if listed is not None:
-        return [(int(a['month']), int(a['day']), '约会%d' % (i + 1)) for i, a in enumerate(listed)]
+        return [('约会%d' % (i + 1), parse_date(a['date'], '约会%d' % (i + 1)))
+                for i, a in enumerate(listed)]
     out = []
     for i, o in enumerate(range(APPT, APPT + 4 * N_APPT, 4)):
         if (b[o], b[o + 1]) == (0xFF, 0xFF):
             continue
         mo, da = b[o + 1] + 1, b[o] + 1
-        if 1 <= mo <= 12 and 1 <= da <= 31:
-            out.append((mo, da, '约会%d（文件里原有）' % (i + 1)))
+        dt = guess_date(mo, da, year, after=now) if (1 <= mo <= 12 and 1 <= da <= 31) else None
+        if dt:
+            out.append(('约会%d（文件里原有）' % (i + 1), dt))
     return out
-
-
-def resolve_now(m, d, year):
-    """Which day of the term a slot's month/day stands for -> (date, 错误, 提醒)."""
-    cands = candidates(m, d, year)
-    if not cands:
-        where = ('--year %d 那年' % year) if year else ('学制 %s' % span_text())
-        return None, ['当前日期 %d/%d 不在 %s 之内（开学前、毕业后，或者这个年份里没有这一天）'
-                      % (m, d, where)], []
-    sundays = [c for c in cands if c.weekday() == SUNDAY]
-    if (m, d) == (TERM[0].month, TERM[0].day):
-        sundays.append(TERM[0])            # 开学第一天，真实公历上是周四——玩家指定的例外
-    if year:
-        now = cands[0]
-        if now not in sundays:
-            # Name the years that DO put this month/day on a Sunday; --year said one of them.
-            ok = [c for c in candidates(m, d) if c.weekday() == SUNDAY or c == TERM[0]]
-            return now, ['当前日期 %s＝星期%s，不是周日（学制里 %d/%d 是周日的年份：%s）；'
-                         '要么改日期，要么 --year 指到那一年'
-                         % (now, WEEK[now.weekday()], m, d,
-                            '、'.join(str(c.year) for c in ok) or '根本没有')], []
-        return now, [], ['当前日期 %d/%d 按 %s（星期%s）算' % (m, d, now, WEEK[now.weekday()])]
-    if not sundays:
-        days = '、'.join('%d 年星期%s' % (c.year, WEEK[c.weekday()]) for c in cands)
-        return None, ['当前日期 %d/%d 在学制里没有对应的周日（%s）；'
-                      '要么改日期，要么 --year 指定年份' % (m, d, days)], []
-    now = sundays[0]
-    return now, [], ['当前日期 %d/%d 落在 %s 这年（星期%s）' % (m, d, now, WEEK[now.weekday()])]
-
-
-def check_appt(now, m, d, label):
-    """One diary entry against the current date: it has to be booked, not already past."""
-    hits = [c for c in candidates(m, d)
-            if now <= c <= now + datetime.timedelta(days=APPT_WINDOW)]
-    if not hits:
-        far = '、'.join('%s（%+d 天）' % (c, (c - now).days) for c in candidates(m, d))
-        return (['%s %d/%d 不在当前日期 %s 之后 %d 天之内（学制里的 %d/%d：%s）'
-                 % (label, m, d, now, APPT_WINDOW, m, d, far or '这一天根本不在学制内')], [])
-    dt = hits[0]
-    note = [] if dt.weekday() == SUNDAY else \
-        ['%s %s（星期%s）不是周日' % (label, dt, WEEK[dt.weekday()])]
-    return [], note
 
 
 def check_calendar(s, b, year):
     """Prove every date this slot ends up with.  Runs on the in-memory copy before a byte
     is committed, and covers dates the YAML never mentions -- a new 当前日期 can push a
     booking that is already in the file out of its 28-day window."""
-    day, appts = slot_date(s, b), slot_appts(s, b)
-    if day is None and not appts:
-        return [], []
-    problems, notes = [], []
-    now = None
-    if day:
-        now, p, n = resolve_now(day[0], day[1], year)
-        problems += p
-        notes += n
-    elif appts:
-        notes.append('0x1cc 读不出合法的月/日，约会窗口没法定，这一项跳过了')
-    for m, d, label in appts:
-        if now is None:
-            if day:
-                problems.append('%s %d/%d 没校验：当前日期先不合法' % (label, m, d))
-            break
-        p, n = check_appt(now, m, d, label)
-        problems += p
-        notes += n
+    now = slot_date(s, b, year)
+    notes = []
+    if now is None:
+        return (['当前日期（0x1cc 或 YAML 的 date）读不出合法的一天'], [])
+    pinned = bool(s.get('date'))
+    problems = []
+    if now < TERM[0] or now > TERM[1]:
+        problems.append('当前日期 %s 不在学制 %s 之内（开学前、毕业后）' % (iso(now), span_text()))
+    elif now.weekday() != SUNDAY and now != TERM[0]:
+        problems.append('当前日期 %s＝星期%s，不是周日（%d/%d 在学制里的周日是 %s）'
+                        % (iso(now), WEEK[now.weekday()], now.month, now.day,
+                           '、'.join(str(c.year) for c in candidates(now.month, now.day)
+                                     if c.weekday() == SUNDAY) or '根本没有'))
+    if not pinned and not year:
+        notes.append('当前日期 %s 的年份是按周日推的（存档不存年份）；要定死就写进 YAML 或给 --year'
+                     % iso(now))
+    for label, dt in slot_appts(s, b, year, now):
+        if not now <= dt <= now + datetime.timedelta(days=APPT_WINDOW):
+            problems.append('%s %s 不在当前日期 %s 之后 %d 天之内（差 %+d 天）'
+                            % (label, iso(dt), iso(now), APPT_WINDOW, (dt - now).days))
+        elif dt.weekday() != SUNDAY:
+            notes.append('%s %s（星期%s）不是周日' % (label, iso(dt), WEEK[dt.weekday()]))
     return problems, notes
 
 
@@ -671,15 +698,18 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
     notes.extend(found)
     if problems and not force:
         raise ValueError('日历校验没过：\n      ' + '\n      '.join(problems)
-                         + '\n      （存档只存月/日，年份靠 --year 或按周日推；确认要照写加 --force）'
+                         + '\n      （当前日期要的是学制 %s 之间的周日，4/4 开学第一天例外；'
+                           '约会只能在它之后 %d 天内。确认要照写加 --force）'
+                         % (span_text(), APPT_WINDOW)
                          + ('\n      ' + '\n      '.join(notes) if notes else ''))
     for line in problems:
         notes.append('提醒（--force 放行）%s' % line)
     date = s.get('date')
     if date:
-        m, d = int(date['month']) - 1, int(date['day']) - 1
-        if not (0 <= m <= 11 and 0 <= d <= 30):
-            raise ValueError('日期要在 1/1–12/31（给了 %d/%d）' % (m + 1, d + 1))
+        now = parse_date(date, '当前日期')
+        m, d = now.month - 1, now.day - 1
+        if d > 30:
+            raise ValueError('当前日期 %s 的日超过了存档里观测到的 1–31' % iso(now))
         _byte_at(b, DATE, d, '日期 0x1cc 日', changes)
         _byte_at(b, DATE + 1, m, '日期 0x1cc 月', changes)
         for off, value, label in ((DATE2, m, '日期 0x038 月'), (DATE2 + 2, d, '日期 0x03a 日')):
@@ -710,10 +740,10 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
                 if (b[o], b[o + 1]) != (0xFF, 0xFF)]
         for i, a in enumerate(listed):
             o = APPT + 4 * i
-            m, d = int(a['month']) - 1, int(a['day']) - 1
-            if not (0 <= m <= 11 and 0 <= d <= 30):
-                raise ValueError('约会%d 的日期要在 1/1–12/31（给了 %d/%d）'
-                                 % (i + 1, m + 1, d + 1))
+            dt = parse_date(a['date'], '约会%d' % (i + 1))
+            m, d = dt.month - 1, dt.day - 1
+            if d > 30:
+                raise ValueError('约会%d 的 %s：日超过了存档里观测到的 1–31' % (i + 1, iso(dt)))
             _byte_at(b, o, d, '约会%d 日 0x%03x' % (i + 1, o), changes)
             _byte_at(b, o + 1, m, '约会%d 月 0x%03x' % (i + 1, o), changes)
             _byte_at(b, o + 2, girl_ref(a['girl']), '约会%d 对象 0x%03x' % (i + 1, o), changes,
@@ -830,12 +860,12 @@ def main(argv=None):
     ap.add_argument('--rom', help='这些存档写出来的镜像；不给就用每个存档同名的 .sfc')
     ap.add_argument('--orig', help='原镜像，只用来把重画过的字库格标成「¤」')
     ap.add_argument('--export', action='store_true', help='把读到的字段写成一份 YAML')
-    ap.add_argument('--out', help='YAML 落点，默认第一个存档旁的 ' + EXPORT_DEFAULT)
+    ap.add_argument('--out', help='YAML 落点，默认就写在第一个存档旁边，同名加 .yaml 后缀')
     ap.add_argument('--import', dest='do_import', metavar='YAML',
                     help='照 YAML 写回日期／好感度／登场／约会')
     ap.add_argument('--dry-run', action='store_true', help='配合 --import：只打字节差异')
     ap.add_argument('--year', type=int, metavar='96',
-                    help='配合 --import：把存档里的月/日定在哪一年（写 96 或 1996 都行）；'
+                    help='存档里只有月/日，这一项决定读出来写成哪一年（写 96 或 1996 都行）；'
                          '不给就按「这一年的这一天是不是周日」推')
     ap.add_argument('--force', action='store_true',
                     help='配合 --import：日历校验只提醒，照样写')
@@ -871,12 +901,12 @@ def _run(a, ap):
         rom = os.path.abspath(a.rom or os.path.splitext(p)[0] + '.sfc')
         if rom not in images:
             images[rom] = Image(rom, a.orig)
-        dumps.append(report(p, images[rom]))
+        dumps.append(report(p, images[rom], a.year))
     if a.export:
         if not dumps:
             print('没有可导出的存档。')
             return 1
-        out = a.out or os.path.join(os.path.dirname(os.path.abspath(a.srm[0])), EXPORT_DEFAULT)
+        out = a.out or os.path.abspath(a.srm[0]) + '.yaml'
         with open(out, 'w', encoding='utf-8') as f:
             f.write(yaml_dump({'export': 'tokimeki-srm', 'version': 1, 'saves': dumps}, HEADER))
         print('\n导出 %s（%d 个存档）' % (out, len(dumps)))

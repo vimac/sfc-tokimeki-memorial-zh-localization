@@ -4,6 +4,7 @@
 *.smc
 *.srm
 *.srm.bak
+*.srm.yaml
 *.bsz
 *.ips
 *.bps

@@ -66,8 +66,9 @@ python3 tools/build_zh.py --patch
 根目录只留这两个 `.sfc`（`.gitignore` 已屏蔽 ROM、存档、IPS 和 macOS 的 `._*` 伴生文件）。
 上游命名的原版和备份在项目外：`~/retro/roms/`、`~/retro/tokimeki.backup.2609200007.tar.gz`。
 **两件待用户处置**：根目录还有两个模拟器存档（`.srm`，文件名跟各自镜像配对，md5 没变）、
-四张未跟踪的 `screenshot001-004.png`、两张 `…-001/002.bmp` 出图，以及用户放进来的
-`…(Chinese Localized).bsz` 即时存档（`.gitignore` 已收进屏蔽列表，不会误提交）。
+四张未跟踪的 `screenshot001-004.png`、两张 `…-001/002.bmp` 出图、用户手里那份旧格式导出
+`tokimeki_srm.yaml`（新的同名导出是 `*.srm.yaml`，已被 `.gitignore` 收掉；这份手工留在树里，未跟踪），
+以及用户放进来的 `…(Chinese Localized).bsz` 即时存档（`.gitignore` 已收进屏蔽列表，不会误提交）。
 
 ## 三、怎么验
 
@@ -179,8 +180,9 @@ start-screenshots/     日文原版启动流程截图
 `ui_glyph_indices.json`，以及每批都要拿去比对的 `blockN_work.tsv`。
 **派生物不入库**：`blockN_jp.txt`、`blockN_work.json`、`*_seg.txt` 由 `tools/block_work.py <块号>` 重生成，
 `blockN_enc.json` 由每次构建顺手刷新。整棵树现在 356 个跟踪文件（`tools/tokimeki_srm_util.py`——
-读／写回 `.srm` 存档槽里那套日期／属性／好感度／登场与电话状态／日程表，`--export` 出一份 YAML、
-`--import` 按 YAML 写回，写之前过日历）；早期草稿、侦察期脚本和破解期旧笔记
+读／写回 `.srm` 存档槽里那套日期／属性／好感度／登场与电话状态／日程表，`--export` 在存档旁边出
+一份同名加 `.yaml` 后缀的导出（日期一律 年-月-日，属性与姓名一条一行摊开），`--import` 照它写回，
+写之前过日历：当前日期要是学制内的周日、约会要落在它 28 天之内）；早期草稿、侦察期脚本和破解期旧笔记
 清过三轮，名单在 git log 里，要找回从历史取。
 
 三张口径表（行数是去掉注释后的表项）：`name_glossary.tsv` 55 行人名、`term_glossary.tsv` 38 行系统术语、
