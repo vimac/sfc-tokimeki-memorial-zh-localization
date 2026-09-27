@@ -30,6 +30,12 @@ any key you leave out of the file stays untouched, which is what makes export→
                 0-11.  Writing the list rewrites the whole table, because a cancelled booking
                 keeps its 对象 byte and the game still counts it.
 Everything else in the file (attributes, names, unconfirmed) is dumped for reference only.
+Every write is followed by a re-sign of the slot's tag at 0xfda (see TAG below).  This is
+insurance, not a fix for something observed here: snes9x loads a slot whose tag is stale
+(proved 2026-09-27 by injecting one and continuing from it), while the emulator the user
+plays on zeroed an edited slot on the next cold boot.  export→import of an unedited file is
+still a byte-exact no-op, because an untouched slot already carries the tag its content asks
+for; a slot saved by any other editor gets the right one written in.
 Before a byte is written the slot's dates are proved against the calendar: 当前日期 must be a
 Sunday between 1996-04-04 and 1999-03-01 (4/4 itself passes -- it is 开学第一天, a Thursday in
 the real calendar), and every appointment must fall within 28 days AFTER that date.  A save
@@ -41,7 +47,10 @@ too, because changing 当前日期 can push a booking that is already in the fil
 Writes make `<存档>.srm.bak` from the pre-write bytes; --dry-run shows the byte diff only.
 
 Slots are 4 KB apart.  The name lives twice (0x2b0/0x2b8 and 0x300/0x308) and so does the
-date.  A slot whose field area is still all zero was never saved into and says nothing.
+date.  A slot whose field area is still all zero was never saved into and says nothing; so
+does one whose 0xfda tag is zero, which is the shape a slot takes after an emulator wiped it.
+The 01 00 02 00 … 0f 00 run at 0xfe2 is in every slot, saved or not, so it is
+not the 没存过 marker.
 Only fields whose identity is established get a name; the offsets that move between saves
 without a proven meaning are dumped once, raw, under 身份未确认 -- including the 4th byte
 of an appointment record, which --export calls `place` because the player reads it as the
@@ -74,9 +83,21 @@ DATE = 0x1cc                         # day-1, month-1; the same day is kept a se
 DATE2 = 0x038                        # at 0x038/0x03a as (month-1, day-1) words -- both
                                      # copies agree in every slot of every save on disk
 FIELD_END = 0x340                    # everything named above lives under this; an
-                                     # untouched slot is zero all the way to it (only
-                                     # 0xfe2 on carries the 01..0f marker bytes the
-                                     # emulator leaves there)
+                                     # untouched slot is zero all the way to it
+TAG = 0xfda                          # 槽位标记：在用的槽是 01 00 ＋两个字（0xfdc／0xfde），
+                                     # 空槽这六字节全零。两个字是 [0,0xfdc) 这段 16 位字的
+                                     # 两种求和（见 tag_words）：全求和、以及每第 4 个字求和。
+                                     # 4 份存档 7 个槽（含一个全零的空槽）逐字节吻合，无一例外。
+                                     # 但 snes9x 这条走查路径不校验它——2026-09-27 实测：把改过
+                                     # 内容、校验字仍属旧内容的槽注入 SRA，加载画面照出数据，
+                                     # 「请选择要开始的相册」照选中，SRAM 一个字节都没被清。
+                                     # 用户那边的模拟器确实在冷启动后把改动过的 slot2 整槽清零
+                                     # （0x000 起 537 字节归零，只剩 0xfe2 那串 01..0f），所以
+                                     # 校验字按结构不变量对待：写回后照新内容重签，代价为零，
+                                     # 防的是校验更严的那类模拟器，不是 snes9x。
+                                     # 0xfe2 起那串 01 00 02 00 … 0f 00 每槽都有、存过没存过都一样，
+                                     # 所以它不是「没存过」的记号；判空只看 0xfda。
+
 NAMES = (('姓', 0x2b0, 4), ('名', 0x2b8, 4), ('姓·副本', 0x300, 4),
          ('名·副本', 0x308, 4), ('昵称', 0x310, 6))
 # Offsets that move between saves but whose meaning is not established: raw values, printed
@@ -95,6 +116,19 @@ TERM = (datetime.date(1996, 4, 4), datetime.date(1999, 3, 1))    # 开学第一�
 WEEK = '一二三四五六日'
 SUNDAY = 6
 APPT_WINDOW = 28
+
+
+def tag_words(b):
+    """The two words a slot carries at 0xfdc/0xfde, computed over the words that precede them.
+
+    Proven against 7 slots from 4 saves (two images, plus one slot an emulator had wiped):
+    `0xfdc` is the 16-bit sum of all little-endian words in [0x000, 0xfdc), and `0xfde` is
+    the same sum taking every fourth word.  The range already covers the `01 00` in-use flag.
+    It is a structural invariant, not a proven load gate: snes9x shows a slot whose words are
+    stale.  See TAG.
+    """
+    w = [int.from_bytes(b[i:i + 2], 'little') for i in range(0, TAG + 2, 2)]
+    return sum(w) & 0xffff, sum(w[::4]) & 0xffff
 
 
 def span_text():
@@ -116,6 +150,9 @@ HEADER = (
     '不写这个键就留着文件里那个字节。',
     '约会整张表重写：导出里没列出来的记录就当没有（取消过的预约会留下对象字节）。',
     'attributes／names／unconfirmed 是给人看的，一条一行摊开写，导入不碰。',
+    'tag 是 0xfda 那六个字节（在用标记＋两个求和字）：只给人看，导入不读它——'
+    '写回之后仪表按新内容自己重签。这两个字是槽位的结构不变量（7 个槽全吻合），'
+    '但 snes9x 读档不校验它：拿旧标记的槽注入照样进游戏。重签是防校验严的模拟器。',
     '写之前过日历：date 要是 %s 之间的周日，%s 开学第一天例外（真实公历上是周四）；'
     '每条约会要落在 date 之后 %d 天之内（当天算，超一天就拒）。'
     % (span_text(), '1996-04-04', APPT_WINDOW),
@@ -449,6 +486,9 @@ def read_slot(b, img, year=None):
     Dates are written out as 年-月-日 even though the bytes carry only month and day: the
     year comes from guess_date, and the import proves whatever year it lands on.
     """
+    stored, calc = b[TAG:TAG + 6], tag_words(b)
+    ok = list(calc) == [int.from_bytes(stored[2:4], 'little'),
+                        int.from_bytes(stored[4:6], 'little')]
     if not b[:FIELD_END].strip(b'\x00'):
         return {'untouched': True}
     # A month/day byte the calendar can't place (0x0d 月, 2/30) reads as None, not a crash:
@@ -457,6 +497,8 @@ def read_slot(b, img, year=None):
     copy = words(b, DATE2, 2)
     now = guess_date(b[DATE + 1] + 1, b[DATE] + 1, year)
     out = {'untouched': False,
+           'tag': stored.hex(' ') + ('（校验一致）' if ok else
+                                     '（标记还是旧内容的：按现在内容应为 %04x %04x）' % calc),
            'date': fmt(now),
            'date_copy': fmt(guess_date(copy[0] + 1, copy[1] + 1, year, after=now)),
            'attributes': dict(zip(ATTR[1], words(b, ATTR[0], len(ATTR[1]))))}
@@ -486,6 +528,8 @@ def print_slot(n, s, year=None):
         print('  没存过：0x000–0x%03x 全零，约会表连 ff 都没写过' % FIELD_END)
         return
     d, c = s['date'], s['date_copy']
+    print('  槽位标记   0xfda %s%s' % (s['tag'],
+          '' if '一致' in s['tag'] else '——snes9x 不校验这个，照样能读进来；校验严的模拟器会清槽'))
     if not d:
         print('  日期       存档里 0x1cc 那对月/日字节推不出学制里的任何一天（0x038 那份是 %s）' % c)
     else:
@@ -766,6 +810,29 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
     return None
 
 
+def resign(b, changes):
+    """Re-sign the 0xfda tag after the fields moved.
+
+    The two tag words cover [0x000, 0xfdc), so any write to a date, a 好感度, a 登场 byte or
+    the 约会 table invalidates them.  Keeping them consistent costs nothing and an unchanged
+    slot re-signs to itself, so this can ride along with every write.  It is NOT known to be
+    required here: a slot injected with a stale tag loaded fine on snes9x (see TAG).  The one
+    wipe we saw -- an edited slot zeroed on the next cold boot -- happened on the emulator
+    the user plays on, which this trace environment cannot stand in for.
+    """
+    if not any(b[:FIELD_END]) and not b[TAG:TAG + 6].strip(b'\x00'):
+        return                                   # 空槽：全零就是「没存过」的样子，别给它造标记
+    old = bytes(b[TAG:TAG + 6])
+    if not int.from_bytes(old[:2], 'little'):
+        b[TAG:TAG + 2] = b'\x01\x00'             # 标记得先落下，它在校验区间里
+    w1, w2 = tag_words(b)
+    b[TAG + 2:TAG + 6] = bytes([w1 & 0xFF, w1 >> 8, w2 & 0xFF, w2 >> 8])
+    if bytes(b[TAG:TAG + 6]) != old:
+        changes.append('0x%03x  %s→%s  槽位标记重签（内容改了标记就得跟着改；snes9x 不校验它，'
+                       '校验严的模拟器会清槽）'
+                       % (TAG, old.hex(' '), bytes(b[TAG:TAG + 6]).hex(' ')))
+
+
 def stage_save(path, slots, year=None, force=False):
     """Apply the YAML's fields to an in-memory copy; return (blob, original, log lines).
 
@@ -786,6 +853,8 @@ def stage_save(path, slots, year=None, force=False):
         changes = []
         notes = []
         note = apply_slot(b, s, changes, year, force, notes)
+        if not note:
+            resign(b, changes)
         blob[n * STRIDE:(n + 1) * STRIDE] = b
         log.append('\n-- 槽位 %d（文件 0x%x）--' % (n + 1, n * STRIDE))
         if note:
