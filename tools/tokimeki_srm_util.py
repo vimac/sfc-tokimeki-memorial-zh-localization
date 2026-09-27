@@ -20,20 +20,30 @@ distinguishable.  The YAML is a hand-rolled subset: mappings are block style one
 ints, true/false/null.  No pyyaml is needed either way -- --import reads the same subset back.
 Comment lines are safe to add, tabs are not.
 
---import writes only these four keys, and only into slots that were actually saved into --
+--import writes only these six keys, and only into slots that were actually saved into --
 any key you leave out of the file stays untouched, which is what makes export→import a no-op:
   date          年-月-日, written to both copies: 0x1cc (day, month) and 0x038/0x03a as words
-  affinity      the 12 words at 0x100 -- all 12, or none
-  visibility    the 12 status bytes at 0x142 -- all 12, or none
-                (00 未登场 / 01 登场没电话 / 0f 有号码)  WARNING: writing these does NOT
-                put a girl into the in-game phone book.  Measured 2026-09-27: a slot with
-                all eleven heroines at 0f still showed none of the new names in 通讯录.
-                The byte tracks 登场/号码 in real saves but is not what drives the book;
-                the field that does is not found yet, so treat this key as unproven.
-  appointments  up to 16 records for 0x16e: {date, girl, place}.  `girl` is a name or an index
-                0-11.  Writing the list rewrites the whole table, because a cancelled booking
-                keeps its 对象 byte and the game still counts it.
-Everything else in the file (attributes, names, unconfirmed) is dumped for reference only.
+  attributes    the nine status words at 0x00..0x11 (体力／文科／理科／艺术／运动／杂学／容姿／
+                毅力／压力).  Given as the mapping the export writes, so any subset is allowed --
+                edit 容姿 alone and the other eight stay as they are.  A plain nine-item list in
+                table order works too.  No ceiling is enforced: a played slot reads 容姿141 and
+                the user's own edited slot reads 体力314.
+  affinity      the 11 words at 0x100 -- all 11, or none
+  visibility    the 11 status bytes at 0x142 -- all 11, or none
+                (00 未登场 / 01 登场没电话 / 0f 有号码)  This is the 登场/号码 status, NOT the
+                phone book: measured 2026-09-27, a slot with all eleven heroines at 0f still
+                showed none of the new names in 通讯录.
+  phone_book    the names listed in 通讯录, from the 24-bit field at 0x8e5.  This IS the gate:
+                clearing those three bytes leaves only 诗织/好雄/丽 on screen, FF FF FF fills
+                the book with all thirteen entries.  Import sets and clears only the ten bits
+                in BOOK_BIT, so the fourteen bits of unknown purpose stay as they are.
+  appointments  up to 16 records for 0x16e: {at, date, girl, place}.  `girl` is a name or an index
+                0-10.  Each record goes back at the `at` offset the export read it from -- the
+                table routinely has empty records in the middle, and packing the list from
+                record 1 would shift every booking after such a hole.  Records the list does not
+                mention are cleared, because a cancelled booking keeps its 对象 byte and the
+                game still counts it.
+Everything else in the file (names, unconfirmed) is dumped for reference only.
 Every write is followed by a re-sign of the slot's tag at 0xfda (see TAG below).  This is
 insurance, not a fix for something observed here: snes9x loads a slot whose tag is stale
 (proved 2026-09-27 by injecting one and continuing from it), while the emulator the user
@@ -72,29 +82,49 @@ ATTR = (0x00, ('体力', '文科', '理科', '艺术', '运动', '杂学', '容�
 # nonzero entries of a played slot are the same four indices as that slot's status bytes,
 # and three of those four match the names read off that save's in-game phone book.
 # 10 是早乙女优美——用户 2026-09-27 给的「女生对你的评价」表就是这 11 行（左列 0-4、右列
-# 5-10），优美固定第 11 行。11 是伊集院丽：同一张表没有她（隐藏角色），而馆林的台词
-# 跟好感度无关（用户裁决），所以这格不是她，剩下的已知角色只有丽。
+# 5-10），优美固定第 11 行。
 GIRLS = ('藤崎诗织', '如月未绪', '纽绪结奈', '片桐彩子', '虹野沙希',
          '古式由加利', '清川望', '镜魅罗', '朝日奈夕子', '美树原爱',
          '早乙女优美')
-N_REC = 12                           # affinity and status tables are both 12 records; the
-                                     # 12th (index 11) is 伊集院丽, see above
-REC11 = '伊集院丽'                    # index 11 -- 隐藏角色，评价表里没有她那一行
+N_REC = 11                           # the per-girl tables are ELEVEN records, not twelve:
+                                     # the loops over $0C00/$0C16/$0C2C/$0C42 run `INX INX …
+                                     # CPX #$0016`, and 0x16/2 = 11.  Five such arrays (好感度
+                                     # 0x100, 0x116, 伤心度 0x12C, 登场 0x142, 约会次数 0x158)
+                                     # end at 0x16d, which is exactly where the 约会 table
+                                     # starts -- a twelfth record would overlap it.
+                                     # 伊集院丽 therefore has no row here; index 11 used to be
+                                     # labelled 丽 and was reading 0x158's first word instead.
 AFFINITY = 0x100
 PHONE = 0x142                        # (status, 0x80) per record; three status values on a
                                      # real save -- 00 没打过交道, 01 认识但没号码,
                                      # 0f 有号码。No slot ever shows affinity > 0 at 00.
-                                     # !! 这一格**不是**通讯录的闸门：用户 2026-09-27 把
-                                     # slot2 的 index 1-10 全改成 0f（并且按仪表给的标记值
-                                     # 重签了），游戏里通讯录仍然没有如月。它跟登场/号码同步
-                                     # 涨，但驱动通讯录的是别的东西，尚未找到。
+                                     # !! 这一格跟登场/号码同步涨，但**不驱动通讯录**：实测把
+                                     # slot2 的 index 1-10 全改成 0f，游戏里通讯录还是没有人。
+                                     # 真正的闸门是下面 BOOK 那三字节（2026-09-27 找到）。
 PHONE_TIER = {0x00: '未登场', 0x01: '登场但没有电话', 0x0F: '有电话'}
+BOOK = 0x8e5                         # 3 bytes / 24 bits -- who is listed in 通讯录.  Found via
+                                     # docs/research/cheats-wikiwiki-snes007.md (`7E13E5-7E13E7
+                                     # 写 FF ＝全员电话号码`; the save mirrors 1:1 into WRAM at
+                                     # $0B00, so that cheat is save 0x8e5) and then measured bit
+                                     # by bit: one probe value per run on a save that reaches
+                                     # the book, names read off the screenshot.  Clearing these
+                                     # bytes empties the book down to the three below; FF FF FF
+                                     # fills it with all thirteen entries.
+BOOK_BIT = {'如月未绪': 4, '纽绪结奈': 1, '片桐彩子': 15, '虹野沙希': 10,
+            '古式由加利': 12, '清川望': 9, '镜魅罗': 8, '朝日奈夕子': 23,
+            '美树原爱': 22, '早乙女优美': 6}          # bit 0 = low bit of byte 0x8e5
+BOOK_UNGATED = ('藤崎诗织', '早乙女好雄', '伊集院丽')   # in the book with BOOK cleared
+# The other 14 bits (0,2,3,5,7,11,13,14,16,17,18,19,20,21) do nothing to the book -- a played
+# slot carries bits 5 and 21 set with no extra name, so they hold something else.  --import
+# therefore only ever touches the ten bits above and leaves the rest of the field alone.
 APPT, N_APPT = 0x16e, 16             # 16 x 4-byte records (day-1, month-1, 对象, 未确认)
 DATE = 0x1cc                         # day-1, month-1; the same day is kept a second time
 DATE2 = 0x038                        # at 0x038/0x03a as (month-1, day-1) words -- both
                                      # copies agree in every slot of every save on disk
-FIELD_END = 0x340                    # everything named above lives under this; an
-                                     # untouched slot is zero all the way to it
+FIELD_END = 0x340                    # the diary/name fields above live under this; an
+                                     # untouched slot is zero all the way to it.  BOOK (0x8e5)
+                                     # is the one named field outside it -- 空槽在那儿也是零，
+                                     # 所以判空只看这一段照样成立。
 TAG = 0xfda                          # 槽位标记：在用的槽是 01 00 ＋两个字（0xfdc／0xfde），
                                      # 空槽这六字节全零。两个字是 [0,0xfdc) 这段 16 位字的
                                      # 两种求和（见 tag_words）：全求和、以及每第 4 个字求和。
@@ -150,19 +180,27 @@ def span_text():
 HEADER = (
     '心跳回忆 .srm 存档导出 -- tools/tokimeki_srm_util.py --export（本文件与存档同名，加 .yaml 后缀）',
     '--import 后面给这份 YAML 或者给存档本身都行：给存档就读它旁边这份，同一个规则不用写两遍路径。',
-    '导入只认 date／affinity／visibility／appointments 这四个键，没写的键不动；'
-    'affinity／visibility 要给满 12 条。',
-    '12 条按引擎下标排：0–9＝十位女主，10＝早乙女优美，11＝伊集院丽（隐藏角色）；'
-    '约会记录里的 girl 也可以直接写中文名。',
+    '导入只认 date／attributes／affinity／visibility／phone_book／appointments 这六个键，'
+    '没写的键不动；affinity／visibility 要给满 11 条，attributes 可以只写想改的那几项。',
+    '11 条按引擎下标排：0–9＝十位女主，10＝早乙女优美；约会记录里的 girl 也可以直接写中文名。'
+    '（伊集院丽不在这些表里——那几条数组每条只有 11 项，第五条正好停在约会表 0x16e 上。）',
     'date 写成 年-月-日（比如 1997-02-12）；存档里存 0 基的月/日两份（0x1cc 日,月 与 '
     '0x038/0x03a 月,日字），年份不住在存档里——导出时按周日推（--year 可以指定哪一年），'
     '导入照你写的核，写了 date 就以它为准。',
-    'visibility＝0x142 起 12 个状态字节（0 未登场／1 登场没电话／15 有号码）。'
-    '注意：实测这一格**不驱动通讯录**——全填 15 之后游戏里还是查不到人，真正的闸门还没找到。',
+    'attributes＝0x00 起九个状态字（体力／文科／理科／艺术／运动／杂学／容姿／毅力／压力），'
+    '一项一行，只写你要改的那几项就行，没写的原样留着；也可以按列表给满九项。'
+    '观测到过 容姿141、体力314，所以面板那个 100 不是这一格的上下限。',
+    'visibility＝0x142 起 11 个状态字节（0 未登场／1 登场没电话／15 有号码）。'
+    '注意：实测这一格**不驱动通讯录**——全填 15 之后游戏里还是查不到人。',
+    'phone_book＝通讯录里的人名列表，闸门是 0x8e5 起那三字节的 24 个比特（一个人名一个比特，'
+    '但比特号跟引擎下标不成顺序，照 BOOK_BIT 那张实测表走）。导入只动这十个已知比特，'
+    '其余十四个（存档里常看到 5 和 21 挂着）来路不明，原样留着。'
+    '藤崎诗织／早乙女好雄／伊集院丽不在这三字节里，把她们写进列表不产生任何字节。',
     '约会的 place 是记录第 4 字节：玩家把它读作约会地点，但这个含义尚未证实，导入按原值写回；'
     '不写这个键就留着文件里那个字节。',
-    '约会整张表重写：导出里没列出来的记录就当没有（取消过的预约会留下对象字节）。',
-    'attributes／names／unconfirmed 是给人看的，一条一行摊开写，导入不碰。',
+    '约会按导出里的 at 偏移写回原位，没列出来的记录清空；'
+    '取消过的预约会留下对象字节，留着就是幽灵预约。',
+    'names／unconfirmed 是给人看的，一条一行摊开写，导入不碰。',
     'tag 是 0xfda 那六个字节（在用标记＋两个求和字）：只给人看，导入不读它——'
     '写回之后仪表按新内容自己重签。这两个字是槽位的结构不变量（7 个槽全吻合），'
     '但 snes9x 读档不校验它：拿旧标记的槽注入照样进游戏。重签是防校验严的模拟器。',
@@ -440,6 +478,28 @@ def words(b, off, n):
     return [int.from_bytes(b[off + 2 * i:off + 2 * i + 2], 'little') for i in range(n)]
 
 
+def book_bits(b):
+    """The 24 通讯录 bits at 0x8e5 as one integer (bit 0 = bit 0 of byte 0x8e5)."""
+    return b[BOOK] | (b[BOOK + 1] << 8) | (b[BOOK + 2] << 16)
+
+
+def book_names(b):
+    """Who the game lists in 通讯录 for these bytes, in engine order."""
+    v = book_bits(b)
+    return [g for g in GIRLS
+            if g in BOOK_UNGATED or (g in BOOK_BIT and v >> BOOK_BIT[g] & 1)]
+
+
+def book_mask(names):
+    """The ten bits --(value, only-these-bits) -- that make `names` the book's content."""
+    hit = 0
+    for text in names:
+        g = girl_ref(text)
+        if GIRLS[g] in BOOK_BIT:
+            hit |= 1 << BOOK_BIT[GIRLS[g]]
+    return hit, sum(1 << bit for bit in BOOK_BIT.values())
+
+
 def redrawn(idx, orig, patched):
     """Whether this image's glyph record differs from the original's at the same slot.
 
@@ -523,6 +583,8 @@ def read_slot(b, img, year=None):
     out['names'] = names
     out['affinity'] = words(b, AFFINITY, N_REC)
     out['visibility'] = [b[PHONE + 2 * i] for i in range(N_REC)]
+    out['phone_book'] = book_names(b)
+    out['phone_book_raw'] = '%02x %02x %02x' % (b[BOOK], b[BOOK + 1], b[BOOK + 2])
     out['appointments'] = [{'at': '%03x' % o,
                             'date': fmt(guess_date(b[o + 1] + 1, b[o] + 1, year, after=now)),
                             'girl': b[o + 2], 'place': b[o + 3]}
@@ -555,11 +617,12 @@ def print_slot(n, s, year=None):
         if s['names'].get(label):
             print('  %-9s %s' % (label, s['names'][label]))
     aff, vis = s['affinity'], s['visibility']
-    print('  好感度     ' + '  '.join('%s=%d' % (g, aff[i]) for i, g in enumerate(GIRLS))
-          + '  %s=%d' % (REC11, aff[11]))
+    print('  好感度     ' + '  '.join('%s=%d' % (g, aff[i]) for i, g in enumerate(GIRLS)))
     print('  登场       ' + ('  '.join('%s=%s' % (g, PHONE_TIER.get(t) or '%02x' % t)
-                                       for g, t in zip(GIRLS + (REC11,), vis) if t)
+                                       for g, t in zip(GIRLS, vis) if t)
                             or '十一个女生都未登场（0x142 起全是 00）'))
+    print('  通讯录     %s（0x8e5 %s；诗织／好雄／丽 不在这一格里）'
+          % ('、'.join(s['phone_book']) or '空的', s['phone_book_raw']))
     booked = s['appointments']
     print('  约会       ' + ('  '.join('%s %s 地点?%02x[%s]'
                                        % (a['date'] or '月/日字节不对', girl(a['girl']),
@@ -602,7 +665,7 @@ def report(path, img, year=None):
 
 # ---------------------------------------------------------------- writing
 
-def girl_ref(value, allow_unknown=False):
+def girl_ref(value):
     if isinstance(value, int):
         if not 0 <= value < N_REC:
             raise ValueError('下标要在 0–%d（给了 %d）' % (N_REC - 1, value))
@@ -610,16 +673,20 @@ def girl_ref(value, allow_unknown=False):
     text = str(value).strip()
     if text in GIRLS:
         return GIRLS.index(text)
-    if text == REC11:
-        return 11
-    if allow_unknown:
-        raise ValueError('第 12 条（%s）请写下标 11（给了「%s」）' % (REC11, text))
-    raise ValueError('不认识的名字「%s」，可写：' % text + '、'.join(GIRLS + (REC11,))
+    raise ValueError('不认识的名字「%s」，可写：' % text + '、'.join(GIRLS)
                      + '，或者下标 0–%d' % (N_REC - 1))
 
 
+def _as_int(value, label):
+    """int() with the field's name in the complaint, so `压力: 七` says which line is wrong."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ValueError('%s 要的是数字（给了「%s」）' % (label, value))
+
+
 def _byte_at(b, off, value, label, changes, lo=0, hi=255):
-    v = int(value)
+    v = _as_int(value, label)
     if not lo <= v <= hi:
         raise ValueError('%s 要在 %d–%d 之间（给了 %s）' % (label, lo, hi, value))
     if b[off] != v:
@@ -628,7 +695,7 @@ def _byte_at(b, off, value, label, changes, lo=0, hi=255):
 
 
 def _word_at(b, off, value, label, changes, hi=0xFFFF):
-    v = int(value)
+    v = _as_int(value, label)
     if not 0 <= v <= hi:
         raise ValueError('%s 要在 0–%d 之间（给了 %s）' % (label, hi, value))
     now = int.from_bytes(b[off:off + 2], 'little')
@@ -744,6 +811,31 @@ def check_calendar(s, b, year):
     return problems, notes
 
 
+def _apply_attributes(b, given, changes):
+    """Write the nine status words at 0x00..0x11 from a mapping or a nine-item list.
+
+    A mapping may name any subset (that is the shape the export writes, and a player edits
+    one line at a time); a list has to carry all nine in table order.  No ceiling is asserted:
+    a played slot reads 容姿141 and the user's own edited slot reads 体力314, so 100 is at
+    best a display convention, not the field's bound.
+    """
+    labels = ATTR[1]
+    if isinstance(given, dict):
+        for label in given:
+            if label not in labels:
+                raise ValueError('属性没有「%s」这一项（只有 %s）' % (label, '／'.join(labels)))
+        items = [(label, given[label]) for label in labels if label in given]
+    else:
+        if len(given) != len(labels):
+            raise ValueError('属性按列表给要给满 %d 项（给了 %d 项）'
+                             % (len(labels), len(given)))
+        items = list(zip(labels, given))
+    if not items:
+        raise ValueError('attributes 给了空表，什么都没写——要整项不碰就别写这个键')
+    for i, (label, value) in enumerate(items):
+        _word_at(b, ATTR[0] + 2 * labels.index(label), value, '属性 %s' % label, changes)
+
+
 def apply_slot(b, s, changes, year=None, force=False, notes=None):
     """Write the importable fields of one slot into `b`; `changes` collects the byte log.
 
@@ -778,6 +870,8 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
                                % (off, label, b[off], b[off + 1]))
                 continue
             _word_at(b, off, value, label, changes, hi=255)
+    if s.get('attributes') is not None:
+        _apply_attributes(b, s['attributes'], changes)
     if s.get('affinity') is not None:
         if len(s['affinity']) != N_REC:
             raise ValueError('好感度要 %d 条（给了 %d 条）' % (N_REC, len(s['affinity'])))
@@ -785,7 +879,7 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
         # without trouble and rules the ceiling at 999 (at 200 the girl still does not blush,
         # so 255 cannot be the game's max).  Values over 999 are written but called out.
         for i, value in enumerate(s['affinity']):
-            if int(value) > 999:
+            if _as_int(value, '好感度 %s' % girl(i)) > 999:
                 changes.append('      提醒 好感度 %s＝%s，超过用户给的上限 999' % (girl(i), value))
             _word_at(b, AFFINITY + 2 * i, value, '好感度 %s' % girl(i), changes)
     if s.get('visibility') is not None:
@@ -793,14 +887,37 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
             raise ValueError('登场状态要 %d 条（给了 %d 条）' % (N_REC, len(s['visibility'])))
         for i, value in enumerate(s['visibility']):
             _byte_at(b, PHONE + 2 * i, value, '登场 %s' % girl(i), changes)
+    if s.get('phone_book') is not None:
+        # Only the ten bits this tool has measured against the screen move; the other fourteen
+        # stay as the save has them.  诗织/好雄/丽 have no bit at all, so listing them is a
+        # no-op rather than an error -- the export always lists 诗织.
+        hit, known = book_mask(s['phone_book'])
+        new = (book_bits(b) & ~known) | hit
+        for k in range(3):
+            _byte_at(b, BOOK + k, (new >> (8 * k)) & 0xFF, '通讯录 0x%03x' % (BOOK + k), changes)
     if s.get('appointments') is not None:
         listed = s['appointments']
         if len(listed) > N_APPT:
             raise ValueError('约会记录最多 %d 条（给了 %d 条）' % (N_APPT, len(listed)))
         live = [o for o in range(APPT, APPT + 4 * N_APPT, 4)
                 if (b[o], b[o + 1]) != (0xFF, 0xFF)]
+        keep = set()
         for i, a in enumerate(listed):
+            # Write each record back where the export found it.  A table with an empty record
+            # in the middle is normal, and packing the list from record 1 shifts every booking
+            # after that hole forward -- which is not what the player's diary says.
             o = APPT + 4 * i
+            if a.get('at'):
+                try:
+                    o = int(str(a['at']), 16)
+                except ValueError:
+                    raise ValueError('约会%d 的 at=%r 不是个偏移' % (i + 1, a['at']))
+            if (o - APPT) % 4 or not APPT <= o < APPT + 4 * N_APPT:
+                raise ValueError('约会%d 的 at=%r 不是记录起点（0x%x 起、每条 4 字节）'
+                                 % (i + 1, a.get('at'), APPT))
+            if o in keep:
+                raise ValueError('约会%d 的 at=0x%03x 跟前面某条撞了' % (i + 1, o))
+            keep.add(o)
             dt = parse_date(a['date'], '约会%d' % (i + 1))
             m, d = dt.month - 1, dt.day - 1
             if d > 30:
@@ -811,17 +928,16 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
                      0, N_REC - 1)
             _byte_at(b, o + 3, a.get('place', b[o + 3]),
                      '约会%d 地点?（未证实）0x%03x' % (i + 1, o), changes)
-        for i in range(len(listed), N_APPT):
-            o = APPT + 4 * i
+        for o in [x for x in range(APPT, APPT + 4 * N_APPT, 4) if x not in keep]:
             if (b[o], b[o + 1]) == (0xFF, 0xFF):
                 continue      # already empty: leave its stale 对象 bytes exactly as they are
             for k in range(4):
                 if b[o + k] != 0xFF:
-                    changes.append('0x%03x  %02x→ff  清空约会记录第 %d 条' % (o + k, b[o + k], i + 1))
+                    changes.append('0x%03x  %02x→ff  清空约会记录 0x%03x' % (o + k, b[o + k], o))
                     b[o + k] = 0xFF
-        if len(live) > len(listed):
+        if len(live) > len(keep):
             changes.append('      约会表原有 %d 条，导入只列 %d 条，其余已清空'
-                           '（取消的预约会留下对象字节，留着就是幽灵预约）' % (len(live), len(listed)))
+                           '（取消的预约会留下对象字节，留着就是幽灵预约）' % (len(live), len(keep)))
     return None
 
 
@@ -990,7 +1106,7 @@ def main(argv=None):
     ap.add_argument('--export', action='store_true', help='把读到的字段写成一份 YAML')
     ap.add_argument('--out', help='YAML 落点，默认就写在第一个存档旁边，同名加 .yaml 后缀')
     ap.add_argument('--import', dest='do_import', metavar='YAML|存档.srm',
-                    help='照 YAML 写回日期／好感度／登场／约会；也可以直接给存档，'
+                    help='照 YAML 写回日期／属性／好感度／登场／通讯录／约会；也可以直接给存档，'
                          '那就照导出的规则读它旁边同名加 .yaml 后缀的那份')
     ap.add_argument('--dry-run', action='store_true', help='配合 --import：只打字节差异')
     ap.add_argument('--year', type=int, metavar='96',
