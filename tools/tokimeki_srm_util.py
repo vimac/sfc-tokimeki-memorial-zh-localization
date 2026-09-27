@@ -10,6 +10,7 @@ read, just through the original image's index->character table.
   python3 tools/tokimeki_srm_util.py [--rom 镜像.sfc] [--orig 原镜像.sfc] [--year 96] 存档.srm [存档.srm ...]
   python3 tools/tokimeki_srm_util.py --export [--out 导出.yaml] 存档.srm [存档.srm ...]
   python3 tools/tokimeki_srm_util.py --import 导出.yaml [存档.srm ...] [--dry-run] [--year 96] [--force]
+  python3 tools/tokimeki_srm_util.py --import 存档.srm [--dry-run]   # 读它旁边的 存档.srm.yaml
 
 --export writes ONE file for every save named on the command line, next to the first save and
 under its own name plus a `.yaml` suffix (`存档.srm` -> `存档.srm.yaml`); each save is keyed by
@@ -103,6 +104,7 @@ def span_text():
 
 HEADER = (
     '心跳回忆 .srm 存档导出 -- tools/tokimeki_srm_util.py --export（本文件与存档同名，加 .yaml 后缀）',
+    '--import 后面给这份 YAML 或者给存档本身都行：给存档就读它旁边这份，同一个规则不用写两遍路径。',
     '导入只认 date／affinity／visibility／appointments 这四个键，没写的键不动；'
     'affinity／visibility 要给满 12 条。',
     '12 条按引擎下标排：0–9＝十位女主（约会记录里 girl 可写中文名），10、11 的人物身份未确认。',
@@ -807,26 +809,46 @@ def commit_save(path, blob, original):
     return '原文备份 %s\n已写 %s（新 md5 %s）' % (bak, path, hashlib.md5(bytes(blob)).hexdigest())
 
 
+def import_target(arg, paths):
+    """What `--import` names: the export YAML, or the save itself.
+
+    The save case is the same rule --export writes by, so `--import 存档.srm` means
+    「把存档旁边那份 `存档.srm.yaml` 写回这个存档」 and only needs the YAML spelled out when it
+    lives somewhere else.  Decided by what is on disk, not by guessing at the bytes: an existing
+    `<arg>.yaml` sibling makes `arg` the save, otherwise `arg` is the dump."""
+    if arg.endswith('.yaml'):
+        return arg, paths
+    sibling = arg + '.yaml'
+    if arg.endswith('.srm') or os.path.exists(sibling):
+        if not os.path.exists(arg):
+            raise ValueError('%s: 没有这个文件（--import 要给存档，或者给一份 YAML）' % arg)
+        if not os.path.exists(sibling):
+            raise ValueError('%s 旁边没有 %s：先导出。\n'
+                             '  python3 tools/tokimeki_srm_util.py --export %s\n'
+                             '（几个存档一起 --export 时，那一份只落在第一个旁边，'
+                             '这种就把 YAML 的路径显式写给 --import）'
+                             % (arg, os.path.basename(sibling), arg))
+        return sibling, [arg] + list(paths)
+    return arg, paths
+
+
 def load_dump(path):
-    """Read the export back, and name the slip this makes easy to hit: --import wants the
-    YAML, not the .srm it came out of."""
+    """Read the export back.  A save reaches here only when it has no sibling export --
+    import_target would have taken that one -- so all this can advise is: export it first."""
     with open(path, 'rb') as f:
         blob = f.read()
     try:
         return yaml_load(blob.decode('utf-8'))
     except UnicodeDecodeError as e:
-        # 存档就是 4 KB 槽位的整数倍，导出文件不会是——光凭这一点加文件名就够认了
-        shaped = len(blob) >= STRIDE and len(blob) % STRIDE == 0
-        named = path.endswith(('.srm', '.bak'))
-        if not (shaped or named):
+        # 存档就是 4 KB 槽位的整数倍，导出文件不会是——光凭这一点就够认出递过来的是存档
+        if not (len(blob) >= STRIDE and len(blob) % STRIDE == 0):
             raise ValueError('%s 不是 UTF-8 文本（第 %d 字节 %02x 读不出字符）'
                              % (path, e.start + 1, blob[e.start]))
         raise ValueError(
-            '%s 不是 YAML，是 .srm 存档本身（%d 字节＝%d 个 4 KB 槽位，第一个非文本字节在第 %d 个）。'
-            '--import 要的是 --export 出来的那份，默认就写在存档旁边、同名加 .yaml 后缀；'
-            '存档只放在命令行尾巴上：\n'
-            '  python3 tools/tokimeki_srm_util.py --import 存档.srm.yaml 存档.srm [--dry-run]'
-            % (path, len(blob), len(blob) // STRIDE, e.start + 1))
+            '%s 是一份 .srm 存档（%d 字节＝%d 个 4 KB 槽位，第一个非文本字节在第 %d 个），'
+            '它旁边也没有导出的 YAML。先跑：\n'
+            '  python3 tools/tokimeki_srm_util.py --export %s'
+            % (path, len(blob), len(blob) // STRIDE, e.start + 1, path))
 
 
 def run_import(dump, paths, dry_run, year=None, force=False):
@@ -883,8 +905,9 @@ def main(argv=None):
     ap.add_argument('--orig', help='原镜像，只用来把重画过的字库格标成「¤」')
     ap.add_argument('--export', action='store_true', help='把读到的字段写成一份 YAML')
     ap.add_argument('--out', help='YAML 落点，默认就写在第一个存档旁边，同名加 .yaml 后缀')
-    ap.add_argument('--import', dest='do_import', metavar='YAML',
-                    help='照 YAML 写回日期／好感度／登场／约会')
+    ap.add_argument('--import', dest='do_import', metavar='YAML|存档.srm',
+                    help='照 YAML 写回日期／好感度／登场／约会；也可以直接给存档，'
+                         '那就照导出的规则读它旁边同名加 .yaml 后缀的那份')
     ap.add_argument('--dry-run', action='store_true', help='配合 --import：只打字节差异')
     ap.add_argument('--year', type=int, metavar='96',
                     help='存档里只有月/日，这一项决定读出来写成哪一年（写 96 或 1996 都行）；'
@@ -911,7 +934,10 @@ def main(argv=None):
 
 def _run(a, ap):
     if a.do_import:
-        run_import(load_dump(a.do_import), a.srm, a.dry_run, a.year, a.force)
+        dump_path, saves = import_target(a.do_import, a.srm)
+        if dump_path != a.do_import:
+            print('--import 给的是存档，照导出的规则读它旁边的 %s' % os.path.basename(dump_path))
+        run_import(load_dump(dump_path), saves, a.dry_run, a.year, a.force)
         return 0
     if not a.srm:
         ap.error('要给至少一个 .srm 存档（--help 看用法）')
