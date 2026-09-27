@@ -645,15 +645,16 @@ UI_TEXT_ROWS = (
     (0X191DC, 2, '科学', '科学', 'R'),
     (0X191E1, 2, '美術', '美术', 'R'),
     (0X191E6, 3, '軽音楽', '轻音乐', 'R'),
-    # The three katakana labels whose Chinese names are shorter than the field keep their
-    # spare cells *in front*: the join message prints the name record and then the shared
-    # suffix (which supplies 「部」 because the exact-fill labels have no room for it), so a
-    # trailing pad shows up as a hole inside that sentence.
-    (0X191ED, 4, 'サッカー', '  足球', 'R'),
+    # The spare cells of these fixed-width labels stay *trailing*: the list draws the
+    # selection bar across the whole field, so right-aligning a name parks it inside the
+    # bar with a hole in front (user's screenshot of the attempt).  The join message
+    # therefore keeps its one-cell gap before the shared suffix's 「部」 -- that is the
+    # cheaper side of the trade.
+    (0X191ED, 4, 'サッカー', '足球  ', 'R'),
     (0X191F6, 2, '野球', '棒球', 'R'),
-    (0X191FB, 3, 'テニス', ' 网球', 'R'),
+    (0X191FB, 3, 'テニス', '网球 ', 'R'),
     (0X19202, 2, '水泳', '游泳', 'R'),
-    (0X19207, 3, 'バスケ', ' 篮球', 'R'),
+    (0X19207, 3, 'バスケ', '篮球 ', 'R'),
     (0X1920E, 2, '私設', '私设', 'R'),
     (0X19213, 3, '無所属', '无社团', 'R'),
     (0X1921A, 1, '部', '部', 'R'),
