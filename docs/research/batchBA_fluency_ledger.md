@@ -114,7 +114,8 @@
 `name_tables` PASS 0/76；`segtext --blocks` **INSIDE 3**（回到那三处假命中）／JOIN 117／POOL-steps 230；
 `--dict` 973 条被真正调用、55,269 次、20 条无表行、**0 条出假名**；
 `charledger` 2,144 字 / 220,604 位，owned 2,143，`new 1`＝「厢」（只在没注册的 block133 里）；
-`doclistings` 270 行 0 mismatch；`bracketpair` 与上一批一致（2,709 命中 → 2,705 是原镜像自己的排版 → 我们的 4 框墙）。
+`doclistings` 270 行 0 mismatch；`bracketpair` 复扫 2,706 命中 → 2,705 是原镜像自己的跨框引号排版 →
+**我们的只剩 1 框墙**（这一趟落库后又按「段末逗号＝1 字节杠杆」补开三框，账在 `batchBA_bracket_ledger.md` §三）。
 
 模拟器层（本轮动了序章 2 行＋词典体 `ebb9`，够到序章画面，所以跑）：
 `prologue_play.py --boot` 96 次按键 → `prologue_shots.py` **88 boxes, 183 sheets**（框 14 没帧＝runtime-only 调用点，跟原镜像一样不上屏），
