@@ -20,7 +20,7 @@ saves but mean nothing I have proved are dumped once, raw, under 身份未确认
 (0x1cc day-first, 0x038/0x03a month-first).  A slot whose field area is still all zero
 was never saved into, and says nothing.
 
-usage: python3 tools/srmread.py [srm ...] [--rom PATH]
+usage: python3 tools/smrutil.py [srm ...] [--rom PATH]
 """
 import sys, os, hashlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
