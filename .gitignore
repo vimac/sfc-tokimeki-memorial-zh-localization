@@ -3,6 +3,7 @@
 *.sfc
 *.smc
 *.srm
+*.srm.bak
 *.bsz
 *.ips
 *.bps
