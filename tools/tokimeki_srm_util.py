@@ -25,7 +25,11 @@ any key you leave out of the file stays untouched, which is what makes export→
   date          年-月-日, written to both copies: 0x1cc (day, month) and 0x038/0x03a as words
   affinity      the 12 words at 0x100 -- all 12, or none
   visibility    the 12 status bytes at 0x142 -- all 12, or none
-                (00 未登场 / 01 登场没电话 / 0f 有电话)
+                (00 未登场 / 01 登场没电话 / 0f 有号码)  WARNING: writing these does NOT
+                put a girl into the in-game phone book.  Measured 2026-09-27: a slot with
+                all eleven heroines at 0f still showed none of the new names in 通讯录.
+                The byte tracks 登场/号码 in real saves but is not what drives the book;
+                the field that does is not found yet, so treat this key as unproven.
   appointments  up to 16 records for 0x16e: {date, girl, place}.  `girl` is a name or an index
                 0-11.  Writing the list rewrites the whole table, because a cancelled booking
                 keeps its 对象 byte and the game still counts it.
@@ -64,19 +68,26 @@ import build_zh as B
 
 STRIDE = 0x1000
 ATTR = (0x00, ('体力', '文科', '理科', '艺术', '运动', '杂学', '容姿', '毅力', '压力'))
-# The ten heroines in the order the engine numbers them.  Proven, not guessed: the four
-# nonzero entries of a played slot are the same four indices as that slot's phone flags,
+# The heroines in the order the engine numbers them.  0-9 proven from data: the four
+# nonzero entries of a played slot are the same four indices as that slot's status bytes,
 # and three of those four match the names read off that save's in-game phone book.
+# 10 是早乙女优美——用户 2026-09-27 给的「女生对你的评价」表就是这 11 行（左列 0-4、右列
+# 5-10），优美固定第 11 行。11 是伊集院丽：同一张表没有她（隐藏角色），而馆林的台词
+# 跟好感度无关（用户裁决），所以这格不是她，剩下的已知角色只有丽。
 GIRLS = ('藤崎诗织', '如月未绪', '纽绪结奈', '片桐彩子', '虹野沙希',
-         '古式由加利', '清川望', '镜魅罗', '朝日奈夕子', '美树原爱')
-N_REC = 12                           # affinity and phone tables are both 12 records; the
-                                     # identity of records 11 and 12 is not established,
-                                     # so those two take an index, never a name
+         '古式由加利', '清川望', '镜魅罗', '朝日奈夕子', '美树原爱',
+         '早乙女优美')
+N_REC = 12                           # affinity and status tables are both 12 records; the
+                                     # 12th (index 11) is 伊集院丽, see above
+REC11 = '伊集院丽'                    # index 11 -- 隐藏角色，评价表里没有她那一行
 AFFINITY = 0x100
 PHONE = 0x142                        # (status, 0x80) per record; three status values on a
-                                     # real save -- 00 not met yet, 01 met but no number,
-                                     # 0f number in the book.  No slot ever shows
-                                     # affinity > 0 at status 00.
+                                     # real save -- 00 没打过交道, 01 认识但没号码,
+                                     # 0f 有号码。No slot ever shows affinity > 0 at 00.
+                                     # !! 这一格**不是**通讯录的闸门：用户 2026-09-27 把
+                                     # slot2 的 index 1-10 全改成 0f（并且按仪表给的标记值
+                                     # 重签了），游戏里通讯录仍然没有如月。它跟登场/号码同步
+                                     # 涨，但驱动通讯录的是别的东西，尚未找到。
 PHONE_TIER = {0x00: '未登场', 0x01: '登场但没有电话', 0x0F: '有电话'}
 APPT, N_APPT = 0x16e, 16             # 16 x 4-byte records (day-1, month-1, 对象, 未确认)
 DATE = 0x1cc                         # day-1, month-1; the same day is kept a second time
@@ -141,11 +152,13 @@ HEADER = (
     '--import 后面给这份 YAML 或者给存档本身都行：给存档就读它旁边这份，同一个规则不用写两遍路径。',
     '导入只认 date／affinity／visibility／appointments 这四个键，没写的键不动；'
     'affinity／visibility 要给满 12 条。',
-    '12 条按引擎下标排：0–9＝十位女主（约会记录里 girl 可写中文名），10、11 的人物身份未确认。',
+    '12 条按引擎下标排：0–9＝十位女主，10＝早乙女优美，11＝伊集院丽（隐藏角色）；'
+    '约会记录里的 girl 也可以直接写中文名。',
     'date 写成 年-月-日（比如 1997-02-12）；存档里存 0 基的月/日两份（0x1cc 日,月 与 '
     '0x038/0x03a 月,日字），年份不住在存档里——导出时按周日推（--year 可以指定哪一年），'
     '导入照你写的核，写了 date 就以它为准。',
-    'visibility＝0x142 起 12 个状态字节（0 未登场／1 登场没电话／15 有电话）。',
+    'visibility＝0x142 起 12 个状态字节（0 未登场／1 登场没电话／15 有号码）。'
+    '注意：实测这一格**不驱动通讯录**——全填 15 之后游戏里还是查不到人，真正的闸门还没找到。',
     '约会的 place 是记录第 4 字节：玩家把它读作约会地点，但这个含义尚未证实，导入按原值写回；'
     '不写这个键就留着文件里那个字节。',
     '约会整张表重写：导出里没列出来的记录就当没有（取消过的预约会留下对象字节）。',
@@ -542,12 +555,11 @@ def print_slot(n, s, year=None):
         if s['names'].get(label):
             print('  %-9s %s' % (label, s['names'][label]))
     aff, vis = s['affinity'], s['visibility']
-    print('  好感度     ' + '  '.join('%s=%d' % (g, aff[i]) for i, g in enumerate(GIRLS)))
-    print('             第 11/12 条（身份未确认）= %d / %d' % (aff[10], aff[11]))
+    print('  好感度     ' + '  '.join('%s=%d' % (g, aff[i]) for i, g in enumerate(GIRLS))
+          + '  %s=%d' % (REC11, aff[11]))
     print('  登场       ' + ('  '.join('%s=%s' % (g, PHONE_TIER.get(t) or '%02x' % t)
-                                       for g, t in zip(GIRLS, vis) if t)
-                            or '十个女生都未登场（0x142 起全是 00）'))
-    print('             第 11/12 条（身份未确认）= %02x / %02x' % (vis[10], vis[11]))
+                                       for g, t in zip(GIRLS + (REC11,), vis) if t)
+                            or '十一个女生都未登场（0x142 起全是 00）'))
     booked = s['appointments']
     print('  约会       ' + ('  '.join('%s %s 地点?%02x[%s]'
                                        % (a['date'] or '月/日字节不对', girl(a['girl']),
@@ -598,9 +610,11 @@ def girl_ref(value, allow_unknown=False):
     text = str(value).strip()
     if text in GIRLS:
         return GIRLS.index(text)
+    if text == REC11:
+        return 11
     if allow_unknown:
-        raise ValueError('第 11/12 条身份未确认，只能写下标 10 或 11（给了「%s」）' % text)
-    raise ValueError('不认识的名字「%s」，可写：' % text + '、'.join(GIRLS)
+        raise ValueError('第 12 条（%s）请写下标 11（给了「%s」）' % (REC11, text))
+    raise ValueError('不认识的名字「%s」，可写：' % text + '、'.join(GIRLS + (REC11,))
                      + '，或者下标 0–%d' % (N_REC - 1))
 
 
@@ -767,11 +781,12 @@ def apply_slot(b, s, changes, year=None, force=False, notes=None):
     if s.get('affinity') is not None:
         if len(s['affinity']) != N_REC:
             raise ValueError('好感度要 %d 条（给了 %d 条）' % (N_REC, len(s['affinity'])))
-        # Storage is a 16-bit word.  Every value on a real save is 0–255 and the game's own
-        # ceiling is not proved, so a bigger number is written but called out.
+        # Storage is a 16-bit word, so the field is not capped at 255: the user played 700
+        # without trouble and rules the ceiling at 999 (at 200 the girl still does not blush,
+        # so 255 cannot be the game's max).  Values over 999 are written but called out.
         for i, value in enumerate(s['affinity']):
-            if int(value) > 255:
-                changes.append('      提醒 好感度 %s＝%s，超过观测到的 0–255' % (girl(i), value))
+            if int(value) > 999:
+                changes.append('      提醒 好感度 %s＝%s，超过用户给的上限 999' % (girl(i), value))
             _word_at(b, AFFINITY + 2 * i, value, '好感度 %s' % girl(i), changes)
     if s.get('visibility') is not None:
         if len(s['visibility']) != N_REC:
