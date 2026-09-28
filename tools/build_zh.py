@@ -2808,7 +2808,11 @@ SB_SHARE = set('「」（）、。？…‥')
 # Always pinned into the 86-code page (see plan(): the `bd` dictionary body
 # 朝日奈同学 needs 日 as a 1-byte code or it outgrows its own 8 B span and
 # every box that calls it reverts to the 8 B literal).
-FORCE_PIN = ('日',)
+# 子 joins it because the boxes that need it are names and fixed terms, not
+# wording: 夕子 (the 神社 wish box, budget 11 B) and 甲子园 / 面子 families
+# cannot lose a cell to prose.  Batch BE measured the page drift: without this
+# pin three exact-fit boxes break, and no reword buys the byte back.
+FORCE_PIN = ('日', '子')
 # The only characters allowed to keep a Japanese slot: shared full-width
 # punctuation, not a hanzi.  The SB band also shortcuts 15 high-frequency kanji
 # (私 今 行 何 当 思 張 来 日 気 見 出 人 一 言); spare_codes() hands those codes
