@@ -175,6 +175,14 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (90, 'block90_zh.txt', 0x1EB7BD), (124, 'block124_zh.txt', 0x25FFD6),
           (91, 'block91_zh.txt', 0x27188B),
           (144, 'prologue_zh.txt', END))
+# Every real dialog block resolves at or above 0x1C8000, so an `hi` below it means the
+# pointer grid hard-decoded a data region as text: block 133 landed inside the bank-$83
+# draw script that way, and packing Chinese over its interleaved placement opcodes
+# black-screened the save/options boot.  Asserted because the block list is the only
+# place that mistake is visible -- the build itself happily encodes a fake block.
+assert all(hi >= 0x1C8000 for _, _, hi in BLOCKS), \
+    'a registered block resolves below the real-text band: %s' % \
+    [(b, '%#x' % h) for b, _, h in BLOCKS if h < 0x1C8000]
 # Which phrase ($B9) and sub-text ($C3) dictionary entries have a Chinese reading.
 # Rows are key/cap/refs/japanese/chinese/bytes/fit; only key and chinese are read
 # here.  The diagnostic columns come from `tools/segtext.py --dict`, which walks
@@ -3513,10 +3521,24 @@ def ui_line_bodies(char2idx, rom):
         body = line_bytes(char2idx, line, keeps)
         k = n - len(body)
         assert k >= 0, '%s needs %d B, the span has %d' % (line, len(body), n)
-        if k:
-            body += (b'\xf0\x00' * ((k - 1) // 2)
-                     + (b'' if k % 2 else b'\x0b') + b'\x0a')
-        out.append((addr, body))
+        fill = (b'\xf0\x00' * ((k - 1) // 2)
+                + (b'' if k % 2 else b'\x0b') + b'\x0a') if k else b''
+        # The #36 invariant, asserted on the bytes instead of left to the emulator walk
+        # that caught it by hand: a row may put at most ONE bare $0A inside its own span.
+        # #36 was exactly this fill written as a run of them, which poisoned the bank-$83
+        # pool walk so the schedule's hit table came out short and the heart cell's press
+        # handler never dispatched.  What the shipped image relies on is the minimum: one
+        # terminator from the fill, then the Japanese one that waits just past the span.
+        # Nothing else in the build looks at this -- verify_ui_lines compares the image
+        # against this same function, so a changed fill would verify green either way.
+        # Walking the body here also moves the pool-side operand guard (#46's shape)
+        # ahead of the write: ui_line_walk refuses a control byte at a token head it
+        # cannot place.
+        bare = sum(t[1].count(b'\x0a')
+                   for t in ui_line_walk(body, 0, len(body), line_raw_runs(line))
+                   if t[0] == 'r') + fill.count(b'\x0a')
+        assert bare <= 1, '%#x writes %d bare $0A inside one span' % (addr, bare)
+        out.append((addr, body + fill))
     return out
 
 
