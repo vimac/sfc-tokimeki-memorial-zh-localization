@@ -23,10 +23,9 @@
 * 别再往项目目录里放 ROM、存档、IPS。上游命名的原版和 `.srm` 放在项目外的 `~/retro/roms/`。
   `.gitignore` 已屏蔽 `*.sfc`、`*.smc`、`*.srm`、`*.ips`、`*.bps`、`*.xdelta`、`*.bsz`、`*.zip`，
   以及 macOS 拷文件带出来的 `._*` 伴生文件。压缩包不算豁免：交付镜像压一份 `.zip`
-  跟再放一个 `.sfc` 是同一件事，`git add -A` 会把整包镜像带进库。**仓库永远不含镜像本体，也不含原作剧本文本**
-  （派生表的 `runs(jp)` 列不入库，见 §二）。全量备份：`~/retro/tokimeki.backup.2609200007.tar.gz`。
-  被清理掉的脚本和中间数据从 git 历史找回；**库里的历史已经不含原作明文**，所以重写之前那一份历史
-  单独存在仓库外：`~/retro/tokimeki.prerewrite.bundle`。
+  跟再放一个 `.sfc` 是同一件事，`git add -A` 会把整包镜像带进库。**仓库永远不含镜像本体、原作剧本文本，
+  也不含原作截图**：派生表的 `runs(jp)` 列不入库（见 §二），从日文侧截来的证据图一律不落进 `docs/`，
+  要留就留在仓库外。侦察期的一次性脚本用完即删，要找回从 `git log` 取。
 * 模拟器只有一个共享槽位（`tools/slot.py` 把指定 ROM 装进 `stable_retro/…/rom.sfc`），因此
   **同一时刻只允许一条 trace，而且 trace 在跑的时候不要重建镜像**——工具会去追上一次留下的那个镜像。
   帧和存档是易腐的：改了镜像就得重走走查、重截帧，旧帧上的判定不能冒充新构建。
@@ -57,7 +56,7 @@ reference/       J2E 第三方素材，只读输入，不入库
   （含 `prologue_zh.txt`、`block8_zh.txt`）。
 * **派生物不入库**：`blockN_work.json`、`blockN_jp.txt`、`*_seg.txt`、**`blockN_work.tsv`**
   都由 `tools/block_work.py <块号>` 重生成（145 次调用实测 18 s，落 **143 份**——块 1 是纯数据、
-  块 59 没有末端，这两块出不了表；拿 `cmp` 跟清理前入库的那批逐字节比过，0 差异），
+  块 59 没有末端，这两块出不了表；重跑出来的那 143 份逐字节可重现），
   `blockN_enc.json` 由每次 `--patch` 顺手刷新。
   **work 表不进库有一条独立理由**：它的 `runs(jp)` 列是逐格日文原文，143 份合起来就是原作剧本的明文表。
   所以新克隆的机器上，`poolsync.py`／`segtext.py`／`bracketpair.py`／`thin_sweep.py` 之前要先跑那一遍循环。
@@ -643,7 +642,6 @@ headless 环境 `stable_retro` 的 `cores/snes9x.json` 里 `Snes.actions` 被补
    但唯一说话人的框只有 0.1%，目标类里「说话人全为同一人」的框是 0）。
    破解期作废的三条模型同样别再复发：`ROWDELTA` 行差表、`$0153` 带的 SJIS 重映射、
    以及按 J2E 那个「文本表 `0x2371BF` ＋字偏移×2」公式去解池指针（实测四个指针目标全都不是可读日文）。
-5. **`docs/history/` 已由批次AT 删除**（旧交接 v1/v2、破解笔记、2026-09-18 那批 jis 证据图，
-   共 21 个跟踪文件）。里面的数字全部被后续批次覆盖，机制结论早已搬进 `docs/research/` 和本文件，
-   要看原始措辞从 git 历史取（`git show ver0.99:docs/history/`）。
+5. **`docs/history/`（旧交接 v1／v2 与破解笔记）不在树里**：机制结论早已搬进 `docs/research/` 和本文件，
+   里面的数字全部被后续批次覆盖。要看旧原文用 `git show ver0.8:docs/history/`。
    **规则不变**：凡是「某处还差 N 个字」这类账，按 `glyph_alloc.json` 重算，别引用任何旧文档的数。
