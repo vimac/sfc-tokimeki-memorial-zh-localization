@@ -14,7 +14,9 @@ Creative Commons itself (linked in §2), not by the summary below it.
 ## English
 
 This repository is a fan-made Simplified-Chinese localisation project: tooling, engineering
-documentation, and the Chinese text written by its author.
+documentation, and the Chinese text produced for it. That text was produced largely by AI agents
+working with a human editor who directed, checked and revised it; it is licensed as a whole,
+without distinguishing which part came from which contributor.
 
 Neither grant below covers any content of the original game
 *Tokimeki Memorial: Densetsu no Ki no Shita de* (SNES, Konami). The original text, artwork, music,
@@ -64,11 +66,11 @@ Under that licence you may copy, modify, rebuild, republish and continue revisin
 * **share alike** — anything you build on it must be distributed under this same licence.
 
 Two boundaries on this layer. First, it is a derivative work: it exists only because of the original
-game's dialogue, names and story, so the licence covers only the Chinese wording this project's author
-wrote — it grants nothing over the original work, and cannot; commercial use of the underlying game
-material would need authorisation from its rights holders. Second, the licence can only be granted for
-what the author owns: the third-party `reference/` material and the WenQuanYi font are described in §3
-and are licensed by their own authors.
+game's dialogue, names and story, so the licence covers only the Chinese wording contributed to this
+project — it grants nothing over the original work, and cannot; commercial use of the underlying game
+material would need authorisation from its rights holders. Second, this layer can only grant rights
+over what the project itself holds: the third-party `reference/` material and the WenQuanYi font are
+described in §3 and carry their own licences.
 
 ### 3. What this repository distributes
 
@@ -83,7 +85,7 @@ Only the tooling, the documentation and the Chinese text above. It contains no g
   `blockN_work.tsv`, `blockN_enc.json` and their siblings) hold the original Japanese writing, are
   regenerable in one command, and are deliberately not committed.
 * No third-party material: the J2E fan-translation drop referred to as `reference/` (about 18 MB) is
-  used read-only on the author's machine and is not part of, or distributed by, this repository.
+  used read-only during development and is not part of, or distributed by, this repository.
 * No font file. The bitmap glyphs written into the image are generated at build time from
   **WenQuanYi 13px** (`wenquanyi_13px.pcf`, distributed under the GPL with the font exception);
   copyright in that font remains with the WenQuanYi project.
@@ -94,7 +96,9 @@ Runtime requirements are listed in `README.md`.
 
 ## 中文
 
-本仓库是一个粉丝自作的简体中文汉化工程：工具脚本、工程文档，以及作者自己写下的中文正文。
+本仓库是一个粉丝自制的简体中文汉化工程：工具脚本、工程文档，以及本项目产出的中文正文。
+这些中文正文主要由 AI Agents 完成，并由一位人类编辑指导、核对和修订；授权整体给出，
+不区分哪一部分出自谁。
 
 下面两层授权**都不覆盖原作《心跳回忆：传说的树下》（SFC，KONAMI）的任何内容**。
 原作的文本、美术、音乐、角色名与字体数据版权归原作权利方所有；本项目对这些不主张任何权利，
@@ -136,9 +140,9 @@ Runtime requirements are listed in `README.md`.
 * **相同方式共享**——基于这些中文再创作或改造的成果，必须以同一许可协议发布。
 
 这一层有两条界限。**其一**，它是衍生作品：这些中文依附原作的台词、人名与剧情才成立，所以本协议授权的
-只是本项目作者自己写下的中文文字，对原作品不授予任何东西、也不可能授予；要用到原作素材本身的商业
-用途，须自行向原作权利方取得授权。**其二**，作者只能授权自己拥有的部分：第三节里的第三方素材与
-文泉驿字体不属于本层，由各自的作者授权。
+只是本项目产出的中文文字，对原作品不授予任何东西、也不可能授予；要用到原作素材本身的商业
+用途，须自行向原作权利方取得授权。**其二**，这一层只能就本项目自己持有的东西授权：第三节里的第三方素材与
+文泉驿字体不属于本层，按各自的许可条款发布。
 
 ### 三、本仓库分发什么
 
@@ -149,7 +153,7 @@ Runtime requirements are listed in `README.md`.
   日版 Rev 1 镜像跑 `python3 tools/build_zh.py --patch` 在本地重建，镜像校验值见 `README.md`。
 * 没有从镜像解出的文本。`docs/research/` 下那批逐格表（`blockN_jp.txt`、`blockN_work.tsv`、
   `blockN_enc.json` 及其同类）装的是原作日文原文，一条命令即可重生成，因此有意不入库。
-* 没有第三方素材：被称为 `reference/` 的那份 J2E 同人汉化转储（约 18 MB）只在作者本机作只读查证，
+* 没有第三方素材：被称为 `reference/` 的那份 J2E 同人汉化转储（约 18 MB）只在开发期间作只读查证，
   不属于、也不随本仓库分发。
 * 没有字体文件。写进镜像的点阵字模在每次构建时由 **文泉驿 13px**（`wenquanyi_13px.pcf`，
   以 GPL 附加字体例外条款发布）现生成，该字体版权归文泉驿项目所有。

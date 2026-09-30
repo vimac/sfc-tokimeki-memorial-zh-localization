@@ -7,11 +7,33 @@
 **状态、数字、剩余工作在 `PROGRESS.md`**（现状、镜像 md5、验收命令、还剩什么）。本文件只写规则和机器事实，
 不写进度。动手前先读 `PROGRESS.md` §一（现在是什么样）和 §三（怎么验）。
 
+## 〇、开工前：先要那颗镜像，再验哈希
+
+**仓库不含镜像，所以任何一轮工作都得先让用户把原镜像放进仓库根目录**，
+文件名是 `Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc`（4,194,304 B 的 LoROM 转储）。
+文件不在就问，不要拿另一颗镜像（别的地区版、别的 Rev、或者带 header 的 `.smc`）顶上去开工。
+
+放进去之后**必须做哈希强校验**，两个都对得上才算这一轮的前置条件成立：
+
+```
+sha1sum "Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc"   # f46f5b0d964bbf5393763b9ebb8e7c50a9e5c9e7
+md5sum  "Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc"   # cd36eb8982de4bf8369deb9f2f23e590
+```
+
+**任何一个不匹配就停手，把实际算出来的数报给用户**，不要继续构建、不要改文档里的数字。
+理由很直接：本仓库里每一个地址、每一条偏移、`tools/` 全部仪表的读数、构建报告那句
+`0 over, 0 broken`，以及 `PROGRESS.md` §二 记的交付镜像哈希，全都是拿这一颗镜像量出来的——
+换一颗镜像，这些数一个都不成立，而工具不会替你发现这件事（它只会照着偏移往下写，写进错误的位置）。
+
+哈希过了之后才轮到第二件事：**`docs/research/blockN_work.tsv` 那 143 份派生表不入库**，
+新克隆的机器上要先跑 `README.md`「克隆后的第一步」那条 18 s 循环，否则 §三 的静态层全都没有输入。
+
 ## 一、镜像、模拟器和措辞
 
 * 根目录**只留两个** `.sfc`：
   * `… (Japan) (Rev 1).sfc`——原镜像，md5 `cd36eb8982de4bf8369deb9f2f23e590`。**只读，任何工具都不许写它。**
-    它不在 git 里，md5 就是唯一的守卫，所以每动手一轮都要复述一遍这个数字。
+    它不在 git 里，所以哈希就是唯一的守卫：开工前按 §〇 那两条（sha1 加 md5）验一遍，
+    每动手一轮都要把这两个数复述一遍。
   * `… (Japan) (Rev 1) (Chinese Localized).sfc`——唯一的中文镜像，**只能由 `tools/build_zh.py --patch` 写**。
     它的 md5 只在 `PROGRESS.md` §二 记一份，别在两个文件里各存一个数字。
 * 这两个名字带空格和括号，所以**路径只写在 `tools/tmtext.py` 的 `ROM_JP` / `ROM_ZH` 两个常量里**，
