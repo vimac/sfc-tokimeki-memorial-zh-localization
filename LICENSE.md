@@ -1,11 +1,13 @@
 # License / 许可
 
 Two complete texts follow: the English version first, then the Chinese version. They state the same
-terms; the English text is the canonical one, and the Chinese rendering of the MIT permission block is
-an unofficial translation for convenience.
+terms; the English text is the canonical one, the Chinese rendering of the MIT permission block is an
+unofficial translation for convenience, and the CC layer is governed by the Legal Code published by
+Creative Commons itself (linked in §2), not by the summary below it.
 
 下面依次是**完整的英文版**与**完整的中文版**。两份表述的是同一套授权条款；英文那份是原文，
-中文那份里的 MIT 许可段落是非官方译文，只是为了方便阅读。
+中文那份里的 MIT 许可段落是非官方译文，只是为了方便阅读。CC 那一层以知识共享组织自己发布的
+法律文本为准（链接见 §二），本文件只是选用它、复述它的要点。
 
 ---
 
@@ -42,18 +44,31 @@ This layer covers every Python script under `tools/`, the files `README.md`, `AG
 `PROGRESS.md` and `LICENSE.md`, the reverse-engineering notes and engineering records under
 `docs/research/*.md`, and the index tables under `docs/research/*.json`.
 
-### 2. Chinese text — non-commercial
+### 2. Chinese text — CC BY-NC-SA 4.0
 
 The Chinese text in this repository — every `docs/research/*_zh.txt` (including `prologue_zh.txt` and
-`block8_zh.txt`) and the three glossaries under `translations/` — is licensed separately.
+`block8_zh.txt`), the three glossaries under `translations/`, and the lines of that text quoted inside
+the `docs/research/*.md` records — is licensed under
+**Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International**.
 
-You may copy, modify, rebuild, republish, continue revising and re-arrange it, for any purpose
-**except a commercial one**. The single condition is: no charging for it, no bundling it into a paid
-product, no using it to monetise traffic. Keep this notice and this file with any redistribution.
+* Deed, the human-readable summary (also in Simplified Chinese):
+  <https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans>
+* Legal Code, the binding terms (also in
+  [Simplified Chinese](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-hans)):
+  <https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode>
 
-That text is a derivative work: it exists only because of the original game's dialogue, names and
-story, so this grant covers only the Chinese wording this project's author wrote, and nothing beyond it.
-Commercial use requires authorisation from the rights holders of the original work.
+Under that licence you may copy, modify, rebuild, republish and continue revising the text, provided you:
+
+* **give credit** — name this project as the source, link the license, and say what you changed;
+* **do not use it commercially** — no charging, no bundling into a paid product, no monetising traffic;
+* **share alike** — anything you build on it must be distributed under this same licence.
+
+Two boundaries on this layer. First, it is a derivative work: it exists only because of the original
+game's dialogue, names and story, so the licence covers only the Chinese wording this project's author
+wrote — it grants nothing over the original work, and cannot; commercial use of the underlying game
+material would need authorisation from its rights holders. Second, the licence can only be granted for
+what the author owns: the third-party `reference/` material and the WenQuanYi font are described in §3
+and are licensed by their own authors.
 
 ### 3. What this repository distributes
 
@@ -70,8 +85,8 @@ Only the tooling, the documentation and the Chinese text above. It contains no g
 * No third-party material: the J2E fan-translation drop referred to as `reference/` (about 18 MB) is
   used read-only on the author's machine and is not part of, or distributed by, this repository.
 * No font file. The bitmap glyphs written into the image are generated at build time from
-  **WenQuanYI 13px** (`wenquanyi_13px.pcf`, distributed under the GPL with the font exception);
-  copyright in that font remains with the WenQuanYI project.
+  **WenQuanYi 13px** (`wenquanyi_13px.pcf`, distributed under the GPL with the font exception);
+  copyright in that font remains with the WenQuanYi project.
 
 Runtime requirements are listed in `README.md`.
 
@@ -102,16 +117,28 @@ Runtime requirements are listed in `README.md`.
 这一层覆盖 `tools/` 下全部 Python 脚本、`README.md`、`AGENTS.md`、`PROGRESS.md`、`LICENSE.md`、
 `docs/research/*.md` 里的逆向结论与工程记录，以及 `docs/research/*.json` 那些索引表。
 
-### 二、中文正文：非商用
+### 二、中文正文：CC BY-NC-SA 4.0
 
-本仓库里的中文正文单独授权：全部 `docs/research/*_zh.txt`（含 `prologue_zh.txt`、`block8_zh.txt`）
-与 `translations/` 三张口径表。
+本仓库里的中文正文采用 **知识共享 署名-非商业性使用-相同方式共享 4.0 国际**
+（Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International）授权，覆盖范围是：
+全部 `docs/research/*_zh.txt`（含 `prologue_zh.txt`、`block8_zh.txt`）、`translations/` 三张口径表，
+以及 `docs/research/*.md` 那些工程记录里引用到的中文句子。
 
-你可以复制、修改、重新构建、转载、继续润色、二次整理，**唯一条件是不用于任何商业目的**——
-不收费、不打包进收费产品、不用于引流变现。再分发时请连同本文件与本段说明一起保留。
+* 通俗版许可说明（含简体中文）：<https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans>
+* 法律文本（约束性条款，另有简体中文版
+  <https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-hans>）：
+  <https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode>
 
-这些中文是衍生作品：它依附原作的台词、人名与剧情才成立，所以本段授权的只是本项目作者自己写下的
-中文文字，不含其余。商业用途需要自行向原作权利方取得授权。
+按该协议，你可以复制、修改、重新构建、转载、继续润色、二次整理，条件是：
+
+* **署名**——注明作品来源与本项目名称，给出许可协议链接，并说明你改动了什么；
+* **非商业性使用**——不收费、不打包进收费产品、不用于引流变现；
+* **相同方式共享**——基于这些中文再创作或改造的成果，必须以同一许可协议发布。
+
+这一层有两条界限。**其一**，它是衍生作品：这些中文依附原作的台词、人名与剧情才成立，所以本协议授权的
+只是本项目作者自己写下的中文文字，对原作品不授予任何东西、也不可能授予；要用到原作素材本身的商业
+用途，须自行向原作权利方取得授权。**其二**，作者只能授权自己拥有的部分：第三节里的第三方素材与
+文泉驿字体不属于本层，由各自的作者授权。
 
 ### 三、本仓库分发什么
 

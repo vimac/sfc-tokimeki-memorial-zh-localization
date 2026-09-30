@@ -386,7 +386,7 @@ block 0 是 `b00-99999`、block 100 是 `b1000-99999`，所以**按 `_b(\d+)0-99
 PROGRESS.md            本文件：现状
 AGENTS.md              规则与工程纪律
 README.md              对外说明：这是汉化工程、不含镜像、克隆后要先重生成哪几样
-LICENSE.md             tools/ 用 MIT，中文正文单独声明非商用
+LICENSE.md             tools/ 用 MIT，中文正文用 CC BY-NC-SA 4.0（两半全文对照，不夹杂）
 docs/research/         逆向结论（*.md，带地址和偏移）+ 构建输入 + 活译文源
 docs/prologue_zh/      序章渲染表与 index.txt 转录（PNG 可重生成、不入库）
 tools/                 36 个脚本（验收链在 §三，其余是侦察仪表）
