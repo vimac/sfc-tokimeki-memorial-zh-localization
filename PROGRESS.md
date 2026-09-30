@@ -256,7 +256,7 @@ python3 tools/build_zh.py --patch
 
 **先给新克隆的机器一句前置**：`blockN_work.tsv` 不入库（它带逐格日文原文，见 §五），
 所以下面这些仪表要先有表——`for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`
-（约 40 s，逐字节重现）。本机磁盘上已经有表就不用跑。
+（145 次调用实测 18 s，落 143 份，逐字节重现）。本机磁盘上已经有表就不用跑。
 
 **静态层，每批改完译文都要跑，全绿才算好构建。** 下面这个块可以整段复制：
 
@@ -401,9 +401,10 @@ reference/             J2E 第三方素材，只读输入，不入库
 `ui_glyph_indices.json`。
 **派生物不入库**：`blockN_jp.txt`、`blockN_work.json`、`blockN_work.tsv`、`*_seg.txt` 由
 `tools/block_work.py <块号>` 重生成，`blockN_enc.json` 由每次构建顺手刷新。
-**work 表这一样是新加的**：它的 `runs(jp)` 列是逐格日文原文（144 份合起来 3.5 MB），
+**work 表这一样是新加的**：它的 `runs(jp)` 列是逐格日文原文（143 份合起来 3.5 MB），
 那是原作剧本的明文表，不该随仓库分发；实测拿 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`
-重跑一遍，144 份**逐字节完全重现**（单块 0.25 s，全量约 40 s），`translation` 列本来就是空的。
+重跑一遍，**145 次调用 18 s、落 143 份**（块 1 纯数据、块 59 没有末端，出不了表），`cmp` 跟清理前入库的那批
+**逐字节 0 差异**，`translation` 列本来就是空的。
 所以 §三 静态层在**新克隆的机器上**要先跑这一遍循环（`poolsync`／`segtext`／`bracketpair`／`thin_sweep`
 都读那张表），本机已经有表就不用重跑。整棵树现在 212 个跟踪文件（`tools/tokimeki_srm_util.py`——
 读／写回 `.srm` 存档槽里那套日期（年／月／日三份都带，年份住在 `0x1cd` 高半个字节，见
@@ -436,6 +437,11 @@ reference/             J2E 第三方素材，只读输入，不入库
 `/tmp/wt_s.preopensource-2026-09-30`（616 项暂存新增＋3 项修改，全是 2026-09-22 那次的快照，
 `git worktree prune` 注销之后 `gc --prune=now` 才把对象真删掉；那目录你随时可以删）。
 `origin` 是 `filter-repo` 按设计删掉的，我照原 URL 补回来了；**要推得用 `git push --force --atomic`，等你发话**。
+**「清掉的东西都是可重生成的」这一条不是推论，是拿一次真克隆验过的**：`git clone` 出来 212 个跟踪文件、
+一张 work 表都没有，把只读原镜像按 README 说的放进根目录，跑那 18 s 循环拿到 143 份表（`cmp` 跟清理前入库的
+那批 0 差异），再 `python3 tools/build_zh.py --patch` ——`142/142` 打 `0 over, 0 broken`、`VERDICT: all checks
+passed`，出来的中文镜像 md5 就是 §二 那个 `d6c68c6d…`，**跟本机这个仓库造出来的镜像逐字节相同**，
+原镜像 md5 也仍是 `cd36eb89…`（只读位没动过）。所以仓库公开之后缺的不是文件，是镜像本体——那本来就不该给。
 
 三张口径表（行数是去掉注释后的表项）：`name_glossary.tsv` 55 行人名、`term_glossary.tsv` 38 行系统术语、
 `phrase_glossary.tsv` 1,029 条词典表项（构建 `phrase bodies:` 那一行的分母就是它）。改译法之前先看它们；构建只读第 1 列（日文键）和第 5 列

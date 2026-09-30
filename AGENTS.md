@@ -56,9 +56,10 @@ reference/       J2E 第三方素材，只读输入，不入库
   `nameplate_glyph_indices.json`、`ui_glyph_indices.json`，以及全部 `blockN_zh.txt`
   （含 `prologue_zh.txt`、`block8_zh.txt`）。
 * **派生物不入库**：`blockN_work.json`、`blockN_jp.txt`、`*_seg.txt`、**`blockN_work.tsv`**
-  都由 `tools/block_work.py <块号>` 重生成（实测 144 份逐字节可重现，单块 0.25 s、全量约 40 s），
+  都由 `tools/block_work.py <块号>` 重生成（145 次调用实测 18 s，落 **143 份**——块 1 是纯数据、
+  块 59 没有末端，这两块出不了表；拿 `cmp` 跟清理前入库的那批逐字节比过，0 差异），
   `blockN_enc.json` 由每次 `--patch` 顺手刷新。
-  **work 表不进库有一条独立理由**：它的 `runs(jp)` 列是逐格日文原文，144 份合起来就是原作剧本的明文表。
+  **work 表不进库有一条独立理由**：它的 `runs(jp)` 列是逐格日文原文，143 份合起来就是原作剧本的明文表。
   所以新克隆的机器上，`poolsync.py`／`segtext.py`／`bracketpair.py`／`thin_sweep.py` 之前要先跑那一遍循环。
 * 新脚本放 `tools/`，文件名 snake_case，docstring 第一句写清**它证明什么事实**。默认只读原镜像，
   产物写 `/tmp` 或 `docs/research/`。一次性探索脚本用完就删（git 历史留得回来）——
@@ -68,7 +69,7 @@ reference/       J2E 第三方素材，只读输入，不入库
 ## 三、验收
 
 **跑静态层之前先确认 `blockN_work.tsv` 在磁盘上**：这张表不入库（§二 那条：它带逐格日文原文），
-新克隆的机器上得先 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`（约 40 s，
+新克隆的机器上得先 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`（18 s，
 实测逐字节重现），否则 `poolsync`／`segtext`／`bracketpair`／`thin_sweep` 全都没有输入。
 
 可复制的命令块在 `PROGRESS.md` §三。静态层每批译文都要过，判据是：构建每块 `0 over, 0 broken`、

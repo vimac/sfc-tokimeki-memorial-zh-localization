@@ -22,12 +22,14 @@
 
 ## 克隆后的第一步
 
-`docs/research/blockN_work.tsv`（144 份译稿预算表）**不入库**——它的 `runs(jp)` 列是逐格日文原文，
-144 份合起来等于原作剧本的明文表。它完全可重生成，且实测逐字节重现：
+`docs/research/blockN_work.tsv`（143 份译稿预算表）**不入库**——它的 `runs(jp)` 列是逐格日文原文，
+合起来等于原作剧本的明文表。它完全可重生成，且实测逐字节重现：
 
 ```
-for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done     # 单块 0.25 s，全量约 40 s
+for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done     # 145 次调用，实测 18 s
 ```
+
+块 1 与块 59 出不了表（一个是纯数据、一个是最后一个指针没有末端），所以循环写到 144 会落 143 份。
 
 跑完 `poolsync.py`／`segtext.py`／`bracketpair.py`／`thin_sweep.py` 才有输入。
 （同一条命令顺手写出 `_work.json` 与 `_jp.txt`，两个也都是派生物。）

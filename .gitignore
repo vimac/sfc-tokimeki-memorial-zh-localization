@@ -41,9 +41,9 @@ __pycache__/
 
 # Per-block derived data. 中文正文（blockN_zh.txt）是要入库的，下面这些不是：
 # 全部由 tools/block_work.py（_work.tsv / _work.json）和构建本身（_enc.json）重生成。
-# _work.tsv 的 runs(jp) 列是逐格日文原文（144 份合起来 3.5 MB），等于原作剧本的明文表，
+# _work.tsv 的 runs(jp) 列是逐格日文原文（143 份合起来 3.5 MB），等于原作剧本的明文表，
 # 所以也不入库——克隆后跑一遍 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`
-# （实测单块 0.25 s、全量约 40 s，逐字节可重现）才有 poolsync／segtext／bracketpair／thin_sweep 的输入。
+# （145 次调用实测 18 s，跟清理前入库的那批逐字节 0 差异）才有 poolsync／segtext／bracketpair／thin_sweep 的输入。
 docs/research/*_work.tsv
 docs/research/*_work.json
 docs/research/*_jp.txt
