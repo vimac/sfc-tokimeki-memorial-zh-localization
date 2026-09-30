@@ -251,6 +251,10 @@ python3 tools/build_zh.py --patch
 
 ## 三、怎么验
 
+**先给新克隆的机器一句前置**：`blockN_work.tsv` 不入库（它带逐格日文原文，见 §五），
+所以下面这些仪表要先有表——`for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`
+（约 40 s，逐字节重现）。本机磁盘上已经有表就不用跑。
+
 **静态层，每批改完译文都要跑，全绿才算好构建。** 下面这个块可以整段复制：
 
 ```
@@ -379,21 +383,26 @@ block 0 是 `b00-99999`、block 100 是 `b1000-99999`，所以**按 `_b(\d+)0-99
 ```
 PROGRESS.md            本文件：现状
 AGENTS.md              规则与工程纪律
+README.md              对外说明：这是汉化工程、不含镜像、克隆后要先重生成哪几样
+LICENSE.md             tools/ 用 MIT，中文正文单独声明非商用
 docs/research/         逆向结论（*.md，带地址和偏移）+ 构建输入 + 活译文源
 docs/prologue_zh/      序章渲染表与 index.txt 转录（PNG 可重生成、不入库）
-docs/ALL_CHARACTERS.txt  wiki 角色资料，人名译法依据
 tools/                 36 个脚本（验收链在 §三，其余是侦察仪表）
 translations/          三张口径表 + tm.json 命中表；中文正文不住这里，在 docs/research/
 out/                   从原镜像 dump 出来的分析文本，可重生成，不入库
 reference/             J2E 第三方素材，只读输入，不入库
-start-screenshots/     日文原版启动流程截图
 ```
 
 **删了就构建不出来**（人写的中文正文和构建输入，必须留在库里）：全部 `blockN_zh.txt`（含
 `prologue_zh.txt`、`block8_zh.txt`）、`glyph_alloc.json`、`nameplate_glyph_indices.json`、
-`ui_glyph_indices.json`，以及每批都要拿去比对的 `blockN_work.tsv`。
-**派生物不入库**：`blockN_jp.txt`、`blockN_work.json`、`*_seg.txt` 由 `tools/block_work.py <块号>` 重生成，
-`blockN_enc.json` 由每次构建顺手刷新。整棵树现在 361 个跟踪文件（`tools/tokimeki_srm_util.py`——
+`ui_glyph_indices.json`。
+**派生物不入库**：`blockN_jp.txt`、`blockN_work.json`、`blockN_work.tsv`、`*_seg.txt` 由
+`tools/block_work.py <块号>` 重生成，`blockN_enc.json` 由每次构建顺手刷新。
+**work 表这一样是新加的**：它的 `runs(jp)` 列是逐格日文原文（144 份合起来 3.5 MB），
+那是原作剧本的明文表，不该随仓库分发；实测拿 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`
+重跑一遍，144 份**逐字节完全重现**（单块 0.25 s，全量约 40 s），`translation` 列本来就是空的。
+所以 §三 静态层在**新克隆的机器上**要先跑这一遍循环（`poolsync`／`segtext`／`bracketpair`／`thin_sweep`
+都读那张表），本机已经有表就不用重跑。整棵树现在 212 个跟踪文件（`tools/tokimeki_srm_util.py`——
 读／写回 `.srm` 存档槽里那套日期（年／月／日三份都带，年份住在 `0x1cd` 高半个字节，见
 `docs/research/phone-book.md` §九）／九项属性／**玩家社团**（`0x0062` 那个编号字，写部名就行）／
 好感度／登场状态／**通讯录名册**／约会表（对象＋地点）；引擎自己那份「真登场」（`0x8e3`–`0x8e4`）

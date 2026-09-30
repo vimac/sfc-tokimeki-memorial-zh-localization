@@ -1,6 +1,7 @@
 # 人名对照表 —— 正式翻译前必读，人名一律以此为准
-# 依据：docs/ALL_CHARACTERS.txt（wiki 角色资料，2026-09-20 放入）+ 对
-#       reference/.../Scripts/Japanese/Tksc/*.EUC 全部说话人标签的实测统计。
+# 依据：中文 wiki「ときめきメモリアル」角色条目（https://w.atwiki.jp/tokimekicn，2026-09-20 查）
+#       ＋对 reference/.../Scripts/Japanese/Tksc/*.EUC 全部说话人标签的实测统计。
+#       （抄来的角色资料原文不入库，所以本表这张口径表才是唯一依据。）
 # 列：日文<TAB>中文<TAB>类型<TAB>备注
 # 类型 name=专有名词（译名必须与此一致，tools/translate_batch.py 按此列做 <N> 占位）；
 #       role=身份词，不是人名，按上下文译；ph=占位符。

@@ -1,7 +1,7 @@
 # 心跳回忆（SFC，日版 Rev‑1）——文本字节 → 字库字模：精确算法
 
 这份文件证明的是：一个文本码怎么算出字模索引，索引又怎么算出字模在 ROM 里的地址。
-目标 ROM：`REPO_ROOT/Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc`（4 MiB、LoROM、65816 原生、16 位 A/X/Y）。
+目标 ROM：根目录的 `Tokimeki Memorial - Densetsu no Ki no Shita de (Japan) (Rev 1).sfc`（4 MiB、LoROM、65816 原生、16 位 A/X/Y；路径只写在 `tools/tmtext.py` 的 `ROM_JP`）。
 下面每条结论都是从这个镜像自己的机器码读出来的（逐字节反汇编，不引用旧笔记），并且拿真实游戏文本的解码、
 真实字模位图的渲染验证过。原镜像**没有被改动**。
 

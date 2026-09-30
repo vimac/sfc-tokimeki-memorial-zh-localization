@@ -39,27 +39,33 @@
 tools/         36 个脚本：验收链及其依赖在 PROGRESS §三，其余是侦察仪表
 PROGRESS.md    权威状态
 AGENTS.md      本文件
+README.md      对外说明：这是汉化工程、不含镜像、克隆后要自己重生成哪几样
+LICENSE.md     tools/ 用 MIT，中文正文单独声明非商用
 docs/research/   逆向结论（*.md，带地址和偏移）+ 构建输入 + 活译文源
 docs/prologue_zh/  序章渲染表与 index.txt 转录（PNG 可重生成、不入库）
-docs/ALL_CHARACTERS.txt  wiki 角色资料，人名译法的原始依据
 translations/    三张口径表 + tm.json 命中表；中文正文不住这里，在 docs/research/
 out/             从原镜像 dump 出来的分析文本，可重生成，不入库
 reference/       J2E 第三方素材，只读输入，不入库
-start-screenshots/ 日文原版启动流程截图
 ```
 
 * **删了就构建不出来的**（人写的中文正文，构建直接读）：`glyph_alloc.json`、
   `nameplate_glyph_indices.json`、`ui_glyph_indices.json`，以及全部 `blockN_zh.txt`
-  （含 `prologue_zh.txt`、`block8_zh.txt`）。`blockN_work.tsv` 也留着——`poolsync.py` 每批要拿它做
-  全库比对，重生成得跑 142 次。
-* **派生物不入库**：`blockN_work.json`、`blockN_jp.txt`、`*_seg.txt` 由 `tools/block_work.py <块号>`
-  重生成，`blockN_enc.json` 由每次 `--patch` 顺手刷新。
+  （含 `prologue_zh.txt`、`block8_zh.txt`）。
+* **派生物不入库**：`blockN_work.json`、`blockN_jp.txt`、`*_seg.txt`、**`blockN_work.tsv`**
+  都由 `tools/block_work.py <块号>` 重生成（实测 144 份逐字节可重现，单块 0.25 s、全量约 40 s），
+  `blockN_enc.json` 由每次 `--patch` 顺手刷新。
+  **work 表不进库有一条独立理由**：它的 `runs(jp)` 列是逐格日文原文，144 份合起来就是原作剧本的明文表。
+  所以新克隆的机器上，`poolsync.py`／`segtext.py`／`bracketpair.py`／`thin_sweep.py` 之前要先跑那一遍循环。
 * 新脚本放 `tools/`，文件名 snake_case，docstring 第一句写清**它证明什么事实**。默认只读原镜像，
   产物写 `/tmp` 或 `docs/research/`。一次性探索脚本用完就删（git 历史留得回来）——
   别把侦察期的脚本堆在目录里，以前就是这样攒到 131 个再清掉的。
 * 树里**不留历史快照**。凡是「某处还差 N 个字」这类账，按 `glyph_alloc.json` 重算，别照任何旧文档念。
 
 ## 三、验收
+
+**跑静态层之前先确认 `blockN_work.tsv` 在磁盘上**：这张表不入库（§二 那条：它带逐格日文原文），
+新克隆的机器上得先 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`（约 40 s，
+实测逐字节重现），否则 `poolsync`／`segtext`／`bracketpair`／`thin_sweep` 全都没有输入。
 
 可复制的命令块在 `PROGRESS.md` §三。静态层每批译文都要过，判据是：构建每块 `0 over, 0 broken`、
 每块 `bodies drawn: 0 kana`、末尾 `VERDICT: all checks passed`；逐框渲染 `0 kana cells, 0 "?" cells`；

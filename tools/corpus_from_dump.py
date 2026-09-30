@@ -16,8 +16,8 @@ import sys, os, json, collections, re
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tmtext as T
 
-REF = 'REPO_ROOT/reference/j2e_full/scripts_x/Scripts/Japanese'
-PENDING = 'REPO_ROOT/translations/pending.json'
+REF = os.path.join(T.ROOT, 'reference/j2e_full/scripts_x/Scripts/Japanese')
+PENDING = os.path.join(T.ROOT, 'translations/pending.json')
 
 HANZI = lambda c: '一' <= c <= '鿿'
 KANA = lambda c: '぀' <= c <= 'ヿ'
