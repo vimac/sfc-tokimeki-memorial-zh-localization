@@ -1,8 +1,10 @@
 # 许可
 
-本仓库分两层授权，**两层都不覆盖原游戏《心跳回忆：传说的树下》的任何内容**。
+本仓库是粉丝自作的简体中文汉化工程，授权分两层。两层都不覆盖原作
+《心跳回忆：传说的树下》的任何内容——原作的文本、图像、音乐版权归原作版权方所有，
+本项目不对它们主张任何权利，也不代表原作版权方。
 
-## 一、`tools/` 与文档：MIT
+## 一、代码与文档：MIT
 
 Copyright (c) 2026 vimac <vimac@users.noreply.github.com>
 
@@ -21,29 +23,27 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FO
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-这一层包括：全部 Python 脚本、`AGENTS.md`／`PROGRESS.md`／`README.md`、`docs/research/*.md`
-里的逆向结论与账本（地址、偏移、裁决记录），以及 `docs/research/*.json` 那些索引表。
+这一层覆盖 `tools/` 下的全部 Python 脚本、`README.md`／`AGENTS.md`／`PROGRESS.md`、
+`docs/research/` 里的逆向结论与工程记录，以及 `docs/research/*.json` 那几张索引表。
 
 ## 二、中文正文：非商用
 
 `docs/research/*_zh.txt`（含 `prologue_zh.txt`、`block8_zh.txt`）与 `translations/` 三张口径表里的
-中文译文是粉丝同人成果。你可以为了自己在正版卡带上使用而复制、修改、重新构建，也可以转载、
-继续润色、二次整理——**唯一条件是不得用于商业目的**（不收费、不打包进收费产品、不用于引流变现）。
-请在再分发时保留本文件与本段说明。
+中文译文，授权范围是：复制、修改、重新构建、转载、继续润色、二次整理，**条件只有一个——
+不得用于任何商业目的**（不收费、不打包进收费产品、不用于引流变现），再分发时保留本段说明。
 
-这些中文文本是**衍生作品**：它依赖原作的台词、人名、剧情才成立。本项目的作者不对原作文本主张
-任何权利，也不代表原作版权方。任何商业使用请自行去取得版权方授权。
+这一层是衍生作品：它依附原作的台词、人名与剧情才成立，所以本段授权的只是本项目作者自己写下的
+那部分中文文字。商业用途需要自行向原作版权方取得授权。
 
-## 三、仓库里不含的东西
+## 三、分发范围
 
-* **游戏镜像与补丁**：本仓库不含 `.sfc`／`.smc` 镜像，也不含 IPS／BPS／xdelta 成品补丁。
-  `.gitignore` 把这一族全部挡住（`*.sfc`、`*.zip`、`*.srm`、`*.ips`、`*.bps`、`*.bsz`）。
-  构建必须由使用者自备正版镜像跑 `tools/build_zh.py --patch`。
-* **存档与模拟器截图**：`.srm`、按镜像名自动出的 `.bmp`、走查渲染目录同理不入库。
-* **`reference/`**：第三方 J2E 同人素材（约 18 MB），只作只读查证输入，不属于本仓库、不随仓库分发。
-* **字库带**：镜像里生成的点阵字模来自**文泉驿 13px**（`wenquanyi_13px.pcf`，GPL 附加字体例外条款），
-  字体版权仍属文泉驿项目；本仓库不复制该字体文件，只按 `tools/wqyfont.py` 在构建时读取本机安装的它。
+仓库里只有工具、文档和中文正文，不含游戏内容本体：
 
-## 四、跑起来需要什么
-
-见 `README.md` 的「你要准备什么」。
+* 不含镜像（`*.sfc`／`*.smc`）、补丁成品（`*.ips`／`*.bps`／`*.xdelta`）、
+  存档（`*.srm`／`*.bsz`）与镜像压缩包（`*.zip`）——`.gitignore` 把这一族整批挡住。
+  中文镜像由使用者拿自己的日版 Rev 1 镜像跑 `tools/build_zh.py --patch` 重建。
+* 不含从镜像解出的原作文本。`docs/research/` 下那批派生表（`blockN_jp.txt`、`blockN_work.tsv`、
+  `blockN_enc.json` 等）是原镜像的逐格日文原文与断点表，一条命令重生成，流程见 `README.md`。
+* 不含 `reference/`：那是第三方 J2E 同人汉化素材（约 18 MB），只在本机作为只读查证输入。
+* 不含字体文件。镜像里写进去的点阵字模每次构建时从本机安装的**文泉驿 13px**
+  （`wenquanyi_13px.pcf`，GPL 附加字体例外条款）现生成，该字体版权仍属文泉驿项目。

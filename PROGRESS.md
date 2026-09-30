@@ -16,11 +16,10 @@
 而且字库必须真的是文泉驿点阵，不许拿日文假形或繁体字顶替。
 
 标签 `ver0.99` 原来打在提交 `17f3a7d`（「文案之外全部做完」那一版，2026-09 中旬）；
-用户 2026-09-28 指示**把那个 commit 改叫 `ver0.90`，`ver0.99` 挪到批次 BB 续作这一版**。
+用户 2026-09-28 指示**把那个 commit 改叫 `ver0.90`，`ver0.99` 挪到批次 BB 续作这一版 `bc711ae`**。
 再往后的批次 AV／AW…BB 都改过正文，所以**磁盘上这个镜像只跟最新构建对齐，不跟旧标签对齐**；
-标签还要不要继续挪、什么时候挪，等用户发话。**远端 `origin` 一个标签都没有，推送也仍未获准。**
-（2026-09-30 那一轮历史重写把这两个标签一起重写了：`ver0.90` 现在解到 `17f3a7d`、`ver0.99` 解到 `bc711ae`，
-含义没变，只是提交换了新身份。`origin` 那条 URL 是重写之后按原样补回来的，仓库本身还是私有的。）
+标签还要不要继续挪、什么时候挪，等用户发话。**远端 `origin` 一个标签都没有，推送也仍未获准**
+（2026-09-30 那一轮历史重写把两个标签一起重写了，含义没变，只是提交换了新号，见 §五）。
 结论没变：**覆盖问题已经没有了，剩下的全是文案质量**。
 看得见的文本全中文，142 个文本块每一块都被人工通读过一遍以上。
 批次 AY 把「一个框里几行拼起来读着怪」这一层单独过了一遍（并行 20 路，见 §四 第 1 项那条）；
@@ -401,8 +400,8 @@ reference/             J2E 第三方素材，只读输入，不入库
 `ui_glyph_indices.json`。
 **派生物不入库**：`blockN_jp.txt`、`blockN_work.json`、`blockN_work.tsv`、`*_seg.txt` 由
 `tools/block_work.py <块号>` 重生成，`blockN_enc.json` 由每次构建顺手刷新。
-**work 表这一样是新加的**：它的 `runs(jp)` 列是逐格日文原文（143 份合起来 3.5 MB），
-那是原作剧本的明文表，不该随仓库分发；实测拿 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`
+**work 表这一样单独有一条不入库的理由**：它的 `runs(jp)` 列是逐格日文原文（143 份合起来 3.5 MB），
+那是原作文本的明文副本，不该随仓库分发；实测拿 `for i in $(seq 0 144); do python3 tools/block_work.py "$i"; done`
 重跑一遍，**145 次调用 18 s、落 143 份**（块 1 纯数据、块 59 没有末端，出不了表），`cmp` 跟清理前入库的那批
 **逐字节 0 差异**，`translation` 列本来就是空的。
 所以 §三 静态层在**新克隆的机器上**要先跑这一遍循环（`poolsync`／`segtext`／`bracketpair`／`thin_sweep`
@@ -417,31 +416,41 @@ reference/             J2E 第三方素材，只读输入，不入库
 写之前过日历：当前日期要是学制内的周日、约会要落在它 28 天之内）；早期草稿、侦察期脚本和破解期旧笔记
 清过三轮，名单在 git log 里，要找回从历史取。
 
-**2026-09-30 那轮「开源前清理」把仓库分发的东西收干净了**，动的全是可以重生成的派生物，正文一行未改：
-从 HEAD 与**整条提交历史**里拿掉三类东西——原作剧本文本的明文副本（`blockN_jp.txt`／`blockN_work.tsv`／
-`blockN_work.json`／`blockN_enc.json`／`*_seg.txt` 那些派生表的历史版本，以及 `textmap.json`、
-`corpus_from_dump.json`、`translations/TKSC*_zh.tsv`）、两份第三方成果（`.agents/` 那个技能目录与
-逐条抄自中文 wiki 的 `docs/ALL_CHARACTERS.txt`）、原游戏截图（`start-screenshots/`、
-`status_panel_jp_original.png`、`docs/history/` 与 `docs/evidence_2026-09-18_jis/` 各 17 张；
-同目录的**文字**笔记一份没动）。我们自己写的那份 65816 速查从 `.agents` 搬进了
-`docs/research/memory-map.md`。提交作者与两个标签的 tagger 一律换成 `vimac@users.noreply.github.com`，
-历史正文里的本机绝对路径同步刷成 `REPO_ROOT`／`~`，所以文档里引用的 6 个短提交号已按 `filter-repo`
-的 commit-map 全部刷齐（`git grep -E "\b[0-9a-f]{7}\b" -- '*.md'` 现在每个都能 `git show`）。
-账：**跟踪文件 366→212**，`.git` 对象包 **15.74 MiB→4.31 MiB**（整目录 21→4.6 MB），
-**提交比重写前少了两条**——`批次S 随车：全块 enc.json 重建产物` 与
-`TKSC：七连发批次同步 prologue_enc.json 逐行字节回推`，它们改的文件全在被清之列，清空之后自己就成了空提交；
-两条的说明文字没有任何文档引用，所以没有断链。提交数从此不再往文档里写，要数就 `git rev-list --count HEAD`。
-重写前的整仓备份在仓库外：`~/retro/tokimeki.prerewrite.bundle`。
-另有一件跟文本无关的：批次S 遗留的那个 `/tmp` 工作树**把自己那份暂存索引钉在本机对象库里**，
-于是被清掉的日文表虽然不在任何可达提交上、却还躺在磁盘的 pack 里——已经把它整目录挪到
-`/tmp/wt_s.preopensource-2026-09-30`（616 项暂存新增＋3 项修改，全是 2026-09-22 那次的快照，
-`git worktree prune` 注销之后 `gc --prune=now` 才把对象真删掉；那目录你随时可以删）。
-`origin` 是 `filter-repo` 按设计删掉的，我照原 URL 补回来了；**要推得用 `git push --force --atomic`，等你发话**。
-**「清掉的东西都是可重生成的」这一条不是推论，是拿一次真克隆验过的**：`git clone` 出来 212 个跟踪文件、
-一张 work 表都没有，把只读原镜像按 README 说的放进根目录，跑那 18 s 循环拿到 143 份表（`cmp` 跟清理前入库的
-那批 0 差异），再 `python3 tools/build_zh.py --patch` ——`142/142` 打 `0 over, 0 broken`、`VERDICT: all checks
-passed`，出来的中文镜像 md5 就是 §二 那个 `d6c68c6d…`，**跟本机这个仓库造出来的镜像逐字节相同**，
-原镜像 md5 也仍是 `cd36eb89…`（只读位没动过）。所以仓库公开之后缺的不是文件，是镜像本体——那本来就不该给。
+**2026-09-30 一轮「开源前清理」把仓库分发的东西收干净了**，正文一行未改，所以本文档其余数字全部照旧有效。
+从 HEAD 与整条提交历史里拿掉三类：
+
+* **原作文本的明文副本**——`blockN_jp.txt`／`blockN_work.tsv`／`blockN_work.json`／`blockN_enc.json`／
+  `*_seg.txt`／`*_boxes.*` 那批派生表的历史版本，加 `textmap.json`、`corpus_from_dump.json`、
+  `translations/TKSC*_zh.tsv`（日文原句配英文译文的成对表）。
+* **第三方成果**——`.agents/` 那个技能目录（里面是另一部作品的约定加一份他人教材的速查），
+  以及逐条抄自中文 wiki 的 `docs/ALL_CHARACTERS.txt`；后者的结论本来就沉淀在
+  `translations/name_glossary.tsv` 里，出处改成了那条 wiki URL。自己写的那份 65816 速查搬进了
+  `docs/research/memory-map.md`。
+* **原作截图**——`start-screenshots/`、`docs/research/status_panel_jp_original.png`、
+  `docs/evidence_2026-09-18_jis/` 与 `docs/history/evidence_jis_2026-09-18/` 各 17 张。
+  `docs/history/` 的文字笔记一份未动，`git show ver0.99:docs/history/` 那条回看路只丢图不丢字。
+
+提交作者、committer 与两个标签的 tagger 一律换成 `vimac@users.noreply.github.com`；历史正文里的本机绝对
+路径同步刷成 `REPO_ROOT`／`~`。文档里引用的短提交号因此全部按 `filter-repo` 的 commit-map 换过一遍，
+`git grep -ohE "\b[0-9a-f]{7}\b" -- '*.md' | sort -u` 现在每个都解得开。
+
+账：跟踪文件 **366→212**，`.git` 对象包 **15.74 MiB→4.31 MiB**（整目录 21→4.9 MB），
+**提交比清理前少两条**——`批次S 随车：全块 enc.json 重建产物` 与
+`TKSC：七连发批次同步 prologue_enc.json 逐行字节回推`，两条改的文件全在被清之列，清空之后自己就成了
+空提交，而没有任何文档引用它们的号。**提交数不写进文档**（每落一笔就过期），要数现量：
+`git rev-list --count HEAD`。
+
+**「清掉的东西全部可重生成」这一条是拿一次真克隆走通的**：clone 出来 212 个跟踪文件、一张 work 表都没有；
+按 README 把只读原镜像放进根目录，跑那 18 s 循环拿到 143 份表（`cmp` 与清理前入库的那批 0 差异），
+再 `python3 tools/build_zh.py --patch` ——`142/142` 打 `0 over, 0 broken`、`VERDICT: all checks passed`，
+出来的中文镜像 md5 就是 §二 那个 `d6c68c6d…`，原镜像仍是 `cd36eb89…`、只读位没动过。
+所以仓库公开之后缺的只有镜像本体，而那正是它不该分发的东西。
+
+两条留给以后的教训：`filter-repo` 按设计会删掉 `origin`，重写后要照原 URL 补回；而**遗留工作树的暂存索引
+会把「已经不在任何可达提交上」的对象钉在本机 pack 里**，所以注销工作树（`git worktree prune`）之后还要
+`git reflog expire --expire=now --all && git gc --prune=now`，被清的东西才算真从磁盘上没了。
+清理前的整仓 mirror 备份在仓库外：`~/retro/tokimeki.prerewrite.bundle`。
+**远端那一侧要覆盖的是重写过的历史，所以推送只能是 `git push --force --atomic`，仍等用户发话。**
 
 三张口径表（行数是去掉注释后的表项）：`name_glossary.tsv` 55 行人名、`term_glossary.tsv` 38 行系统术语、
 `phrase_glossary.tsv` 1,029 条词典表项（构建 `phrase bodies:` 那一行的分母就是它）。改译法之前先看它们；构建只读第 1 列（日文键）和第 5 列
