@@ -212,7 +212,7 @@ PLACE_NAMES = tuple(zh for _, _, zh in B.PLACE_TABLE)   # the record's 4th byte 
 DATE = 0x1cc                         # 日-1, then 月-1 装在低半个字节、年序（年-1996）装在高半个
 DATE2 = 0x036                        # 字节；同一个日子还另有第二份，三个 16 位字 (年序, 月-1, 日-1)。
                                      # 年序这一档是 2026-09-28 拿用户亲手玩到 1997 年的那份存档定的：
-                                     # 盘中六个槽逐一看过，0x1cd 的高半个字节恒等于 0x036 那个字，
+                                     # 存档六个槽逐一看过，0x1cd 的高半个字节恒等于 0x036 那个字，
                                      # 1997-01-05 那一份两边都是 1；而 01-05 在真实公历上正是周日，
                                      # 跟「游戏用真历、存档日全是周日」那条独立观测对上了。
 FIELD_END = 0x340                    # the diary/name fields above live under this; an
