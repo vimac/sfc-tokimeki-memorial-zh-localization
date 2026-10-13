@@ -35,7 +35,10 @@ except StopIteration:
 # 0x1E5E90 starts the $01 branch-table region: those bytes are partly runtime
 # distance tables, so a linear walk must stop before them and the patch must
 # not reach past them.
-hi = min(hi, {8: 0x1E5E90}.get(blk, hi))
+# A block whose registered end is inside its derived extent, so the table matches
+# what the build writes (see the notes on BLOCKS in build_zh.py).
+hi = min(hi, {8: 0x1E5E90, 26: 0x1CFFEB, 138: 0x23DBE4,
+              141: 0x239FC6}.get(blk, hi))
 
 # ---------------------------------------------------------------- wide codes
 # Engine-verified advance width per control code (tools/ctrl_widths.py reads the

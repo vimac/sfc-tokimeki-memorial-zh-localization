@@ -92,6 +92,20 @@ OVERLAY = PROMPT + CAPTION
 #      extent end is just the next block pointer; boxes 0 and 1 get written twice on
 #      purpose -- once by this block, once by PROMPT below -- and both encode the
 #      same two strings, so the later write only replaces bytes with bytes.
+#   26: it ends at 0x1CFFEB rather than at its next grid pointer because that pointer
+#      lands on 21 bytes of `$FF` fill followed by a live script stream (the `$09`
+#      three-operand and `$0F` five-operand records at 0x1D0002..).  Covering them
+#      clobbers the holiday-visitor selection and sends the box printer into the
+#      stream, which reads as `$C0 $B7` phrase calls forever: the 元旦 freeze.
+#  141: its last real sentence ends at 0x239FC6 (`⟦E96D⟧`＋「。」).  Past that the
+#      grid runs into a stride-2 record table (`$24 $A0 $26 $A0 $2B $A0 …`), and the
+#      walk mints four 「。」 boxes out of it -- the same shape as block 26, eight
+#      bytes of engine records inside a range we rewrite every build.
+#  138: it ends at 0x23DBE4 rather than at the last step's end (0x23DC39) because
+#      that tail is the 诗织-confession script stream (`$09 47 c1 1f` then
+#      `c1 1b 00 NN` records).  The walk minted six boxes out of it -- 「怎么样」
+#      「当。」「思。」 -- and rewriting the stream every build is what made the
+#      epilogue loop forever after the confession.
 BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (8, 'block8_zh.txt', 0x1E5E90), (32, 'block32_zh.txt', 0x27AC58),
           (35, 'block35_zh.txt', 0x1CAD18), (38, 'block38_zh.txt', 0x26D5E2),
@@ -129,14 +143,14 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (114, 'block114_zh.txt', 0x26BD04), (15, 'block15_zh.txt', 0x250A51),
           (24, 'block24_zh.txt', 0x1E7B36),
           (71, 'block71_zh.txt', 0x22FFE2), (135, 'block135_zh.txt', 0x26EC90),
-          (141, 'block141_zh.txt', 0x239FCE),
+          (141, 'block141_zh.txt', 0x239FC6),
           (65, 'block65_zh.txt', 0x1CCAA5),
           (64, 'block64_zh.txt', 0x1FFFC5), (31, 'block31_zh.txt', 0x277D09),
           (42, 'block42_zh.txt', 0x207FD7), (134, 'block134_zh.txt', 0x26D6DC),
           (130, 'block130_zh.txt', 0x208184),
           (16, 'block16_zh.txt', 0x2157B7), (127, 'block127_zh.txt', 0x1D38C2),
           (128, 'block128_zh.txt', 0x27019D),
-          (23, 'block23_zh.txt', 0x1F6C0A), (26, 'block26_zh.txt', 0x1D0008),
+          (23, 'block23_zh.txt', 0x1F6C0A), (26, 'block26_zh.txt', 0x1CFFEB),
           (29, 'block29_zh.txt', 0x245E9B), (41, 'block41_zh.txt', 0x238C21),
           (47, 'block47_zh.txt', 0x1D7A88), (110, 'block110_zh.txt', 0x27AEA4),
           (3, 'block3_zh.txt', 0x1D58DC), (17, 'block17_zh.txt', 0x23F66A),
@@ -152,7 +166,7 @@ BLOCKS = ((0, 'block0_zh.txt', 0x26B9BA), (2, 'block2_zh.txt', 0x25FE05),
           (60, 'block60_zh.txt', 0x1D2534), (48, 'block48_zh.txt', 0x251A55),
           (81, 'block81_zh.txt', 0x20CA2B), (80, 'block80_zh.txt', 0x24179D),
           (121, 'block121_zh.txt', 0x265E57), (78, 'block78_zh.txt', 0x267F0F),
-          (75, 'block75_zh.txt', 0x24FFD8), (138, 'block138_zh.txt', 0x23DC39),
+          (75, 'block75_zh.txt', 0x24FFD8), (138, 'block138_zh.txt', 0x23DBE4),
           (86, 'block86_zh.txt', 0x1CB46B), (63, 'block63_zh.txt', 0x2196A8),
           (89, 'block89_zh.txt', 0x1D10C2), (106, 'block106_zh.txt', 0x2723B8),
           (82, 'block82_zh.txt', 0x2091D9), (94, 'block94_zh.txt', 0x21E234),
@@ -2496,7 +2510,7 @@ class Codec:
                         # $F0-$FF operands stay visible (runtime_glyphs reads the
                         # kept $0F bodies' kanji through this walk), and the last
                         # byte of the range is the block's own terminator, which
-                        # group() must still find (block 141's `30 a0`).
+                        # group() must still find (block 16's `32 a0`).
                         atoms.append({'k': 'c', 'ch': '', 'raw': bytes(d[i:i + w]),
                                       'ctrl': list(d[i:i + w])})
                         i += w
@@ -3747,6 +3761,38 @@ def block_ctx(rom, code, blk, hi, path):
     """Everything one translated block needs: its atoms, boxes, segments, lines."""
     lo, cap = block_extent(rom, blk)
     assert lo < hi <= cap, 'block %d ends at %#x, outside %#x..%#x' % (blk, hi, lo, cap)
+    # A registered range that swallows the engine's blank-cell fill is never text:
+    # the fill sits between the last terminator and the script records that follow
+    # it, so covering it also covers those records (block 26's 0x1D0008 did, and the
+    # 元旦 visitor event read the damaged script).  Real text tops out at 3 in a row.
+    run = 0
+    for a in range(lo, hi):
+        run = run + 1 if rom.data[a] == 0xFF else 0
+        assert run < 8, ('block %d: %#x is blank-cell fill (%d `$FF` in a row), '
+                         'tighten hi before it' % (blk, a, run))
+    # Same test for a record table the grid happens to slice through: `ctrl $A0`
+    # repeating at stride 2 is a pointer/distance table (text never reuses one
+    # terminator so regularly), and walk() reads each pair as a 「。」 box.
+    for phase in (0, 1):
+        run = 0
+        a = lo + phase
+        while a + 1 < hi:
+            if rom.data[a] < 0x40 and rom.data[a + 1] == 0xA0:
+                run += 1
+                assert run < 3, ('block %d: %#x is inside a stride-2 record table '
+                                 '(%d `ctrl $A0` pairs), tighten hi before it' % (blk, a, run))
+            else:
+                run = 0
+            a += 2
+    # Third shape of the same defect: the walk slicing into an event-script stream.
+    # `$1B` eats two operands, and in real text it never takes `$00` as the first one
+    # (all 142 registered ranges hold 542 `$1B` atoms, none at `$00`), while the
+    # `c1 1b 00 NN` script records do it every four bytes.  Block 138's tail was that
+    # stream and the minted 「怎么样」「当。」「思。」 boxes rewrote it every build.
+    for a in range(lo, hi - 1):
+        assert not (rom.data[a] == 0x1B and rom.data[a + 1] == 0x00), \
+            ('block %d: %#x is `$1B $00`, an event-script record, not text '
+             '-- tighten hi before it' % (blk, a))
     atoms = code.walk(lo, hi)
     segs = segmentize(atoms)
     boxes = group(atoms)
