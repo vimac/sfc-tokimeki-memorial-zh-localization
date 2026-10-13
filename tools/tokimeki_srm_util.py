@@ -1,6 +1,7 @@
 """Every field a .srm save slot says, read out of the bytes: the date, the nine
-attributes, affinity per record, who has been met and who has a phone number, and every
-appointment in the diary.  It can also write back the fields whose offset is proven.
+attributes, the player's club and the two club tables, the 生日／血型 records, affinity per
+record, who has been met and who has a phone number, and every appointment in the diary.
+It can also write back the fields whose offset is proven.
 
 Nothing here needs a path baked in: the saves come from argv, the image they were written
 by comes from --rom (or each save's own sibling .sfc), and the original image used only for
@@ -20,20 +21,30 @@ distinguishable.  The YAML is a hand-rolled subset: mappings are block style one
 ints, true/false/null.  No pyyaml is needed either way -- --import reads the same subset back.
 Comment lines are safe to add, tabs are not.
 
---import writes only these six keys, and only into slots that were actually saved into --
+--import writes only these nine keys, and only into slots that were actually saved into --
 any key you leave out of the file stays untouched, which is what makes export→import a no-op:
   date          年-月-日, one line in the file.  The save keeps the same day twice and both get
                 written: 0x1cc (日, and 月|年序 packed into one byte) plus 0x036/0x038/0x03a as
                 words.  The second copy is report-only -- it is there to be compared, not edited.
   attributes    the nine status words at 0x00..0x11 (体力／文科／理科／艺术／运动／杂学／容姿／
                 毅力／压力), one 属性名: 数值 per line -- edit 容姿 alone and the other eight stay
-                as they are.  No ceiling is enforced: a played slot reads 容姿141 and the user's
-                own edited slot reads 体力314.
+                as they are.  No ceiling is enforced: over the 30 in-use slots on disk the
+                nine words read up to 运动581 / 体力566, so 100 is a display convention.
+  club          the player's club at 0x0062, written as the name (see CLUBS) or that pool's row
+                number 0-9, or 还没入部 (the word ffff).  Only the word moves -- joining also
+                changes schedule and attribute growth in play, and the tool does not touch those.
+  birthday      月-日, one line per owner (主人公／藤崎诗织).  The save keeps two four-word
+                records (月−1, 日−1, 血型, a tail that is 0 in every save): 0x370 is the
+                player's, 0x378 is 诗织's.  顺序是 (月, 日) -- the diary records at 0x16e are
+                the other way round.
+  blood_type    A／B／AB／O, one line per owner, written into the 3rd word of those same two
+                records in the game's own order A=0 B=1 AB=2 O=3.
   affinity      the 11 words at 0x100, one 人名: 数值 per line (same subset rule)
   visibility    the 11 status bytes at 0x142, one 人名: 档位 per line.  00 means she has not
-                shown up yet (her affinity is always 0 there); 01 and 0f both mean she is in
-                play, and what separates those two tiers has never been proved.  This is NOT the
-                phone book: measured 2026-09-27, a slot with all eleven heroines at 0f still
+                shown up yet (her affinity is always 0 there); 01, 03, 09, 0f and 1f all mean she
+                is in play, and what separates those tiers has never been proved -- 1f first
+                appeared in the forum save of 2026-10-11, played to the end of 1997.  This is NOT
+                the phone book: measured 2026-09-27, a slot with all eleven heroines at 0f still
                 showed none of the new names in 通讯录.
   phone_book    who is listed in 通讯录, from the 24-bit field at 0x8e5.  This IS the gate:
                 clearing those three bytes leaves only 诗织/好雄/丽 on screen, FF FF FF fills
@@ -42,7 +53,10 @@ any key you leave out of the file stays untouched, which is what makes export→
                 the three raw bytes are report-only and are not exported at all.  Import moves
                 only the bits the lines you wrote name, so the fourteen bits of unknown
                 purpose stay as they are.
-  appointments  up to 16 records for 0x16e: {at, date, girl, place}.  `girl` is a name or an index
+  appointments  up to 16 records for 0x16e: {at, date, girl, place}.  `date` is 年-月-日 and the
+                record stores it packed: 日−1 in byte 0 and 月−1 in the LOW nibble of byte 1 with
+                年序 (年份−1996) in the high nibble, exactly like 0x1cd (see APPT).  `girl` is a
+                name or an index
                 0-10.  `place` is the 约会地点 pool index -- an index into build_zh.PLACE_TABLE,
                 the 21 names `$E802` selects between, which is also the order the player picks in
                 (user's control 2026-09-28: the 1st and 2nd entries, 附近的公园 and 光辉中央公园,
@@ -52,6 +66,14 @@ any key you leave out of the file stays untouched, which is what makes export→
                 not mention are cleared, because a cancelled booking keeps its 对象 byte and the
                 game still counts it.
 Everything else in the file (names, unconfirmed) is dumped for reference only.
+Five rows the report prints are deliberately read-only (see EYE_ONLY): 心动度 0x116,
+the roster 0x072 and the per-club XP 0x096, 退过的部 0x066, and the 约会地点 bitmap at
+0x1ae.  外部金手指表
+(docs/research/cheats-fc2.md) names all of them and gives their addresses, but a written
+byte has never been shown to make the game do anything there -- the roster and the
+per-girl table at 0x088 would have to move together, 心动度 moves on its own in slots
+where nobody has been met, and the spot bitmap demonstrably changes by itself: two slots of
+one playthrough (2026-10-11) differ by two bits that went back OFF.
 Every write is followed by a re-sign of the slot's tag at 0xfda (see TAG below).  This is
 insurance, not a fix for something observed here: snes9x loads a slot whose tag is stale
 (proved 2026-09-27 by injecting one and continuing from it), while the emulator the user
@@ -62,9 +84,11 @@ Before a byte is written the slot's dates are proved against the calendar: 当�
 Sunday between 1996-04-04 and 1999-03-01 (4/4 itself passes -- it is 开学第一天, a Thursday in
 the real calendar), and every appointment must fall within 28 days AFTER that date.  The year of
 当前日期 is in the save (0x1cd's high nibble, and the word at 0x036), so what the export prints is
-what the bytes say; only a diary record's year is resolved, and the 28-day window pins it.  Dates
-the YAML does not mention are checked too, because changing 当前日期 can push a booking that is
-already in the file out of the window.
+what the bytes say -- and so is a diary record's year, which lives in the high nibble of ITS month
+byte too (see APPT; the forum save of 2026-10-11 pinned it).  The 28-day window is therefore a
+cross-check on the records, not how their year is guessed.  Dates the YAML does not mention are
+checked too, because changing 当前日期 can push a booking that is already in the file out of
+the window.
 --force turns every complaint into a warning.
 Writes make `<存档>.srm.bak` from the pre-write bytes; --dry-run shows the byte diff only.
 
@@ -134,14 +158,19 @@ BOOK = 0x8e5                         # 3 bytes / 24 bits -- who is listed in 通
                                      # by bit: one probe value per run on a save that reaches
                                      # the book, names read off the screenshot.  Clearing these
                                      # bytes empties the book down to the three below; FF FF FF
-                                     # fills it with all thirteen entries.
+                                     # fills it with all thirteen entries.  docs/research/cheats-fc2.md
+                                     # 那页给的是每个女生的十六进制位，十个逐个对上（见 BOOK_BIT）。
 BOOK_BIT = {'如月未绪': 4, '纽绪结奈': 1, '片桐彩子': 15, '虹野沙希': 10,
             '古式由加利': 12, '清川望': 9, '镜魅罗': 8, '朝日奈夕子': 23,
             '美树原爱': 22, '早乙女优美': 6}          # bit 0 = low bit of byte 0x8e5
 BOOK_UNGATED = ('藤崎诗织', '早乙女好雄', '伊集院丽')   # in the book with BOOK cleared
-# The other 14 bits (0,2,3,5,7,11,13,14,16,17,18,19,20,21) do nothing to the book -- a played
-# slot carries bits 5 and 21 set with no extra name, so they hold something else.  --import
-# therefore only ever touches the ten bits above and leaves the rest of the field alone.
+# 这十个号是拿截图一个个认出来的；docs/research/cheats-fc2.md 那页给的是十六进制位，
+# **十个逐个对上，一个不差**（纽绪 02→1、如月 10→4、优美 40→6、镜 01→8、清川 02→9、
+# 虹野 04→10、古式 10→12、片桐 80→15、美树原 40→22、朝日奈 80→23）——两族人、两种方法、
+# 同一张位图，所以这张表从此不是「凑对过一次」。
+# The other 14 bits (0,2,3,7,11,13,14,16,17,18,19,20) do nothing to the book; two of them
+# (5 and 21) have names now, see BOOK_OTHER.  --import therefore only ever touches the ten
+# bits above and leaves the rest of the field alone.
 MET = 0x8e3                          # 2 bytes -- the engine's OWN 「真的遇见过谁」 list, which only
                                      # real play can set.  Two falsification controls: the
                                      # 1996-04-14 slot where we wrote 0x142 = 0f for 如月 by hand
@@ -170,12 +199,18 @@ MET_BIT = {'如月未绪': (0x8e3, 1),   # 42 slots agree (docs/research/phone-b
                                      # he had joined their club and run it for two-three weeks, yet
                                      # 清川 lit one bit -- and slot1's 片桐 (player 美术部, her canon
                                      # club) likewise shows one, so that save is no longer a counter-
-                                     # example either.  The extra bit now has NO explanation.  虹野's
-                                     # own bit is settled (3 is not hers: slot1's 51 and the broken
-                                     # 11-17 slot's 10 both carry 4 without 3); which of 1/2 is 古式's
-                                     # still needs the subtraction test -- clear one of them on a /tmp
-                                     # copy, cold-boot, and ask 好雄 about her (docs §十七).
-                                     # (报告把这类对不上人的比特单列出来。)
+                                     # example either.  虹野's own bit is settled (3 is not hers:
+                                     # slot1's 51 and the broken 11-17 slot's 10 both carry 4 without 3);
+                                     # 古式's candidate narrowed the same way on 2026-10-11 -- the forum
+                                     # save (docs §十九) carries 0x8e4 = 15 with BOTH of them met (tier
+                                     # 1f, in the book), so 1 is off while 2 is on, exactly like 3 off
+                                     # / 4 on.  Still not written into this table: the subtraction test
+                                     # (clear one of 1/2, cold-boot, ask 好雄 about her, docs §十七) is
+                                     # the only thing that can close it, so the report keeps calling
+                                     # bit 2 an unowned bit.
+                                     # 那份档同时否掉一条我们一直没明说的假设：**这一族不是每个女生都占一位**。
+                                     # 美树原（1f＋簿子比特 22）和优美（0f＋比特 6）第一次以「已登场＋在簿子上」
+                                     # 被读到，整块跟她们对得上的位一个都没有（诗织早就占不到位）。
                                      # Quitting does not clear it (1996-05-05: 0x0062 moved 7 -> 6 and
                                      # 0x8e4 stayed 06).  The former club number is NOT in 0x0062's
                                      # neighbourhood but does survive, in the quit mask at 0x066 below.
@@ -203,12 +238,84 @@ CLUBS = ('文艺部', '戏剧部', '科学部', '美术部', '轻音乐部',
                                      # row) wrote 1 -- same word, two independent points.
                                      # Only this word moves; what the game does with a written club
                                      # (schedule, attribute growth) has not been tested.
-APPT, N_APPT = 0x16e, 16             # 16 x 4-byte records (day-1, month-1, 对象, 地点)
+THRILL = 0x116                       # 心动度：0x100 那五个 11 行数组里的第二个（友好度 0x100、
+                                     # 心动度 0x116、伤心度 0x12C、出会い 0x142、约会次数 0x158，
+                                     # 步长 0x16＝11 个字）。外部金手指表 docs/research/cheats-fc2.md
+                                     # 把这一族叫「ときめき度」，它给的五个地址跟我们从反汇编量的
+                                     # 五个起点逐个相同，所以这一族从此有名。
+                                     # **只读**：那份 1996-06-30 的游泳部档里，十个没登场过的女生
+                                     # 的心动度同时 0→3（而那份只登场过三个人），所以这一族在没登场
+                                     # 的人身上不是她自己的进度；0x22e 在同一窗口里也一起变 3，但那条
+                                     # 不跟着社团走（如月线换了两个部它一直 0）。写它会发生什么没实测。
+CLUB_MEMBERS = 0x072                 # 十个 16 位字：每个部里住着谁（值＝女生下标，ffff＝这一部没人）。
+                                     # 反向那张在 0x088 起（每个女生在哪个部，只有七个：诗织…清川），
+                                     # 两张表在参照件里互相吻合，而且合起来正是各人的设定部
+                                     # （诗织 美术、如月 戏剧、纽绪 科学、片桐 轻音乐、虹野 棒球、
+                                     # 古式 网球、清川 游泳、优美 篮球）。只读，报告印。
+CLUB_XP = 0x096                      # 十个 16 位字：每个部的经验值。这一族顺手给 QUIT_CLUBS 当了
+                                     # 对照：游泳部那份 0x066＝c0（退过 足球＋网球），而 0x096 起
+                                     # 正是 足球 41／网球 60／游泳 47 三格非零——没参加过的部全 0。
+CLUB_OF_GIRL = 0x088                 # 七个 16 位字（诗织…清川）：每个女生在哪个部，值＝CLUBS 行号。
+                                     # 上面那张的**反向写法**，30 个槽位里七个女生逐格一致。
+                                     # 只有优美对不上：成员表每格都把她（下标 10）登记在篮球部，
+                                     # 而这一族只有七栏——第八栏就压进经验带了，装不下她。
+BIRTH = (('主人公', 0x370), ('藤崎诗织', 0x378))
+                                     # 每份记录四个 16 位字：月-1、日-1、血型、一个恒 0 的尾巴。
+                                     # 归属（0x370 那份是主人公的）由两路独立定死：外部表把 $0E70
+                                     # 标成主人公、$0E78 标成诗织（$0B00＋存档偏移＝WRAM，见
+                                     # docs/research/cheats-fc2.md），而我们自己那两份样本——用户
+                                     # 亲手把两个生日都设 5/31、主人公 B 诗织 A，另一份改成主人公 AB
+                                     # 诗织 O——在「A/B/AB/O＝0/1/2/3」这个序下只有这一种读法成立。
+                                     # 顺序跟 0x16e 那对 (日-1, 年·月) 是**反的**，别顺手抄。
+BLOOD = ('A', 'B', 'AB', 'O')        # 血型的数值序，外部表与两份样本各定一遍（见 BIRTH）
+APPT, N_APPT = 0x16e, 16             # 16 x 4-byte records (日-1, 打包月字节, 对象, 地点).
+                                     # The 2nd byte is packed EXACTLY like 0x1cd: 高半个字节＝年序、
+                                     # 低半个字节＝月-1.  Pinned by the forum save (2026-10-11):
+                                     # 当前日期 1997-12-28  carries three bookings and the bare
+                                     # 月-1 reading makes them 28月/33月 -- while 1b/20/20 unpack to
+                                     # 1997-12-28, 1998-01-04 and 1998-01-11, three real Sundays,
+                                     # all inside the 28-day window, and the user's own testimony
+                                     # names the middle one (1998-01-04, 清川).  Every record in the
+                                     # older corpus has 年序 0 in that nibble, which is why the
+                                     # bare-month model agreed with this one up to now.
+                                     # 顺序跟 0x370 那对 (月-1, 日-1) 是**反的**，别顺手抄。
 PLACE_NAMES = tuple(zh for _, _, zh in B.PLACE_TABLE)   # the record's 4th byte indexes this
                                      # 21-name 地点池 (the same table `$E802` selects from, in
                                      # that order).  Head pinned by the user's control on
                                      # 2026-09-28: 约了列表第 1、第 2 个地点 → 记录里是 00 和 01,
                                      # 而 PLACE_TABLE 头两项正是 附近的公园／光辉中央公园。
+                                     # 外部表还给出第二样：那张池子的**顺序**逐字对得上（它的
+                                     # 解锁位掩码 $0CAE-$0CB0 按位排下去，前 20 项与 PLACE_TABLE
+                                     # 的第 0–19 项一字不差）。它写「第 21 项滑雪场在掩码里没有位」
+                                     # ——旧语料确实从没亮过位 20 以上，而论坛那份亮了（见下面 ③），
+                                     # 所以「没有位」只是那一家表格的样本不够，不是这一族的形状。
+                                     # 那三字节的存档落点见下面 PLACE_UNLOCK——**它落档**，
+                                     # 桥算出来是 0x1ae（$0CAE − $0B00），不是 0x0ae；
+                                     # 曾经按 0x0ae 量过一次并据此判「不落档」，那是减法滑掉一位，
+                                     # 账在 docs/research/cheats-fc2.md §三.5。
+                                     # 「RAM 有、档里没有」的那一族是 0x012–0x023 那九个「增减值」
+                                     # （全档恒 0），它们旁边的 0x024–0x035 小数位倒是每档都不同。
+PLACE_UNLOCK = 0x1ae                 # 约会地点那三字节位图（$0CAE–$0CB0 → 0x1ae–0x1b0），
+                                     # 比特号＝上面 PLACE_NAMES 的下标（0＝附近的公园…19＝溜冰场）。
+                                     # 三样对照：
+                                     #  ① 结构——约会表 0x16e 起 16 条四字记录正好停在 0x1ad，
+                                     #     而外部表把这三字节排在约会记录（$0C6E＋0x40＝$0CAE）之后；
+                                     #  ② 新开局控制件——每个新开槽位都读到同一个 15 13 00
+                                     #     （公园／商业街／动物园／图书馆／电玩城／游乐园），
+                                     #     而它是每一个在用槽位的子集；
+                                     #  ③ 约会记录里出现过的地点，那一位在旧语料那 5 条记录里全亮。
+                                     # 论坛那份 1997-12-28（2026-10-11）把 ② 撑开成 ff f7 00，
+                                     # 而它隔壁 1997-12-14 那个槽是 ff f7 18——**同一局、晚 14 天的槽
+                                     # 反倒少了位 19 和位 20**，而这两条灭掉的位所在的那两条滑雪场
+                                     # 记录在两个槽里都还在。所以：
+                                     #  「③ 记录里的地点位永远亮」被这一份证伪（滑雪场自己就不亮）；
+                                     #  位 20 ＝滑雪场只是**看着最像的候选**（那一局唯一没被前 20 位
+                                     #     覆盖的地点就是它），没有第二份档撑它，所以工具仍旧把
+                                     #     位 20 以上报成「不明」而不是印成地点名。
+                                     # **只读**：这一族会**灭**，所以「Once unlocked, forever」那一读
+                                     # 从此作废——它更像「当下能约的（季节算出来的）」。
+                                     # 写它会怎样没实测，而且既然它会自己变，写进去的数能留多久也判不动。
+                                     # 所以写它等于赌前一种解释，游戏会怎样没实测。
 DATE = 0x1cc                         # 日-1, then 月-1 装在低半个字节、年序（年-1996）装在高半个
 DATE2 = 0x036                        # 字节；同一个日子还另有第二份，三个 16 位字 (年序, 月-1, 日-1)。
                                      # 年序这一档是 2026-09-28 拿用户亲手玩到 1997 年的那份存档定的：
@@ -222,7 +329,8 @@ FIELD_END = 0x340                    # the diary/name fields above live under th
 TAG = 0xfda                          # 槽位标记：在用的槽是 01 00 ＋两个字（0xfdc／0xfde），
                                      # 空槽这六字节全零。两个字是 [0,0xfdc) 这段 16 位字的
                                      # 两种求和（见 tag_words）：全求和、以及每第 4 个字求和。
-                                     # 4 份存档 7 个槽（含一个全零的空槽）逐字节吻合，无一例外。
+                                     # 4 份存档 7 个槽（含一个全零的空槽）逐字节吻合，无一例外；
+                                     # 2026-10-11 复测 17 份存档 30 个在用槽位，报 30 次「校验一致」。
                                      # 但 snes9x 这条走查路径不校验它——2026-09-27 实测：把改过
                                      # 内容、校验字仍属旧内容的槽注入 SRA，加载画面照出数据，
                                      # 「请选择要开始的相册」照选中，SRAM 一个字节都没被清。
@@ -236,22 +344,19 @@ TAG = 0xfda                          # 槽位标记：在用的槽是 01 00 ＋�
 NAMES = (('姓', 0x2b0, 4), ('名', 0x2b8, 4), ('姓·副本', 0x300, 4),
          ('名·副本', 0x308, 4), ('昵称', 0x310, 6))
 # Offsets that move between saves but whose meaning is not established: raw values, printed
-# as such and never written by --import.
-# 0x118（0x116 那 11 个字里除第一格之外的那十格）在 1996-06-30 那份游泳部档里**十个同时** 0→3，
-# 而那份只登场过三个人——所以这一族在没登场的女生身上不是她自己的进度，别当每人事件数读；
-# slot1 那份是 14–20 各不同，坏档 11-17 是 3,1,1,1 挂在古式/清川/镜/朝日奈上。三种读法
-# （她的兴趣／她对你的评价／某种全员初始化）都还没有判据。0x22e 在同一窗口里也一起变 3，
-# 但那条不跟着社团走（如月线换了两个部它一直 0），所以也不是「入过几个部」。
-UNCONFIRMED = ((0x042, 3, 'w'), (0x118, 10, 'w'), (0x1ae, 1, 'w'), (0x1ba, 9, 'w'),
-               (0x22e, 1, 'w'), (0x370, 6, 'w'),
+# as such and never written by --import.  三族已经从这一列搬走：0x116 那一族按外部表定名为
+# 心动度（THRILL，同时留着「十个没登场的人同时变 3」那个疑点），0x370 起那八个字定成
+# 主人公与诗织的生日／血型记录（BIRTH），0x1ae 那三个字节定成约会地点位图（PLACE_UNLOCK）。
+UNCONFIRMED = ((0x042, 3, 'w'), (0x1ba, 9, 'w'),
+               (0x22e, 1, 'w'),
                (0x15a, 1, 'b'), (0x160, 1, 'b'), (0x264, 1, 'b'))
 # Regions whose text the localization rewrote: the preset-name pool and block 144.
 VERSION_PROBE = ((0x1F890, 0x1FA40), (0x22F000, 0x22F2D4))
-# The calendar the writes are proved against.  当前日期 carries its year (see DATE), but a diary
-# record only carries day and month, so a booking's year is still resolved -- trivially now,
-# because it has to fall in the 28 days after 当前日期.  The game uses the real Gregorian week:
-# every played day and every booked day on disk (96/4/7, 96/10/13, 96/12/29 / 4/14, 10/20,
-# 10/27, 11/3, and 97/1/5) is a real Sunday.
+# The calendar the writes are proved against.  当前日期 carries its year (see DATE) and so does a
+# diary record, in the high nibble of ITS month byte (see APPT) -- so APPT_WINDOW is a cross-check
+# on the records, not how their year is guessed.  The game uses the real Gregorian week: every
+# played day and every booked day on disk (96/4/7, 96/10/13, 96/12/29 / 4/14, 10/20, 10/27, 11/3,
+# 11/24, 12/1, 97/1/5, 97-12-28, 98/1/4 and 98/1/11) is a real Sunday.
 TERM = (datetime.date(1996, 4, 4), datetime.date(1999, 3, 1))    # 开学第一天 – 毕业典礼
 WEEK = '一二三四五六日'
 SUNDAY = 6
@@ -261,7 +366,8 @@ APPT_WINDOW = 28
 def tag_words(b):
     """The two words a slot carries at 0xfdc/0xfde, computed over the words that precede them.
 
-    Proven against 7 slots from 4 saves (two images, plus one slot an emulator had wiped):
+    Proven against 7 slots from 4 saves (two images, plus one slot an emulator had wiped), and
+    re-read on all 30 in-use slots of 2026-10-11 without one mismatch:
     `0xfdc` is the 16-bit sum of all little-endian words in [0x000, 0xfdc), and `0xfde` is
     the same sum taking every fourth word.  The range already covers the `01 00` in-use flag.
     It is a structural invariant, not a proven load gate: snes9x shows a slot whose words are
@@ -279,18 +385,21 @@ def span_text():
 HEADER = (
     '心跳回忆 .srm 存档导出 -- tools/tokimeki_srm_util.py --export（本文件与存档同名，加 .yaml 后缀）',
     '--import 后面给这份 YAML 或者给存档本身都行：给存档就读它旁边这份，同一个规则不用写两遍路径。',
-    '导入只认 date／attributes／club／affinity／visibility／phone_book／appointments 这七个键，'
-    '没写的键不动；后五张表都是「一行一个键」，只写你要改的那几行就行，没写的原样留着。',
+    '导入只认 date／attributes／club／birthday／blood_type／affinity／visibility／phone_book／'
+    'appointments 这九个键，没写的键不动；属性／生日／血型／好感度／登场／通讯录都是一行一个键，'
+    '只写你要改的那几行就行，没写的原样留着。',
     '三张女生表的键就是屏幕上那十一个名字，行序也跟引擎下标一致（好感度／登场／通讯录共用同一个顺序，'
     '约会记录里的 girl 也用它）：' + '／'.join(GIRLS) + '。'
     '（伊集院丽不在这些表里——那几张表每条只有 11 项，第五条正好停在约会表 0x16e 上。）',
     'date 写成 年-月-日（比如 1997-02-12）；这一格在存档里存了两份，年份两份都带着：'
     '0x1cc（日）＋一个字节把月放在低半个字节、年序放在高半个字节，以及 0x036·0x038·0x03a '
     '三个字（年序, 月−1, 日−1；年序＝年份减 1996）。两份都是导入自己写、报告自己比，'
-    '文件里只留 date 这一行。导出照字节印年份，不再按周日推；约会记录自己没有年，'
-    '它的年按当前日期那 28 天窗口定。',
+    '文件里只留 date 这一行。导出照字节印年份，不再按周日推；约会记录也自己带年——'
+    '它的月字节跟 0x1cd 同族（高半个字节＝年序、低半个字节＝月−1），'
+    '所以 28 天窗口对记录是**校验**，不是推年份的手段。',
     'attributes＝0x00 起九个状态字（体力／文科／理科／艺术／运动／杂学／容姿／毅力／压力），'
-    '一项一行。观测到过 容姿141、体力314，所以面板那个 100 不是这一格的上下限。',
+    '一项一行。这一族没有上下限可判：本轮 30 个在用槽位里读到过 运动581、体力566，'
+    '所以面板那个 100 不是这一格的上下限。',
     'club＝玩家社团，直接写部名（%s），或者写那张十项池的行号（0–%d），或者「还没入部」（字节 ffff）。'
     '这一格是 0x0062 那个编号字，编号＝社团名单池的行号：用户 2026-09-28 两次变更把它钉死了——'
     '参加篮球部（名单最后一项）时它是 9，换到戏剧部（第二项）时它是 1。'
@@ -300,8 +409,25 @@ HEADER = (
     '网球→足球＝80、再加退到游泳＝c0、篮球→戏剧＝200；从没退过部的档全是 0，slot1 玩满一年也还是 0）。'
     '这就是「一年内不能重新加入退过的部」那一条的数据来源，所以导日志会在你写一个退过的部时点名提醒。'
     '工具只读不写它——清掉一位能不能真把那个部放开，没在游戏里试过。',
+    '报告还印两行外部表命名、我们只读的社团栏：**各部成员**（0x072 起十字，每个部里住着谁，'
+    '值＝女生下标，ffff 是空的；0x088 起那七个字是同一件事的女生侧写法，两份逐格一致）'
+    '和**各部经验**（0x096 起十字，非零的那几项正好＝当前部＋上面那些退过的部，30 个槽位零例外，'
+    '所以「退过的部」在档里其实有两处记录）。两份都得同写才不会造出矛盾，没实测过，所以不进这份文件。',
+    'birthday／血型＝存档里那两份四字记录：0x370 起是主人公的（月−1、日−1、血型、恒 0 的尾巴），'
+    '0x378 起是诗织的，一行一个名字。血型照 A／B／AB／O＝0／1／2／3 写。'
+    '归属和数值序这次由外部金手指表（docs/research/cheats-fc2.md）跟我们自己的两份样本各定了一遍：'
+    '用户把两个生日都设 5/31、主人公 B 而诗织 A，另一份改成主人公 AB 而诗织 O，只有这一种读法同时成立。'
+    '注意记录内是 (月, 日)，而下面约会表那 0x16e 的四字节记录是 (日, 年·月)，顺序相反。',
+    '约会地点那三字节（外部表给的 $0CAE–$0CB0，桥算出存档 0x1AE–0x1B0）**这一族只读不写**：'
+    '位序逐项对上地点池的前 20 项（0＝附近的公园…19＝溜冰场），新开局恒为 15 13 00。'
+    '可这一族**会灭**：论坛那份 1997-12-28 是 ff f7 00，同一局早 14 天的槽是 ff f7 18，'
+    '位 19、位 20 后来反而关了，而那两条滑雪场记录两边都还在——'
+    '所以「Once unlocked, forever」作废，它更像「当下能约的」，写进去能留多久没实测。'
+    '（这一条以前写成「存档不落」，那是把 $0CAE − $0B00 减法滑掉一位、去量了 0x0AE 的结果。）'
+    '真正「金手指有、存档没有」的是 0x012–0x023 那九个「增减值」（全档恒 0）。',
     'affinity＝0x100 起十一个 16 位字，一行一个人（上限按用户口径 999，超了照写但提醒）。',
-    'visibility＝0x142 起十一个状态字节，一行一个人（0 未登场；1／3／9／15 都算已登场）。'
+    'visibility＝0x142 起十一个状态字节，一行一个人（0 未登场；1／3／9／15／31 都算已登场，'
+    '31 是论坛那份 1997 年末的档第一次量到的）。'
     '这一档**不是所有女生共用的一条进度梯**：同一份 1996-06-09 的档里诗织是 1（好感度已经 51）、'
     '片桐 9、如月 15，每一档到底管什么都还没证，报告因此把字节原样带着印。'
     '注意：实测这一格**不驱动通讯录**——全填 15 之后游戏里还是查不到人，要谁上簿子写 phone_book；'
@@ -313,8 +439,13 @@ HEADER = (
     '闸门是 0x8e5 起那三字节的 24 个比特，一个人名一个比特，'
     '但比特号跟引擎下标不成顺序，照 BOOK_BIT 那张实测表走——'
     '所以这一列才是编辑入口，那三个原始字节只在报告里印、不进这份文件。'
-    '导入只动你写进来的那几行对应的比特，其余（存档里常看到比特 5 和 21 挂着）来路不明，原样留着。'
+    '导入只动你写进来的那几行对应的比特，其余原样留着——剩下那 14 位现在有两个有名字了：'
+    '外部表（docs/research/cheats-fc2.md）给比特 5＝诗织（注明「好雄情報」）、比特 21＝'
+    '在好雄的电话里听过妹妹的声音，而这正是我们实测那两个「挂着却不多人名」的位，'
+    '所以它俩管的是好雄那一头，不是簿子。剩下 12 位照旧来路不明。'
     '藤崎诗织没有比特可写（她和好雄／丽一样不看这三字节），给她 false 不产生字节、只会提示一句。',
+    '心动度＝0x116 起那十一个字，外部表叫「ときめき度」。**只在报告里印，不进这份文件、导入也不写**：'
+    '那份游泳部档里十个没登场过的人这一族同时 0→3，所以它在没登场的人身上不是她自己的进度。',
     '真登场＝引擎自己另记的那份「遇见过谁」（0x8e3–0x8e4 两字节 16 个比特）。'
     '只在报告里印，不进这份文件、导入也不写：现在有五个人的比特号对得上——'
     '如月（0x8e3 比特 1）、片桐（0x8e4 比特 6）、纽绪（0x8e4 比特 7，'
@@ -348,7 +479,7 @@ HEADER = (
     '列表头两个地点，存档里正是 00 和 01。导入把你写的数原样写回，不写这个键就留着文件里那个字节。',
     '约会按导出里的 at 偏移写回原位，没列出来的记录清空；'
     '取消过的预约会留下对象字节，留着就是幽灵预约。',
-    'names／unconfirmed／真登场那两字节是给人看的，一条一行摊开写，导入不碰。'
+    'names／unconfirmed／心动度／真登场那两字节是给人看的，一条一行摊开写，导入不碰。'
     '通讯录那三字节的十六进制连这份文件都不进：那是给机器的数，'
     '改它等于绕过人名这一列去猜比特。',
     'tag 是 0xfda 那六个字节（在用标记＋两个求和字）：只给人看，导入不读它——'
@@ -365,8 +496,11 @@ HEADER = (
 # the tool writes both and the report compares them, but an editor only ever wants one date.
 # --export drops these; --import never looked at them.
 EYE_ONLY = ('phone_book_raw', 'date_copy', 'met', 'met_raw', 'quit_mask',
-            'quit_clubs')            # quit_clubs 是只读的一栏：清掉一位能不能真把那个部放开，
-                                     # 没在游戏里试过，所以 --import 不碰它（跟 0x8e3 那一族同一条规矩）
+            'quit_clubs', 'thrill', 'club_roster', 'club_xp',
+            'place_unlock', 'place_unlock_raw', 'place_unlock_extra')
+                                                           # 后面几栏都是只读的：清掉一位能不能真把那个部
+                                     # 放开、写心动度会让游戏做什么、两份社团表要不要同写，
+                                     # 都没在游戏里试过，所以 --import 不碰它们（跟 0x8e3 那一族同一条规矩）。
 
 
 # ---------------------------------------------------------------- YAML subset
@@ -653,13 +787,14 @@ def club(i):
 
 
 def diary_rec(r):
-    """One 4-byte diary record the way the player reads it: 月-日 对象 地点.  A record carries no
-    year -- that lives with 当前日期 -- so this is month-day, unlike the exported 年-月-日."""
+    """One 4-byte diary record the way the player reads it: 年-月-日 对象 地点.  年序住在月字节的
+    高半个字节里（见 APPT），所以记录自己带年，不靠当前日期推。"""
     if (r[0], r[1]) == (0xFF, 0xFF):
         return '空档'
-    if not (1 <= r[1] + 1 <= 12 and 1 <= r[0] + 1 <= 31):
+    dt = dated(r[1] >> 4, r[1] & 0x0F, r[0])
+    if dt is None:
         return '月/日字节不对 %02x %02x' % (r[0], r[1])
-    return '%02d-%02d %s %s' % (r[1] + 1, r[0] + 1, girl(r[2]), place(r[3]))
+    return '%s %s %s' % (iso(dt), girl(r[2]), place(r[3]))
 
 
 def words(b, off, n):
@@ -696,18 +831,36 @@ def met_flags(b):
             for g in GIRLS if g in MET_BIT}
 
 
-def book_dangling(raw):
-    """Bits 0x8e5–0x8e7 carries that no name owns, from the report's own 「%02x %02x %02x」.
+BOOK_OTHER = {5: '诗织（外部表注明「好雄情報」）', 21: '在好雄的电话里听过妹妹的声音'}
+                                     # 这两条来自 docs/research/cheats-fc2.md：`$13E5` 的 `20` 和
+                                     # `$13E7` 的 `20`。它们正好是我们那两个「挂着却不多人名」的位，
+                                     # 于是那一条实测有来路了——而两个说明都不是「簿子上有没有她」，
+                                     # 管的是好雄那一头，所以照旧只读不写。
+# 剩下那 12 位（0、2、3、7、11、13、14、16、17、18、19、20）外部表也没给名字。30 个在用槽位量下来
+# 这一族分两半：**真被观察到亮过的只有 7（游泳部那份）、11（论坛那份的两个槽）、14（片桐那条线）**，
+# 另外九位在全部语料里恒 0。反过来十个女生位里有三位从没亮过——1（纽绪）／8（镜）／23（朝日奈），
+# 那是样本空白，不是「她们没登场」。
 
-    A played slot routinely carries such bits (5, 21, and on the 游泳部 line 7), and they change
-    nothing on the 通讯录 screen, so the report names them instead of letting the raw hex look like
-    an undecoded name.
+
+def book_dangling(raw):
+    """Bits 0x8e5–0x8e7 carries that no girl's phone entry owns, from the report's own 「%02x %02x %02x」.
+
+    A played slot routinely carries such bits (5, 21, and over the 30-slot corpus 7 on the
+    游泳部 line, 11 on the forum save, 14 on the 片桐 line), and they change
+    nothing on the 通讯录 screen.  Two of them now come back labelled from the external cheat sheet
+    (BOOK_OTHER) rather than as bare numbers, so the report says what they are instead of letting
+    the raw hex look like an undecoded name.
     """
     v = [int(x, 16) for x in raw.split()]
     known = set(BOOK_BIT.values())
-    return ['比特 %d' % (8 * i + bit)
-            for i, byte in enumerate(v) for bit in range(8)
-            if byte >> bit & 1 and 8 * i + bit not in known]
+    out = []
+    for i, byte in enumerate(v):
+        for bit in range(8):
+            n = 8 * i + bit
+            if byte >> bit & 1 and n not in known:
+                out.append('比特 %d＝%s' % (n, BOOK_OTHER[n]) if n in BOOK_OTHER
+                           else '比特 %d' % n)
+    return out
 
 
 def met_dangling(raw):
@@ -731,9 +884,25 @@ def girl_lists(b):
     rather than a second copy that can drift.
     """
     return {'affinity': dict(zip(GIRLS, words(b, AFFINITY, N_REC))),
+            'thrill': dict(zip(GIRLS, words(b, THRILL, N_REC))),
             'visibility': dict(zip(GIRLS, [b[PHONE + 2 * i] for i in range(N_REC)])),
             'phone_book': book_flags(b),
             'met': met_flags(b)}
+
+
+def club_views(b):
+    """The two club tables the external cheat sheet names: who lives in each club, and each club's XP.
+
+    Both are read-only rows.  The roster has a reverse copy at `CLUB_OF_GIRL` (seven records, one per
+    girl), and the two agree for those seven in every reference slot -- 优美 is the one name the
+    roster carries that the reverse table has no room for, so the report prints the roster and does
+    not claim the pair is redundant.
+    """
+    roster = {}
+    for i, v in enumerate(words(b, CLUB_MEMBERS, len(CLUBS))):
+        roster[CLUBS[i]] = None if v == 0xffff else girl(v)
+    return {'club_roster': roster,
+            'club_xp': dict(zip(CLUBS, words(b, CLUB_XP, len(CLUBS))))}
 
 
 def ghost_names(state):
@@ -801,11 +970,24 @@ class Image:
                 self.pair = (T.Rom(orig_path).data, rom.data)
 
 
+def birth_records(b):
+    """The two 生日／血型 records (see BIRTH): (月−1, 日−1, 血型) per owner, 主人公 first.
+
+    报告与 --export 都从这里取，所以「这一格字节不像日期」在两边是同一个判断。
+    """
+    md, blood = {}, {}
+    for who, off in BIRTH:
+        mo, da, bl = words(b, off, 3)
+        md[who] = '%d-%d' % (mo + 1, da + 1) if 0 <= mo <= 11 and 0 <= da <= 30 else None
+        blood[who] = BLOOD[bl] if bl < len(BLOOD) else None
+    return md, blood
+
+
 def read_slot(b, img):
     """Model dict for one slot -- what the report prints and --export writes.
 
-    当前日期 comes straight out of the bytes, year included; only a diary record's year is
-    resolved, against the slot's own date (see diary_date).
+    当前日期和每条约会的年都直接来自字节（记录的那半个字节见 APPT／appt_date）；
+    28 天窗口只用来复核。
     """
     stored, calc = b[TAG:TAG + 6], tag_words(b)
     ok = list(calc) == [int.from_bytes(stored[2:4], 'little'),
@@ -817,12 +999,15 @@ def read_slot(b, img):
     fmt = lambda dt: iso(dt) if dt else None
     now = dated(*day_bytes(b))
     copy = words(b, DATE2, 3)
+    birthday, blood = birth_records(b)
     out = {'untouched': False,
            'tag': stored.hex(' ') + ('（校验一致）' if ok else
                                      '（标记还是旧内容的：按现在内容应为 %04x %04x）' % calc),
            'date': fmt(now),
            'date_copy': fmt(dated(copy[0], copy[1], copy[2])),
            'attributes': dict(zip(ATTR[1], words(b, ATTR[0], len(ATTR[1])))),
+           'birthday': birthday,
+           'blood_type': blood,
            'club': club(words(b, CLUB, 1)[0]),
            'quit_mask': words(b, QUIT_CLUBS, 1)[0],
            'quit_clubs': [CLUBS[i] for i in range(len(CLUBS))
@@ -834,10 +1019,15 @@ def read_slot(b, img):
             names[label] = text
     out['names'] = names
     out.update(girl_lists(b))
+    out.update(club_views(b))
     out['phone_book_raw'] = '%02x %02x %02x' % (b[BOOK], b[BOOK + 1], b[BOOK + 2])
     out['met_raw'] = '%02x %02x' % (b[MET], b[MET + 1])
+    pu = int.from_bytes(b[PLACE_UNLOCK:PLACE_UNLOCK + 3], 'little')
+    out['place_unlock_raw'] = '%02x %02x %02x' % (pu & 0xff, pu >> 8 & 0xff, pu >> 16 & 0xff)
+    out['place_unlock'] = [PLACE_NAMES[i] for i in range(20) if pu >> i & 1]
+    out['place_unlock_extra'] = [i for i in range(20, 24) if pu >> i & 1]
     out['appointments'] = [{'at': '%03x' % o,
-                            'date': fmt(diary_date(b[o + 1] + 1, b[o] + 1, now)),
+                            'date': fmt(appt_date(b[o + 1], b[o], now)),
                             'girl': b[o + 2], 'place': b[o + 3]}
                            for o in range(APPT, APPT + 4 * N_APPT, 4)
                            if (b[o], b[o + 1]) != (0xFF, 0xFF)]
@@ -866,16 +1056,33 @@ def print_slot(n, s):
                  '' if TERM[0] <= dt <= TERM[1] else '，超出学制 ' + span_text(),
                  '两份一致' if c == d else '两份不一致！0x036 那份是 %s' % c))
     print('  属性       ' + '  '.join('%s%d' % (k, v) for k, v in s['attributes'].items()))
+    print('  生日       %s（0x370 起那四个 16 位字是主人公的一份记录：月−1、日−1、血型、恒 0 的尾巴；'
+          '0x378 起那一份是诗织的）'
+          % '  '.join('%s %s' % (who, v or '字节不成日期') for who, v in s['birthday'].items()))
+    print('  血型       %s（同一份记录的第 3 字：%s）'
+          % ('  '.join('%s %s' % (who, v or '字节越界') for who, v in s['blood_type'].items()),
+             '／'.join('%s＝%d' % (b_, i) for i, b_ in enumerate(BLOOD))))
     print('  社团       %s（0x0062 那个编号字＝那张十项池的行号）' % s['club'])
     extra = s['quit_mask'] >> len(CLUBS)
     print('  退过的部   %s（0x066＝%04x，比特号跟上面那张池子同号；退掉才置位，还在部的那一年里'
           '加不回去，所以这一位加上当前那个部＝被拒绝重入的那一批%s）'
           % ('、'.join(s['quit_clubs']) or '无（这份一次都没退过部）', s['quit_mask'],
              '；比特 10 以上还有 %04x，没解' % extra if extra else ''))
+    print('  各部成员   %s（0x072 起那十个字＝每个部里住着谁，`ffff` 是空的，值＝女生下标；'
+          '0x088 起那七个字是同一件事的女生侧写法，两份在七个女生身上逐格一致，只有优美是'
+          '成员表里有她、女生侧装不下她。**只读**：两份得同写，游戏怎么消化没实测）'
+          % ('  '.join('%s=%s' % (k, v or '—') for k, v in s['club_roster'].items())))
+    xp = [(k, v) for k, v in s['club_xp'].items() if v]
+    print('  各部经验   %s（0x096 起那十个字；非零的那几个正好＝当前部＋上面那几位退过的部，'
+          '30 个槽位里没有一个例外——所以「退过的部」在档里其实有两处记录。**只读**）'
+          % ('  '.join('%s%d' % (k, v) for k, v in xp) or '无（十个部都还没有经验）'))
     for label in ('姓', '名', '昵称', '姓·副本', '名·副本'):
         if s['names'].get(label):
             print('  %-9s %s' % (label, s['names'][label]))
     print('  好感度     ' + '  '.join('%s=%d' % (g, v) for g, v in s['affinity'].items()))
+    print('  心动度     ' + '  '.join('%s=%d' % (g, v) for g, v in s['thrill'].items())
+          + '（0x116 起十一个字，外部表叫「ときめき度」；**只读**——那份游泳部档里十个没登场过的人'
+            '这一族同时变 3，所以它在没登场的人身上不是她自己的进度，写它会怎样没实测）')
     print('  登场       %s（这格只说登场到哪一档；簿子上有没有她看守下面的通讯录）'
           % ('  '.join('%s=%s' % (g, PHONE_TIER.get(t) or '已登场·%02x' % t)
                        for g, t in s['visibility'].items() if t)
@@ -885,8 +1092,8 @@ def print_slot(n, s):
              s['phone_book_raw']))
     bd = book_dangling(s['phone_book_raw'])
     if bd:
-        print('             这一族还挂着对不上人名的比特：%s——簿子上没有多出来的人，'
-              '它们管的是别的事，导入一律不碰（实测 5、21，游泳部那份另有 7）'
+        print('             这一族还有几位不在那十个女生名下：%s——簿子上并没有多出来的人，'
+              '它们管的不是「通讯录里有谁」（给了名字的那两条都在好雄那一头），导入一律不碰'
               % '、'.join(bd))
     met = [g for g, on in s['met'].items() if on]
     n = len(MET_BIT)
@@ -898,7 +1105,9 @@ def print_slot(n, s):
     if dang:
         print('             另外挂着没对上人的比特：%s——她第一次登场时新亮的那一位就是她的号；'
               '一次登场亮两位的事古式和虹野都出现过，可「跟玩家同部就多亮一位」那条解释已经被证词否掉'
-              '（清川同部登场只亮一位），所以多出来那一位现在没有解释（§十六、§十七）'
+              '（清川同部登场只亮一位）。论坛那份 1997 年末的档里古式和虹野**都登场过**（档位 1f、都在簿子上），'
+              '而这两位各自多出来那一格（古式 1／虹野 3）反而是灭的——所以古式的号从「1 或 2」收到「2」，'
+              '跟虹野当年一模一样；减法判据还没做，工具不替引擎点名（§十六、§十七、§十九）'
               % '、'.join(dang))
     ghost = ghost_names(s)
     if ghost:
@@ -910,6 +1119,18 @@ def print_slot(n, s):
                                           place(a['place']), a['at'])
                                        for a in booked)
                              or '无（0x16e 起 16 条记录的日、月都是 ff）'))
+    print('  约会地点   %s（0x1ae–0x1b0＝%s；外部表那三字节的位序逐项对上地点池的前 20 项，'
+          '位 20 以上外部表没给%s。每份新开局都是 15 13 00，而它是每个在用槽位的子集。'
+          '**但只读，而且这一族会灭**：论坛那份 1997-12-28 是 ff f7 00，同一局早 14 天的槽是 '
+          'ff f7 18——位 19、位 20 后来反而关了，而那两条滑雪场记录两边都还在。'
+          '所以「解过就永久」那一读已作废，它更像「当下能约的（季节算出来的）」；'
+          '写进去能留多久没实测）'
+          % ('、'.join(s['place_unlock']) or '一个都没亮（这不可能，新开局就有六个）',
+             s['place_unlock_raw'],
+             '，亮着的那一位最像滑雪场（约会表里恰好有两条滑雪场），可没有第二份档撑它'
+             if s['place_unlock_extra'] == [20] else
+             ('，另外亮着不明位 %s' % s['place_unlock_extra']
+              if s['place_unlock_extra'] else '')))
     u = s['unconfirmed']
     print('  身份未确认 ' + '  '.join('%s [%s]' % ('0x' + k, ' '.join(str(x) for x in v))
                                       for k, v in u['w'].items()))
@@ -1003,6 +1224,28 @@ def parse_date(value, label):
         raise ValueError('%s %s 没有这么一天' % (label, value))
 
 
+def parse_md(value, label):
+    """`5-31` -> (5, 31).  生日的那一行就是这个形状：没有年，所以只有 月-日。"""
+    hit = re.match(r'^(\d{1,2})-(\d{1,2})$', str(value).strip().strip('"'))
+    if not hit:
+        raise ValueError('%s要写成 月-日（比如 5-31），给了「%s」' % (label, value))
+    mo, da = int(hit.group(1)), int(hit.group(2))
+    try:
+        datetime.date(2000, mo, da)        # 2000 是闰年，2-29 因此能过；2-30 不能
+    except ValueError:
+        raise ValueError('%s %s 没有这么一天' % (label, value))
+    return mo, da
+
+
+def parse_blood(value, label):
+    text = str(value).strip().strip('"').upper()
+    if text.endswith('型'):
+        text = text[:-1]
+    if text not in BLOOD:
+        raise ValueError('%s要写成 %s 之一（给了「%s」）' % (label, '／'.join(BLOOD), value))
+    return BLOOD.index(text)
+
+
 def candidates(m, d):
     """Every day in the school term that this month/day could be, oldest first."""
     out = []
@@ -1068,6 +1311,18 @@ def slot_date(s, b):
     return dated(*day_bytes(b))
 
 
+def appt_date(mbyte, dbyte, now):
+    """The 年-月-日 a diary record carries.  Its 月 byte is packed like 0x1cd -- 高半个字节＝年序、
+    低半个字节＝月-1 -- so the year IS in the record and does not have to be guessed:
+    1b → 年序 1 的 12 月，20 → 年序 2 的 1 月（论坛那份 1997-12-28 的三个约定，
+    2026-10-11 由用户逐条对过游戏画面：中间那条是 1998-01-04 清川）。
+    半个字节读不出合法一天时（被手改过的档）才退回 28 天窗口去猜（见 diary_date），
+    而窗口那一关由 check_calendar 负责比对——它现在能指出「记录里的年序跟当前日期对不上」。
+    """
+    return dated(mbyte >> 4, mbyte & 0x0F, dbyte) or diary_date((mbyte & 0x0F) + 1,
+                                                                 dbyte + 1, now)
+
+
 def slot_appts(s, b, now=None):
     """The diary dates the import leaves behind, as (标签, date) -- the YAML's list if it
     gives one (then the year is written out), otherwise what the file holds now."""
@@ -1079,7 +1334,7 @@ def slot_appts(s, b, now=None):
     for i, o in enumerate(range(APPT, APPT + 4 * N_APPT, 4)):
         if (b[o], b[o + 1]) == (0xFF, 0xFF):
             continue
-        dt = diary_date(b[o + 1] + 1, b[o] + 1, now)
+        dt = appt_date(b[o + 1], b[o], now)
         if dt:
             out.append(('约会%d（文件里原有）' % (i + 1), dt))
     return out
@@ -1162,8 +1417,8 @@ def _apply_book(b, given, changes):
 def _apply_attributes(b, given, changes):
     """Write the nine status words at 0x00..0x11 from `属性名: 数值`, one per line.
 
-    No ceiling is asserted: a played slot reads 容姿141 and the user's own edited slot reads
-    体力314, so 100 is at best a display convention, not the field's bound.
+    No ceiling is asserted: the 属性 words on disk go well past 100 (the current corpus reads
+    up to 运动581), so 100 is at best a display convention, not the field's bound.
     """
     for label, value in _by_name(given, ATTR[1], '属性', '属性名: 数值'):
         _word_at(b, ATTR[0] + 2 * ATTR[1].index(label), value, '属性 %s' % label, changes)
@@ -1195,6 +1450,31 @@ def _apply_club(b, given, changes):
             changes.append('      注意 这一位（%s）在 0x066 那张「退过的部」名单里，'
                            '游戏照理会拒绝重新加入；工具不清那一个字（清了能不能真加回去没实测过），'
                            '要试的话自己把 0x066 的比特 %d 抹掉' % (club(value), value))
+
+
+def _apply_birth(b, given, field, changes):
+    """Write 生日（月-日）or 血型 into one of the two records: 主人公's at 0x370, 诗织's at 0x378.
+
+    Rows come keyed by owner, so editing 主人公's 血型 leaves 诗织's three words alone, and the
+    record's 4th word (恒 0 in every save) is never touched.  Returns the owners whose bytes moved
+    so `apply_slot` can say the caveat once per record rather than once per field.
+    """
+    owners = [who for who, _ in BIRTH]
+    touched = []
+    for who, value in _by_name(given, owners, field,
+                               '人名: 月-日' if field == '生日' else '人名: A／B／AB／O'):
+        off = dict(BIRTH)[who]
+        before = len(changes)
+        if field == '生日':
+            mo, da = parse_md(value, '生日 %s' % who)
+            _word_at(b, off, mo - 1, '生日 %s 月 0x%03x' % (who, off), changes, hi=11)
+            _word_at(b, off + 2, da - 1, '生日 %s 日 0x%03x' % (who, off + 2), changes, hi=30)
+        else:
+            _word_at(b, off + 4, parse_blood(value, '血型 %s' % who),
+                     '血型 %s 0x%03x' % (who, off + 4), changes, hi=len(BLOOD) - 1)
+        if len(changes) > before:
+            touched.append(who)
+    return touched
 
 
 def apply_slot(b, s, changes, force=False, notes=None):
@@ -1240,6 +1520,14 @@ def apply_slot(b, s, changes, force=False, notes=None):
         _apply_attributes(b, s['attributes'], changes)
     if s.get('club') is not None:
         _apply_club(b, s['club'], changes)
+    touched = []
+    if s.get('birthday') is not None:
+        touched += _apply_birth(b, s['birthday'], '生日', changes)
+    if s.get('blood_type') is not None:
+        touched += _apply_birth(b, s['blood_type'], '血型', changes)
+    for who in [w for w, _ in BIRTH if w in touched]:
+        changes.append('      提醒 只改了 %s 那一份记录的字段：血型管的是游戏里的相性判定、'
+                       '生日管的是生日事件，改完在游戏里什么表现都没实测' % who)
     if s.get('affinity') is not None:
         # Storage is a 16-bit word, so the field is not capped at 255: the user played 700
         # without trouble and rules the ceiling at 999 (at 200 the girl still does not blush,
@@ -1286,13 +1574,17 @@ def apply_slot(b, s, changes, force=False, notes=None):
                 raise ValueError('约会%d 的 at=0x%03x 跟前面某条撞了' % (i + 1, o))
             keep.add(o)
             dt = parse_date(a['date'], '约会%d' % (i + 1))
-            m, d = dt.month - 1, dt.day - 1
+            yo, m, d = dt.year - 1996, dt.month - 1, dt.day - 1
+            if not 0 <= yo <= 0x0F:
+                raise ValueError('约会%d 的 %s：年序（年份−1996）装不进月字节高半个字节'
+                                 % (i + 1, iso(dt)))
+            m |= yo << 4                       # 记录自己带年，见 APPT
             if d > 30:
                 raise ValueError('约会%d 的 %s：日超过了存档里观测到的 1–31' % (i + 1, iso(dt)))
             old = bytes(b[o:o + 4])
             mine = []                          # 一条记录＝玩家眼里的一次约会，所以按记录报，
             _byte_at(b, o, d, '约会%d 日 0x%03x' % (i + 1, o), mine)
-            _byte_at(b, o + 1, m, '约会%d 月 0x%03x' % (i + 1, o + 1), mine)
+            _byte_at(b, o + 1, m, '约会%d 年·月 0x%03x' % (i + 1, o + 1), mine)
             _byte_at(b, o + 2, girl_ref(a['girl']), '约会%d 对象 0x%03x' % (i + 1, o + 2), mine,
                      0, N_REC - 1)
             _byte_at(b, o + 3, a.get('place', b[o + 3]),
