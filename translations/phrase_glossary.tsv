@@ -128,7 +128,7 @@ ea37	8	1	もらえなかった	高兴	8	relocate
 ea3d	9	1	分かってるって	我知道啦	8	ok
 ea89	8	1	知らなかった	我不知道	8	relocate
 ea97	7	1	そうなんです	是这样的	8	relocate
-ea9b	7	1	あぁ、いいよ	啊，没事	8	relocate
+ea9b	7	1	あぁ、いいよ	啊，好的	8	relocate
 eae8	8	1	まぁ、いいか	算了，好吧	10	relocate
 eaf3	8	1	あっ、待って	啊，等等	8	relocate
 eb10	7	1	しょうがない	没办法	6	ok
